@@ -20,6 +20,10 @@ scratch/
 .system_generated/
 *.bak
 *.tmp
+*.sql
+*.md
+docs/
+
 
 # Flutter & Dart (mobile)
 mobile/.dart_tool/
