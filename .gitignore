@@ -7,7 +7,7 @@ db.sqlite3
 media/
 *.log
 local_settings.py
-.env
+.env*
 
 # Virtual Environment
 venv/
