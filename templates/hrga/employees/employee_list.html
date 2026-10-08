@@ -1,0 +1,274 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Data Pegawai & Karyawan - ERP Paketin{% endblock %}
+{% block page_title %}Data Karyawan{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Actions Bar (Search + Filter Pop-up + Actions) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <form class="d-flex align-items-center gap-2" method="get">
+            <!-- Search Input -->
+            <div class="search-box-clean d-flex align-items-center bg-white px-3" style="width: 280px; max-width: 320px; height: 38px;">
+                <i class="ph-bold ph-magnifying-glass me-2 text-muted" style="font-size: 1rem; color: #64748b;"></i>
+                <input type="text" name="q" class="border-0 shadow-none p-0 bg-transparent flex-grow-1" placeholder="Cari nama, NIP, email..." value="{{ search_q|default:'' }}" style="outline: none !important; font-size: 0.88rem; color: #1e293b; height: 100%;">
+            </div>
+
+            <!-- Filter Button with Pop-up Dropdown -->
+            <div class="dropdown">
+                <button class="btn shadow-sm position-relative rounded-3 d-inline-flex align-items-center gap-2 px-3 border" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Filter Pegawai" style="height: 38px; font-size: 0.88rem; font-weight: 600; color: #1e293b; background-color: #ffffff !important; border-color: #cbd5e1 !important;">
+                    <i class="ph-bold ph-faders fs-5" style="color: #1e293b;"></i>
+                    <span>Filter</span>
+                    {% if has_active_filter %}
+                    <span class="active-filter-dot" title="Filter Aktif"></span>
+                    {% endif %}
+                </button>
+                <div class="dropdown-menu filter-dropdown-menu dropdown-menu-start p-3 shadow-lg border-0" style="width: 320px; z-index: 1050; border-radius: 12px; border: 1px solid #e2e8f0 !important;">
+                    <h6 class="dropdown-header px-0 text-dark mb-2"><i class="ph-bold ph-faders me-2 text-dark"></i>Filter Lanjutan</h6>
+                    
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Status Kepegawaian</label>
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="">Semua Status</option>
+                            <option value="PERMANENT" {% if status_filter == 'PERMANENT' %}selected{% endif %}>Permanent (Tetap)</option>
+                            <option value="CONTRACT" {% if status_filter == 'CONTRACT' %}selected{% endif %}>Contract (Kontrak)</option>
+                            <option value="PROBATION" {% if status_filter == 'PROBATION' %}selected{% endif %}>Probation (Percobaan)</option>
+                            <option value="INTERN" {% if status_filter == 'INTERN' %}selected{% endif %}>Intern (Magang)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Cabang</label>
+                        <select name="branch" class="form-select form-select-sm">
+                            <option value="">Semua Cabang</option>
+                            {% for b in branches %}
+                            <option value="{{ b.id }}" {% if branch_filter == b.id|stringformat:"s" %}selected{% endif %}>{{ b.name }} ({{ b.code }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary mb-1">Tanggal Mulai</label>
+                            <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date|default:'' }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary mb-1">Tanggal Akhir</label>
+                            <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date|default:'' }}">
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 pt-2 border-top">
+                        <button type="submit" class="btn btn-danger btn-sm w-100 fw-bold">Terapkan</button>
+                        <a href="{% url 'employees:employee_list' %}" class="btn btn-outline-secondary btn-sm w-100">Reset</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div class="d-flex gap-2">
+            <a href="{% url 'employees:employee_create' %}" class="btn btn-danger px-4 fw-bold shadow-sm d-inline-flex align-items-center" style="height: 38px;">
+                <i class="ph-bold ph-plus me-1"></i> Buat Baru
+            </a>
+        </div>
+    </div>
+
+    <!-- Table Styles matching Operational -->
+    <style>
+        .table-premium {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            font-size: 0.875rem;
+        }
+        .table-premium thead th {
+            background-color: #f8f9fa;
+            color: #6c757d;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 12px 16px;
+            border-bottom: 2px solid #e9ecef;
+            border-top: 1px solid #e9ecef;
+        }
+        .table-premium thead th:first-child {
+            border-top-left-radius: 8px;
+            border-left: 1px solid #e9ecef;
+        }
+        .table-premium thead th:last-child {
+            border-top-right-radius: 8px;
+            border-right: 1px solid #e9ecef;
+        }
+        .table-premium tbody td {
+            padding: 14px 16px;
+            vertical-align: middle;
+            border-bottom: 1px solid #e9ecef;
+            color: #212529;
+            background-color: #fff;
+            transition: background-color 0.2s ease;
+        }
+        .table-premium tbody tr:hover td {
+            background-color: #f8f9fa;
+        }
+        .table-premium tbody tr:last-child td {
+            border-bottom: 1px solid #e9ecef;
+        }
+        .table-premium tbody tr:last-child td:first-child {
+            border-bottom-left-radius: 8px;
+            border-left: 1px solid #e9ecef;
+        }
+        .table-premium tbody tr:last-child td:last-child {
+            border-bottom-right-radius: 8px;
+            border-right: 1px solid #e9ecef;
+        }
+        .table-premium tbody td:first-child {
+            border-left: 1px solid #e9ecef;
+        }
+        .table-premium tbody td:last-child {
+            border-right: 1px solid #e9ecef;
+        }
+        .shipment-filter-summary { 
+            padding: 10px 12px; 
+            border: 1px solid #edf1f7; 
+            border-radius: 10px; 
+            background: #fbfcfe; 
+        }
+        .filter-chip { 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 6px; 
+            padding: 5px 9px; 
+            border-radius: 999px; 
+            background: #fff1f2; 
+            color: #be123c; 
+            border: 1px solid #fecdd3; 
+            font-size: .72rem; 
+            font-weight: 600; 
+            text-decoration: none; 
+        }
+        .filter-chip:hover { 
+            color: #9f1239; 
+            background: #ffe4e6; 
+        }
+    </style>
+
+    <!-- Table Data Container -->
+    <div class="table-responsive rounded-4 shadow-sm bg-white border" style="font-size: 0.85rem;">
+        <table class="table table-premium table-sm table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th class="ps-4 text-nowrap text-secondary fw-semibold">PEGAWAI</th>
+                    <th class="text-nowrap text-secondary fw-semibold">NIP</th>
+                    <th class="text-nowrap text-secondary fw-semibold">NO. TELP</th>
+                    <th class="text-nowrap text-secondary fw-semibold">CABANG &amp; DEPARTEMEN</th>
+                    <th class="text-nowrap text-secondary fw-semibold">JABATAN</th>
+                    <th class="text-nowrap text-secondary fw-semibold">TGL GABUNG</th>
+                    <th class="text-center text-nowrap text-secondary fw-semibold">STATUS</th>
+                    <th class="text-center text-nowrap text-secondary fw-semibold pe-4">AKSI</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for emp in employees %}
+                <tr>
+                    <!-- Employee Info (Clean without avatar icon) -->
+                    <td class="ps-4">
+                        <div class="fw-semibold text-dark">{{ emp.full_name }}</div>
+                        <div class="text-muted small" style="font-size:0.75rem;">
+                            <i class="ph-bold ph-envelope-simple me-1"></i>{{ emp.user.email }}
+                        </div>
+                    </td>
+                    <!-- NIP (Clean standard font) -->
+                    <td>
+                        <span class="fw-medium text-dark" style="font-size:0.85rem;">
+                            {{ emp.employee_id }}
+                        </span>
+                    </td>
+                    <!-- No. Telepon -->
+                    <td>
+                        <span class="text-dark fw-medium" style="font-size:0.85rem;">
+                            {{ emp.phone_number|default:"-" }}
+                        </span>
+                    </td>
+                    <!-- Branch & Department (Clean Text without coordinate icon) -->
+                    <td>
+                        <div class="fw-medium text-dark">
+                            {% if emp.branch %}
+                            {{ emp.branch.name }}{% if emp.branch.code %} - {{ emp.branch.code }}{% endif %}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </div>
+                        <div class="text-muted small" style="font-size:0.75rem;">
+                            {{ emp.department.name|default:"-" }}
+                        </div>
+                    </td>
+                    <!-- Position (Plain Clean Text) -->
+                    <td>
+                        <div class="fw-medium text-dark">{{ emp.position.name|default:"-" }}</div>
+                        {% if emp.user.roles.all %}
+                        <div class="text-muted small" style="font-size:0.72rem;">Role: {{ emp.user.roles.first.name }}</div>
+                        {% endif %}
+                    </td>
+                    <!-- Join Date -->
+                    <td class="text-muted small">
+                        {{ emp.join_date|date:"d M Y"|default:"-" }}
+                    </td>
+                    <!-- Status (Solid standard ERP style, positioned next to Aksi) -->
+                    <td class="text-center">
+                        {% if emp.status == 'PERMANENT' %}
+                        <span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold">TETAP</span>
+                        {% elif emp.status == 'CONTRACT' %}
+                        <span class="badge bg-warning text-dark rounded-pill px-3 py-1 fw-bold">KONTRAK</span>
+                        {% elif emp.status == 'PROBATION' %}
+                        <span class="badge bg-info text-white rounded-pill px-3 py-1 fw-bold">PROBATION</span>
+                        {% else %}
+                        <span class="badge bg-secondary text-white rounded-pill px-3 py-1 fw-bold">{{ emp.get_status_display|upper }}</span>
+                        {% endif %}
+                    </td>
+                    <!-- Actions -->
+                    <td class="text-center pe-4">
+                        <div class="dropdown">
+                            <button class="btn btn-action-table dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Aksi">
+                                <i class="ph-bold ph-list"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 p-2" style="min-width:170px; z-index: 9999;">
+                                <li>
+                                    <a href="{% url 'employees:employee_detail' emp.pk %}" class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2">
+                                        <i class="ph-bold ph-eye text-primary"></i>
+                                        <span>Detail Lengkap</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{% url 'employees:employee_update' emp.pk %}" class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2">
+                                        <i class="ph-bold ph-pencil-simple text-warning"></i>
+                                        <span>Edit Pegawai</span>
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider my-1"></li>
+                                <li>
+                                    <form method="POST" action="{% url 'employees:employee_delete' emp.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="button" class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 w-100 text-danger" onclick="PaketinModal.confirm({ title: 'Hapus Data Pegawai?', description: 'Profil pegawai {{ emp.full_name }} ({{ emp.employee_id }}) akan dihapus secara permanen dari sistem.', theme: 'danger', confirmText: 'Hapus Pegawai', cancelText: 'Batal', icon: 'ph-user-minus', form: this.closest('form') })">
+                                            <i class="ph-bold ph-trash"></i>
+                                            <span>Hapus Pegawai</span>
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-5 text-muted">
+                        <i class="ph-duotone ph-identification-card fs-1 d-block mb-2 opacity-50"></i>
+                        Belum ada data pegawai yang terdaftar.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

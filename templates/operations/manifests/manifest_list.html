@@ -1,0 +1,702 @@
+{% extends 'base.html' %}
+
+{% block title %}Data Manifest - ERP Paketin{% endblock %}
+{% block page_title %}{% if manifest_type == 'OUTGOING' %}Outgoing{% elif manifest_type == 'TRANSFER' %}Transfer Location{% elif manifest_type == 'DELIVERY' %}Delivery{% else %}Manifest{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Actions Bar (Search + Filter Pop-up + Actions) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <form class="d-flex align-items-center gap-2" method="get">
+            {% if manifest_type %}
+            <input type="hidden" name="type" value="{{ manifest_type }}">
+            {% endif %}
+            <!-- Search Input -->
+            <div class="search-box-clean d-flex align-items-center bg-white px-3" style="width: 280px; max-width: 320px; height: 38px;">
+                <i class="ph-bold ph-magnifying-glass me-2 text-muted" style="font-size: 1rem; color: #64748b;"></i>
+                <input type="text" name="q" class="border-0 shadow-none p-0 bg-transparent flex-grow-1" placeholder="Cari nomor manifest, supir..." value="{{ q_search|default:manifest_number|default:'' }}" style="outline: none !important; font-size: 0.88rem; color: #1e293b; height: 100%;">
+            </div>
+
+            <!-- Filter Button with Pop-up Dropdown -->
+            <div class="dropdown">
+                <button class="btn shadow-sm position-relative rounded-3 d-inline-flex align-items-center gap-2 px-3 border" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Filter Manifest" style="height: 38px; font-size: 0.88rem; font-weight: 600; color: #1e293b; background-color: #ffffff !important; border-color: #cbd5e1 !important;">
+                    <i class="ph-bold ph-faders fs-5" style="color: #1e293b;"></i>
+                    <span>Filter</span>
+                    {% if has_active_filter %}
+                    <span class="active-filter-dot" title="Filter Aktif"></span>
+                    {% endif %}
+                </button>
+                <div class="dropdown-menu filter-dropdown-menu dropdown-menu-start p-3 shadow-lg border-0" style="width: 320px; z-index: 1050; border-radius: 12px; border: 1px solid #e2e8f0 !important;">
+                    <h6 class="dropdown-header px-0 text-dark mb-2"><i class="ph-bold ph-faders me-2 text-dark"></i>Filter Lanjutan</h6>
+                    
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Driver / Supir</label>
+                        <select name="driver" class="form-select form-select-sm">
+                            <option value="">Semua Driver</option>
+                            {% for d in drivers %}
+                            <option value="{{ d.first_name }}" {% if driver_name == d.first_name or driver_name == d.username %}selected{% endif %}>{{ d.get_full_name|default:d.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Status</label>
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="">Semua Status</option>
+                            <option value="DRAFT" {% if status_filter == 'DRAFT' %}selected{% endif %}>Draft</option>
+                            <option value="ON_PROCESS" {% if status_filter == 'ON_PROCESS' %}selected{% endif %}>On Process</option>
+                            <option value="COMPLETED" {% if status_filter == 'COMPLETED' %}selected{% endif %}>Completed</option>
+                            <option value="CANCELLED" {% if status_filter == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary mb-1">Tanggal Mulai</label>
+                            <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date|default:'' }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary mb-1">Tanggal Akhir</label>
+                            <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date|default:'' }}">
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 pt-2 border-top">
+                        <button type="submit" class="btn btn-danger btn-sm w-100 fw-bold">Terapkan</button>
+                        <a href="{% url 'operations:manifest-list' %}{% if manifest_type %}?type={{ manifest_type }}{% endif %}" class="btn btn-outline-secondary btn-sm w-100">Reset</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div class="d-flex align-items-center flex-wrap gap-2">
+            <!-- Batch Action Buttons -->
+            {% if manifest_type == 'OUTGOING' %}
+            <button type="button" class="btn btn-secondary px-3 fw-bold shadow-sm" id="btnBatchOutgoingTransfer" style="display: none; height: 38px;">
+                <i class="ph-bold ph-arrows-left-right me-1"></i> <span id="batchOutgoingTransferText">Buat Transfer (0)</span>
+            </button>
+            <button type="button" class="btn btn-secondary px-3 fw-bold shadow-sm" id="btnBatchOutgoingOnTheWay" style="display: none; height: 38px;">
+                <i class="ph-bold ph-truck me-1"></i> <span id="batchOutgoingOnTheWayText">On The Way (0)</span>
+            </button>
+            <button type="button" class="btn btn-secondary px-3 fw-bold shadow-sm" id="btnBatchOutgoingIncoming" style="display: none; height: 38px;">
+                <i class="ph-bold ph-download-simple me-1"></i> <span id="batchOutgoingIncomingText">Terima di Incoming (0)</span>
+            </button>
+            <button type="button" class="btn btn-secondary px-3 shadow-sm" id="btnBatchManifestPrint" style="display: none; height: 38px;">
+                <i class="ph-bold ph-printer me-1"></i> <span id="batchManifestPrintText">Print Resi (0)</span>
+            </button>
+            {% elif manifest_type == 'TRANSFER' %}
+            <button type="button" class="btn btn-secondary px-3 fw-bold shadow-sm" id="btnBatchTransferIncoming" style="display: none; height: 38px;">
+                <i class="ph-bold ph-download-simple me-1"></i> <span id="batchTransferIncomingText">Terima di Incoming (0)</span>
+            </button>
+            <button type="button" class="btn btn-secondary px-3 fw-bold shadow-sm" id="btnBatchTransferOnTheWay" style="display: none; height: 38px;">
+                <i class="ph-bold ph-truck me-1"></i> <span id="batchTransferOnTheWayText">On The Way (0)</span>
+            </button>
+            <button type="button" class="btn btn-secondary px-3 shadow-sm" id="btnBatchManifestPrint" style="display: none; height: 38px;">
+                <i class="ph-bold ph-printer me-1"></i> <span id="batchManifestPrintText">Print Resi (0)</span>
+            </button>
+            {% elif manifest_type == 'DELIVERY' %}
+            <button type="button" class="btn btn-secondary px-3 fw-bold shadow-sm" id="btnBatchDeliveryPod" style="display: none; height: 38px;">
+                <i class="ph-bold ph-check-square-offset me-1"></i> <span id="batchDeliveryPodText">Quick Bulk POD (0)</span>
+            </button>
+            <button type="button" class="btn btn-secondary px-3 shadow-sm" id="btnBatchManifestPrint" style="display: none; height: 38px;">
+                <i class="ph-bold ph-printer me-1"></i> <span id="batchManifestPrintText">Print Resi (0)</span>
+            </button>
+            {% endif %}
+
+            <div class="dropdown">
+                <button class="btn btn-danger px-4 dropdown-toggle fw-bold shadow-sm d-inline-flex align-items-center" type="button" id="buatBaruManifest" data-bs-toggle="dropdown" aria-expanded="false" style="height: 38px;">
+                    <i class="ph-bold ph-plus me-1"></i> Buat Baru
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="buatBaruManifest" style="min-width: 220px; z-index: 9999;">
+                    {% if manifest_type == 'TRANSFER' %}
+                    <li><a class="dropdown-item py-2 fw-medium" href="{% url 'operations:manifest-create' %}?type=TRANSFER&mode=AIR"><i class="ph-duotone ph-airplane me-2 text-dark"></i>Air Freight Manifest</a></li>
+                    <li><a class="dropdown-item py-2 fw-medium" href="{% url 'operations:manifest-create' %}?type=TRANSFER&mode=VENDOR"><i class="ph-duotone ph-storefront me-2 text-primary"></i>Vendor Manifest</a></li>
+                    <li><a class="dropdown-item py-2 fw-medium" href="{% url 'operations:manifest-create' %}?type=TRANSFER&mode=LAND"><i class="ph-duotone ph-truck me-2 text-warning"></i>Land Manifest Internal</a></li>
+                    <li><a class="dropdown-item py-2 fw-medium" href="{% url 'operations:manifest-create' %}?type=TRANSFER&mode=SEA"><i class="ph-duotone ph-boat me-2 text-info"></i>Sea Manifest</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item py-2 fw-medium" href="{% url 'operations:manifest-create' %}?type=TRANSFER"><i class="ph-duotone ph-file-text me-2 text-secondary"></i>General Transfer Manifest</a></li>
+                    {% elif manifest_type == 'OUTGOING' %}
+                    <li><a class="dropdown-item py-2 fw-medium" href="{% url 'operations:manifest-create' %}?type=OUTGOING&mode=BIASA"><i class="ph-duotone ph-map-pin me-2 text-dark"></i>Reguler Outgoing</a></li>
+                    <li><a class="dropdown-item py-2 fw-medium" href="{% url 'operations:manifest-create' %}?type=OUTGOING&mode=BYPASS"><i class="ph-duotone ph-arrows-merge me-2 text-warning"></i>By Pass Outgoing</a></li>
+                    {% elif manifest_type == 'DELIVERY' %}
+                    <li><a class="dropdown-item py-2 fw-medium" href="{% url 'operations:manifest-create' %}?type=DELIVERY"><i class="ph-duotone ph-truck me-2 text-dark"></i>Buat Delivery Runsheet</a></li>
+                    {% else %}
+                    <li><a class="dropdown-item py-2 fw-medium" href="{% url 'operations:manifest-create' %}"><i class="ph-duotone ph-file-text me-2 text-dark"></i>Buat Manifest</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table Container ONLY -->
+    <style>
+        .table-premium {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            font-size: 0.875rem;
+        }
+        .table-premium thead th {
+            background-color: #f8fafc;
+            color: #64748b;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 12px 16px;
+            border-bottom: 1px solid #edf1f7;
+            border-top: none;
+        }
+        .table-premium tbody tr {
+            transition: all 0.2s ease;
+        }
+        .table-premium tbody tr:hover {
+            background-color: #f8fafc;
+        }
+        .table-premium tbody td {
+            padding: 14px 16px;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f5f9;
+            color: #1e293b;
+        }
+    </style>
+    <div class="table-responsive rounded-3 shadow-sm bg-white border" style="font-size: 0.85rem;">
+        <table class="table table-premium table-sm table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="ps-3" style="width: 40px;">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input" type="checkbox" id="selectAllManifest">
+                                        </div>
+                                    </th>
+                                    {% if manifest_type == 'OUTGOING' %}
+                                    <th class="text-nowrap text-secondary fw-semibold">NO. OUTGOING</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">TIPE OUTGOING</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">TIPE MANIFEST</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">TUJUAN (TLC)</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">TOTAL COLLY</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">BERAT AKTUAL</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">DIINPUT OLEH</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">TGL DIBUAT</th>
+                                    <th class="text-nowrap text-secondary fw-semibold text-center">STATUS</th>
+                                    <th class="text-center text-nowrap text-secondary fw-semibold">AKSI</th>
+                                    {% else %}
+                                    {% if manifest_type == 'TRANSFER' %}
+                                    <th class="text-nowrap text-secondary fw-semibold">NO. TRANSFER LOCATION</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">TIPE MANIFEST</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">KODE VENDOR</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">NO. MANIFEST</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">TUJUAN</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">KOLI</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">BERAT</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">DIINPUT OLEH</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">TGL DIBUAT</th>
+                                    <th class="text-nowrap text-secondary fw-semibold text-center">STATUS</th>
+                                    <th class="text-center text-nowrap text-secondary fw-semibold">AKSI</th>
+                                    {% else %}
+                                    <th class="text-nowrap text-secondary fw-semibold">NO. DELIVERY RUNSHEET</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">TOTAL RESI</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">BERAT</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">KOLI</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">KURIR</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">TGL DIBUAT</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">DIINPUT OLEH</th>
+                                    <th class="text-nowrap text-secondary fw-semibold text-center">STATUS</th>
+                                    <th class="text-center text-nowrap text-secondary fw-semibold">AKSI</th>
+                                    {% endif %}
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in manifests %}
+                                <tr>
+                                    <td class="ps-3">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input manifest-checkbox" type="checkbox" value="{{ item.id }}" data-resi-ids="{% for s in item.shipments.all %}{{ s.id }}{% if not forloop.last %},{% endif %}{% endfor %}" data-number="{{ item.manifest_number }}">
+                                        </div>
+                                    </td>
+                                    {% if manifest_type == 'TRANSFER' %}
+                                    <td>
+                                        <span class="fw-semibold text-dark">{{ item.manifest_number }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-dark fw-semibold">
+                                            {% with t_mode=item.get_transfer_mode %}
+                                            {% if t_mode == 'AIR' %}Air Freight Manifest
+                                            {% elif t_mode == 'VENDOR' %}Vendor Manifest
+                                            {% elif t_mode == 'LAND' %}Land Manifest Internal
+                                            {% elif t_mode == 'SEA' %}Sea Manifest
+                                            {% else %}{{ item.get_manifest_type_display|default:item.manifest_type }}
+                                            {% endif %}
+                                            {% endwith %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if item.vendor %}
+                                            {{ item.vendor.code|default:item.vendor.name }}
+                                        {% elif item.driver %}
+                                            {{ item.driver.username }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="fw-medium text-dark">{{ item.get_outgoing_manifest_number }}</span>
+                                    </td>
+                                    <td>
+                                        {% if item.destination_city %}
+                                            {{ item.get_city_dest|title }} - {{ item.get_tlc_dest }}
+                                        {% elif item.shipments.exists %}
+                                            {{ item.shipments.first.get_city_dest|title }} - {{ item.shipments.first.get_tlc_dest }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td><span class="text-dark fw-medium">{{ item.colly_cmo|default:item.shipments.count }}</span></td>
+                                    <td>{{ item.actual_weight|default:"0"|floatformat:0 }} Kg</td>
+                                    <td>{{ item.created_by.username|default:"Admin" }}</td>
+                                    <td>{{ item.created_at|date:"d M Y H:i"|default:item.date }}</td>
+                                    <td class="text-center">
+                                        {% if item.status == 'PREPARING' %}
+                                        <span class="badge bg-warning text-dark rounded-pill px-3 py-1 fw-bold d-inline-block">ENTRY</span>
+                                        {% elif item.status == 'ON_THE_WAY' %}
+                                        <span class="badge bg-primary text-white rounded-pill px-3 py-1 fw-bold d-inline-block">ON THE WAY</span>
+                                        {% elif item.status == 'CANCELLED' %}
+                                        <span class="badge bg-dark text-white rounded-pill px-3 py-1 fw-bold d-inline-block">VOID</span>
+                                        {% else %}
+                                        <span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold d-inline-block">{{ item.get_status_display|upper }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="dropdown">
+                                            <button class="btn btn-action-table dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Aksi">
+                                                <i class="ph-bold ph-list"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                                <li><a class="dropdown-item py-2" href="{% url 'operations:manifest-detail' item.pk %}"><i class="ph-duotone ph-eye me-2 text-info"></i>Lihat Detail</a></li>
+                                                <li><a class="dropdown-item py-2" href="{% url 'operations:print_manifest_linehaul' item.pk %}" target="_blank"><i class="ph-duotone ph-printer me-2 text-secondary"></i>Print Linehaul</a></li>
+                                                {% if item.status == 'PREPARING' %}
+                                                <li><a class="dropdown-item py-2" href="{% url 'operations:manifest-update' item.pk %}"><i class="ph-duotone ph-pencil-simple me-2 text-warning"></i>Edit</a></li>
+                                                {% endif %}
+                                                {% if request.user.is_superuser or request.user.is_staff or request.user.user_type == 'ADMIN' %}
+                                                    {% if item.status == 'CANCELLED' %}
+                                                    <li><a class="dropdown-item py-2 text-danger" href="#" onclick="event.preventDefault(); showHideModal('{% url 'operations:manifest-hide' item.pk %}', '{{ item.manifest_number|default:item.pk }}');"><i class="ph-duotone ph-trash me-2 text-danger"></i>Hapus</a></li>
+                                                    {% else %}
+                                                    <li><a class="dropdown-item py-2" href="#" onclick="event.preventDefault(); showVoidModal('{% url 'operations:manifest-delete' item.pk %}', '{{ item.manifest_number|default:item.pk }}');"><i class="ph-duotone ph-prohibit me-2 text-secondary"></i>Void</a></li>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+                                    </td>
+                                    {% elif manifest_type == 'OUTGOING' %}
+                                    <!-- OUTGOING ROW FORMAT -->
+                                    <td>
+                                        <span class="fw-semibold text-dark">{{ item.manifest_number }}</span>
+                                    </td>
+                                    <td>{{ item.transport_mode|default:"DRT" }}</td>
+                                    <td>{% if item.is_bypass %}By Pass Outgoing{% else %}Reguler Outgoing{% endif %}</td>
+                                    <td>
+                                        <span class="text-dark fw-medium">{{ item.get_city_dest|title }} - {{ item.get_tlc_dest }}</span>
+                                    </td>
+                                    <td><span class="text-dark fw-semibold">{{ item.colly_cmo }} Koli</span></td>
+                                    <td>{{ item.actual_weight|floatformat:0 }} Kg</td>
+                                    <td>Admin</td>
+                                    <td>{{ item.created_at|date:"d M Y" }}</td>
+                                    <td class="text-center">
+                                        {% if item.status == 'PREPARING' %}
+                                        <span class="badge bg-warning text-dark rounded-pill px-3 py-1 fw-bold d-inline-block">ENTRY</span>
+                                        {% elif item.status == 'ON_THE_WAY' %}
+                                        <span class="badge bg-primary text-white rounded-pill px-3 py-1 fw-bold d-inline-block">ON THE WAY</span>
+                                        {% elif item.status == 'CANCELLED' or item.status == 'VOID' %}
+                                        <span class="badge bg-dark text-white rounded-pill px-3 py-1 fw-bold d-inline-block">VOID</span>
+                                        {% else %}
+                                        <span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold d-inline-block">{{ item.get_status_display|upper }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="dropdown">
+                                            <button class="btn btn-action-table dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Aksi">
+                                                <i class="ph-bold ph-list"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                                <li><a class="dropdown-item py-2" href="{% url 'operations:manifest-detail' item.pk %}"><i class="ph-duotone ph-eye me-2 text-info"></i>Lihat Detail</a></li>
+                                                <li><a class="dropdown-item py-2" href="{% url 'operations:manifest-print' item.pk %}" target="_blank"><i class="ph-duotone ph-printer me-2 text-secondary"></i>Print Manifest</a></li>
+                                                <li><a class="dropdown-item py-2" href="{% url 'operations:manifest-print-bagtag' item.pk %}" target="_blank"><i class="ph-duotone ph-tag me-2 text-primary"></i>Print BagTag</a></li>
+                                                {% if item.status == 'PREPARING' %}
+                                                <li><a class="dropdown-item py-2" href="{% url 'operations:manifest-update' item.pk %}"><i class="ph-duotone ph-pencil-simple me-2 text-warning"></i>Edit</a></li>
+                                                {% endif %}
+                                                {% if request.user.is_superuser or request.user.is_staff or request.user.user_type == 'ADMIN' %}
+                                                    {% if item.status == 'CANCELLED' or item.status == 'VOID' %}
+                                                    <li><a class="dropdown-item py-2 text-danger" href="#" onclick="event.preventDefault(); showHideModal('{% url 'operations:manifest-hide' item.pk %}', '{{ item.manifest_number|default:item.pk }}');"><i class="ph-duotone ph-trash me-2 text-danger"></i>Hapus</a></li>
+                                                    {% else %}
+                                                    <li><a class="dropdown-item py-2" href="#" onclick="event.preventDefault(); showVoidModal('{% url 'operations:manifest-delete' item.pk %}', '{{ item.manifest_number|default:item.pk }}');"><i class="ph-duotone ph-prohibit me-2 text-secondary"></i>Void</a></li>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+                                    </td>
+                                    {% else %}
+                                    <td>
+                                        <span class="fw-semibold text-dark">{{ item.manifest_number }}</span>
+                                    </td>
+                                    <td>{{ item.shipments.count }} Awb</td>
+                                    <td>{{ item.delivery_total_weight|default:"0"|floatformat:0 }} Kg</td>
+                                    <td>{{ item.delivery_total_colly|default:"0" }}</td>
+                                    <td>
+                                        {% if item.driver %}
+                                            {{ item.driver.first_name|default:item.driver.username }}
+                                        {% elif item.vendor %}
+                                            {{ item.vendor.name }}
+                                        {% else %}
+                                            Tanpa Supir
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.created_at|date:"d M Y"|default:item.date }}</td>
+                                    <td><span class="fw-medium text-dark">Admin</span></td>
+                                    <td class="text-center">
+                                        {% if item.status == 'PREPARING' %}
+                                        <span class="badge bg-warning text-dark rounded-pill px-3 py-1 fw-bold d-inline-block">PERSIAPAN</span>
+                                        {% elif item.status == 'ON_THE_WAY' %}
+                                        <span class="badge bg-primary text-white rounded-pill px-3 py-1 fw-bold d-inline-block">PERJALANAN</span>
+                                        {% elif item.status == 'CANCELLED' or item.status == 'VOID' %}
+                                        <span class="badge bg-dark text-white rounded-pill px-3 py-1 fw-bold d-inline-block">VOID</span>
+                                        {% elif item.status == 'COMPLETED' %}
+                                        <span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold d-inline-block">SELESAI</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="dropdown">
+                                            <button class="btn btn-action-table dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Aksi">
+                                                <i class="ph-bold ph-list"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                                <li><a class="dropdown-item py-2" href="{% url 'operations:manifest-detail' item.pk %}"><i class="ph-duotone ph-eye me-2 text-info"></i>Lihat (View Detail)</a></li>
+                                                <li><a class="dropdown-item py-2" href="{% url 'operations:manifest-print' item.pk %}" target="_blank"><i class="ph-duotone ph-printer me-2 text-secondary"></i>Print</a></li>
+                                                {% if item.status == 'PREPARING' %}
+                                                <li><a class="dropdown-item py-2" href="{% url 'operations:manifest-update' item.pk %}"><i class="ph-duotone ph-pencil-simple me-2 text-warning"></i>Edit</a></li>
+                                                {% endif %}
+                                                {% if request.user.is_superuser or request.user.is_staff or request.user.user_type == 'ADMIN' %}
+                                                    {% if item.status == 'CANCELLED' or item.status == 'VOID' %}
+                                                    <li><a class="dropdown-item py-2 text-danger" href="#" onclick="event.preventDefault(); showHideModal('{% url 'operations:manifest-hide' item.pk %}', '{{ item.manifest_number|default:item.pk }}');"><i class="ph-duotone ph-trash me-2 text-danger"></i>Hapus</a></li>
+                                                    {% else %}
+                                                    <li><a class="dropdown-item py-2" href="#" onclick="event.preventDefault(); showVoidModal('{% url 'operations:manifest-delete' item.pk %}', '{{ item.manifest_number|default:item.pk }}');"><i class="ph-duotone ph-prohibit me-2 text-secondary"></i>Void</a></li>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+                                    </td>
+                                    {% endif %}
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="12" class="text-center py-5 text-muted">
+                                        <i class="ph-duotone ph-book-open text-muted mb-2" style="font-size: 2.5rem;"></i>
+                                        <p class="mb-3">Belum ada manifest.</p>
+                                        <a href="{% url 'operations:manifest-create' %}" class="btn btn-danger btn-sm">Buat Manifest Pertama</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+    </div>
+</div>
+
+<!-- Modal Konfirmasi Update Status On The Way -->
+<div class="modal fade" id="bulkStatusModal" tabindex="-1" aria-labelledby="bulkStatusModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="post" action="{% url 'operations:manifest-bulk-status' %}">
+                {% csrf_token %}
+                <input type="hidden" name="manifest_type" value="{{ manifest_type|default:'OUTGOING' }}">
+                <input type="hidden" name="action_type" value="ON_THE_WAY">
+                <div id="bulkStatusManifestIdsContainer"></div>
+                <div class="modal-header bg-warning bg-opacity-10 border-0">
+                    <h5 class="modal-title fw-bold text-dark" id="bulkStatusModalLabel">
+                        <i class="ph-bold ph-truck text-warning me-2"></i>Update Status: On The Way
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="mb-3 text-dark">Anda akan mengubah status <strong id="bulkStatusCount">0</strong> manifest terpilih beserta seluruh resi di dalamnya menjadi <strong>ON THE WAY</strong> (Dalam Perjalanan).</p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Lokasi Transit / Posisi Saat Ini (Opsional)</label>
+                        <input type="text" name="location" class="form-control" placeholder="Contoh: Hub Transit Utama / Bandara CGK">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Keterangan Tambahan (Opsional)</label>
+                        <input type="text" name="description" class="form-control" placeholder="Contoh: Manifest diberangkatkan via Armada Darat/Udara">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning px-4 fw-bold">Konfirmasi & Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Konfirmasi Direct Incoming Destination -->
+<div class="modal fade" id="bulkIncomingModal" tabindex="-1" aria-labelledby="bulkIncomingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="post" action="{% url 'operations:manifest-bulk-incoming' %}">
+                {% csrf_token %}
+                <div id="bulkIncomingManifestIdsContainer"></div>
+                <div class="modal-header bg-success bg-opacity-10 border-0">
+                    <h5 class="modal-title fw-bold text-dark" id="bulkIncomingModalLabel">
+                        <i class="ph-bold ph-download-simple text-success me-2"></i>Terima di Incoming Destination
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="mb-3 text-dark">Seluruh resi pada <strong id="bulkIncomingCount">0</strong> manifest terpilih akan langsung diproses masuk ke <strong>Incoming Destination (Inbound)</strong> dan dibuatkan sesi inbound bersama.</p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Lokasi Gudang Tujuan <span class="text-danger">*</span></label>
+                        <input type="text" name="location" class="form-control" placeholder="Contoh: Gudang Surabaya (SUB)" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Catatan Penerimaan (Opsional)</label>
+                        <input type="text" name="description" class="form-control" placeholder="Contoh: Paket diterima lengkap di gudang tujuan">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success px-4 fw-bold">Terima Massal Sekarang</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Quick Bulk POD for Delivery Runsheet -->
+<div class="modal fade" id="bulkDeliveryPodModal" tabindex="-1" aria-labelledby="bulkDeliveryPodModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="post" action="{% url 'operations:pod-bulk-update' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="pod_status" value="POD">
+                <div id="bulkDeliveryPodResiIdsContainer"></div>
+                <div class="modal-header bg-success bg-opacity-10 border-0">
+                    <h5 class="modal-title fw-bold text-dark" id="bulkDeliveryPodModalLabel">
+                        <i class="ph-bold ph-check-square-offset text-success me-2"></i>Quick Bulk POD (Delivered Massal)
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="mb-3 text-dark">Update seluruh resi pada <strong id="bulkDeliveryPodCount">0</strong> delivery runsheet terpilih menjadi <strong>DELIVERED (POD)</strong>.</p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Nama Penerima</label>
+                        <input type="text" name="pod_receiver_name" class="form-control" placeholder="Kosongkan jika sesuai penerima resi masing-masing">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Keterangan / Hubungan Penerima</label>
+                        <input type="text" name="description" class="form-control" placeholder="Contoh: Diterima oleh Yang Bersangkutan / Security">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Foto Bukti Bersama (Opsional)</label>
+                        <input type="file" name="pod_image" class="form-control" accept="image/*">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success px-4 fw-bold">Simpan POD Massal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('selectAllManifest');
+    const itemCheckboxes = document.querySelectorAll('.manifest-checkbox');
+    
+    // Outgoing buttons
+    const btnBatchOutgoingTransfer = document.getElementById('btnBatchOutgoingTransfer');
+    const batchOutgoingTransferText = document.getElementById('batchOutgoingTransferText');
+    const btnBatchOutgoingOnTheWay = document.getElementById('btnBatchOutgoingOnTheWay');
+    const batchOutgoingOnTheWayText = document.getElementById('batchOutgoingOnTheWayText');
+    const btnBatchOutgoingIncoming = document.getElementById('btnBatchOutgoingIncoming');
+    const batchOutgoingIncomingText = document.getElementById('batchOutgoingIncomingText');
+    
+    // Transfer buttons
+    const btnBatchTransferIncoming = document.getElementById('btnBatchTransferIncoming');
+    const batchTransferIncomingText = document.getElementById('batchTransferIncomingText');
+    const btnBatchTransferOnTheWay = document.getElementById('btnBatchTransferOnTheWay');
+    const batchTransferOnTheWayText = document.getElementById('batchTransferOnTheWayText');
+    
+    // Delivery buttons
+    const btnBatchDeliveryPod = document.getElementById('btnBatchDeliveryPod');
+    const batchDeliveryPodText = document.getElementById('batchDeliveryPodText');
+    
+    // Print button
+    const btnBatchManifestPrint = document.getElementById('btnBatchManifestPrint');
+    const batchManifestPrintText = document.getElementById('batchManifestPrintText');
+
+    function getSelectedResiIds() {
+        const checked = document.querySelectorAll('.manifest-checkbox:checked');
+        const resiSet = new Set();
+        checked.forEach(cb => {
+            const resiStr = cb.getAttribute('data-resi-ids') || '';
+            resiStr.split(',').forEach(id => {
+                const trimmed = id.trim();
+                if (trimmed) resiSet.add(trimmed);
+            });
+        });
+        return Array.from(resiSet);
+    }
+
+    function getSelectedManifestIds() {
+        const checked = document.querySelectorAll('.manifest-checkbox:checked');
+        return Array.from(checked).map(cb => cb.value);
+    }
+
+    function updateCheckboxState() {
+        const checkedCount = document.querySelectorAll('.manifest-checkbox:checked').length;
+        
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = (checkedCount === itemCheckboxes.length && itemCheckboxes.length > 0);
+            selectAllCheckbox.indeterminate = (checkedCount > 0 && checkedCount < itemCheckboxes.length);
+        }
+
+        const show = checkedCount > 0 ? 'inline-block' : 'none';
+
+        if (btnBatchOutgoingTransfer) {
+            btnBatchOutgoingTransfer.style.display = show;
+            if (batchOutgoingTransferText) batchOutgoingTransferText.textContent = `Buat Transfer (${checkedCount})`;
+        }
+        if (btnBatchOutgoingOnTheWay) {
+            btnBatchOutgoingOnTheWay.style.display = show;
+            if (batchOutgoingOnTheWayText) batchOutgoingOnTheWayText.textContent = `On The Way (${checkedCount})`;
+        }
+        if (btnBatchOutgoingIncoming) {
+            btnBatchOutgoingIncoming.style.display = show;
+            if (batchOutgoingIncomingText) batchOutgoingIncomingText.textContent = `Terima di Incoming (${checkedCount})`;
+        }
+
+        if (btnBatchTransferIncoming) {
+            btnBatchTransferIncoming.style.display = show;
+            if (batchTransferIncomingText) batchTransferIncomingText.textContent = `Terima di Incoming (${checkedCount})`;
+        }
+        if (btnBatchTransferOnTheWay) {
+            btnBatchTransferOnTheWay.style.display = show;
+            if (batchTransferOnTheWayText) batchTransferOnTheWayText.textContent = `On The Way (${checkedCount})`;
+        }
+
+        if (btnBatchDeliveryPod) {
+            btnBatchDeliveryPod.style.display = show;
+            if (batchDeliveryPodText) batchDeliveryPodText.textContent = `Quick Bulk POD (${checkedCount})`;
+        }
+
+        if (btnBatchManifestPrint) {
+            btnBatchManifestPrint.style.display = show;
+            const resiIds = getSelectedResiIds();
+            if (batchManifestPrintText) batchManifestPrintText.textContent = `Print Resi (${resiIds.length})`;
+        }
+    }
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            itemCheckboxes.forEach(cb => cb.checked = selectAllCheckbox.checked);
+            updateCheckboxState();
+        });
+    }
+
+    itemCheckboxes.forEach(cb => cb.addEventListener('change', updateCheckboxState));
+
+    // Handle "Buat Transfer Location" (Outgoing -> Transfer)
+    if (btnBatchOutgoingTransfer) {
+        btnBatchOutgoingTransfer.addEventListener('click', function() {
+            const resiIds = getSelectedResiIds();
+            if (resiIds.length === 0) {
+                alert('Pilih manifest yang memiliki resi.');
+                return;
+            }
+            const params = resiIds.map(id => 'resi_ids=' + encodeURIComponent(id)).join('&');
+            window.location.href = '{% url "operations:manifest-create" %}?type=TRANSFER&' + params;
+        });
+    }
+
+    // Handle "Update On The Way" (Outgoing & Transfer)
+    function setupOnTheWayModal(btn) {
+        if (!btn) return;
+        btn.addEventListener('click', function() {
+            const manifestIds = getSelectedManifestIds();
+            const container = document.getElementById('bulkStatusManifestIdsContainer');
+            container.innerHTML = '';
+            manifestIds.forEach(id => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'manifest_ids';
+                input.value = id;
+                container.appendChild(input);
+            });
+            document.getElementById('bulkStatusCount').textContent = manifestIds.length;
+            const modal = new bootstrap.Modal(document.getElementById('bulkStatusModal'));
+            modal.show();
+        });
+    }
+    setupOnTheWayModal(btnBatchOutgoingOnTheWay);
+    setupOnTheWayModal(btnBatchTransferOnTheWay);
+
+    // Handle "Terima di Incoming Destination" (Outgoing & Transfer)
+    function setupIncomingModal(btn) {
+        if (!btn) return;
+        btn.addEventListener('click', function() {
+            const manifestIds = getSelectedManifestIds();
+            const container = document.getElementById('bulkIncomingManifestIdsContainer');
+            container.innerHTML = '';
+            manifestIds.forEach(id => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'manifest_ids';
+                input.value = id;
+                container.appendChild(input);
+            });
+            document.getElementById('bulkIncomingCount').textContent = manifestIds.length;
+            const modal = new bootstrap.Modal(document.getElementById('bulkIncomingModal'));
+            modal.show();
+        });
+    }
+    setupIncomingModal(btnBatchOutgoingIncoming);
+    setupIncomingModal(btnBatchTransferIncoming);
+
+    // Handle "Quick Bulk POD" (Delivery runsheet)
+    if (btnBatchDeliveryPod) {
+        btnBatchDeliveryPod.addEventListener('click', function() {
+            const resiIds = getSelectedResiIds();
+            const container = document.getElementById('bulkDeliveryPodResiIdsContainer');
+            container.innerHTML = '';
+            resiIds.forEach(id => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'shipment_ids';
+                input.value = id;
+                container.appendChild(input);
+            });
+            document.getElementById('bulkDeliveryPodCount').textContent = getSelectedManifestIds().length;
+            const modal = new bootstrap.Modal(document.getElementById('bulkDeliveryPodModal'));
+            modal.show();
+        });
+    }
+
+    // Handle "Print Resi Massal"
+    if (btnBatchManifestPrint) {
+        btnBatchManifestPrint.addEventListener('click', function() {
+            const resiIds = getSelectedResiIds();
+            if (resiIds.length === 0) {
+                alert('Tidak ada resi yang dapat dicetak pada manifest terpilih.');
+                return;
+            }
+            const params = resiIds.map(id => 'resi_ids=' + encodeURIComponent(id)).join('&');
+            window.open('{% url "operations:print_bulky" %}?' + params, '_blank');
+        });
+    }
+});
+</script>
+{% endblock %}

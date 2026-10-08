@@ -1,0 +1,1642 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paketin Cargo Finance</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="icon" type="image/png" href="/static/finance/asset/icon2.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <link rel="stylesheet" href="/static/finance/src/css/style.css?v=2.5">
+    <link rel="stylesheet" href="/static/finance/src/css/components.css">
+    <link rel="stylesheet" href="/static/finance/src/css/login.css">
+    <link rel="stylesheet" href="/static/finance/src/css/dashboard.css">
+    <link rel="stylesheet" href="/static/finance/src/css/spreadsheet.css?v=2.5">
+    <link rel="stylesheet" href="/static/finance/src/css/toolbar.css">
+    <link rel="stylesheet" href="/static/finance/src/css/admin.css">
+    <link rel="stylesheet" href="/static/finance/src/css/chat.css">
+
+    <style>
+        .setup-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            position: relative;
+            overflow: hidden
+        }
+
+        .setup-wrapper::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(204, 0, 0, .08) 0%, transparent 50%);
+            animation: sg 8s ease-in-out infinite
+        }
+
+        @keyframes sg {
+
+            0%,
+            100% {
+                transform: translate(0, 0)
+            }
+
+            50% {
+                transform: translate(5%, 5%)
+            }
+        }
+
+        .setup-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, .3);
+            width: 100%;
+            max-width: 440px;
+            padding: 40px 32px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .setup-header {
+            text-align: center;
+            margin-bottom: 32px
+        }
+
+        .setup-header .setup-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #CC0000, #CC0000);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            color: #fff;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 15px rgba(204, 0, 0, .4)
+        }
+
+        .setup-header h2 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 6px
+        }
+
+        .setup-header p {
+            font-size: .85rem;
+            color: var(--text-muted);
+            line-height: 1.5
+        }
+
+        .setup-success {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 16px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 10px;
+            color: #16a34a;
+            font-size: .85rem;
+            font-weight: 500;
+            margin-top: 16px
+        }
+
+        [data-theme="dark"] .setup-success {
+            background: rgba(22, 163, 74, .1);
+            border-color: rgba(22, 163, 74, .3)
+        }
+
+        .readonly-banner {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: linear-gradient(90deg, #fef3c7, #fffbeb);
+            border-bottom: 1px solid #fde68a;
+            color: #92400e;
+            font-size: .78rem;
+            font-weight: 500;
+            flex-shrink: 0
+        }
+
+        .readonly-banner i {
+            color: #d97706;
+            font-size: .9rem;
+            flex-shrink: 0
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ERP Navigation -->
+    <a href="/" style="position:fixed; top:20px; left:20px; z-index:9999; background:rgba(0,0,0,0.5); color:white; padding:10px 15px; border-radius:8px; text-decoration:none; font-family:Inter, sans-serif; display:flex; align-items:center; gap:8px;">
+        <i class="ph-bold ph-arrow-left"></i> Kembali ke ERP
+    </a>
+
+    <!-- NAVBAR -->
+    <nav class="navbar" id="navbar" style="display: none !important;">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <div class="brand-logo">
+                    <img src="static/img/logo.webp" alt="Logo Paketin Cargo" class="brand-logo-img">
+                </div>
+            </div>
+
+            <div class="nav-right">
+                <a href="#" class="nav-link" data-page="dashboard"
+                    onclick="switchPage('dashboard'); return false;">Dashboard</a>
+                <a href="#" class="nav-link" data-page="table" onclick="switchPage('table'); return false;"
+                    ondblclick="switchPage('table'); return false;">Worksheet</a>
+                <a href="#" class="nav-link" data-page="recap" onclick="switchPage('recap'); return false;">Rekap</a>
+                <a href="#" class="nav-link" data-page="audit" onclick="switchPage('audit'); return false;">History</a>
+                <a href="#" class="nav-link" data-page="monitoring" id="navMonitoring" style="display:none;"
+                    onclick="switchPage('monitoring'); return false;"><i class="ph-duotone ph-eye"
+                        style="margin-right:4px;font-size:0.85rem;"></i>Monitoring</a>
+                <a href="#" class="nav-link" data-page="admin" id="navAdmin" style="display:none;"
+                    onclick="switchPage('admin'); return false;"><i class="ph-duotone ph-gear"
+                        style="margin-right:4px;font-size:0.85rem;"></i>Admin</a>
+
+                <span class="nav-separator">|</span>
+
+                <div class="nav-online" id="navOnlineUsers" title="Pengguna online">
+                    <span class="online-status-dot"></span>
+                    <i class="ph-duotone ph-users" style="font-size: 0.95rem;"></i>
+                    <span class="online-count" id="onlineCount">0</span>
+                </div>
+
+                <span class="nav-user" id="userInfo"></span>
+
+
+
+                <button class="btn-logout" onclick="handleLogout()">
+                    <i class="ph-duotone ph-sign-out" style="font-size: 0.95rem; margin-right: 4px;"></i> Logout
+                </button>
+            </div>
+        </div>
+
+        <div class="online-dropdown" id="onlineDropdown" style="display:none;">
+            <div class="online-dropdown-header">
+                <span class="online-status-dot"></span>
+                Pengguna Aktif
+            </div>
+            <div class="online-dropdown-body" id="onlineUsersList">
+                <span style="color:var(--text-muted);font-size:0.8rem;">Memuat...</span>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-container" id="mainContainer">
+
+        <!-- ========== LOGIN ========== -->
+        <div id="loginSection" class="login-wrapper-crm">
+            <div class="login-card-crm">
+                <div class="login-header-crm">
+                    <img src="static/img/logo.webp" alt="Paketin Cargo Logo" style="max-width: 220px; margin-bottom: 15px;">
+                </div>
+
+                <div id="loginError" class="login-error-crm" style="display:none; color: red; margin-bottom: 15px; padding: 10px; background: #fee2e2; border-radius: 8px; border: 1px solid #ef4444; font-size: 0.9rem;"></div>
+
+                <form id="loginForm" onsubmit="handleLogin(); return false;">
+                    <div class="form-group-crm">
+                        <label for="email" class="form-label-crm">Username</label>
+                        <div class="input-group-crm">
+                            <span class="input-icon-crm"><i class="fas fa-user"></i></span>
+                            <input type="text" id="email" class="form-input-crm" placeholder="Masukkan username" required autofocus>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group-crm" style="margin-top: 15px; margin-bottom: 25px;">
+                        <label for="password" class="form-label-crm">Password</label>
+                        <div class="input-group-crm">
+                            <span class="input-icon-crm"><i class="fas fa-lock"></i></span>
+                            <input type="password" id="password" class="form-input-crm" placeholder="Masukkan password" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-login-crm w-100" id="loginButton">
+                        <i class="fas fa-sign-in-alt" style="margin-right: 8px;"></i>Login
+                    </button>
+                </form>
+
+
+            </div>
+        </div>
+
+        <!-- SIGNUP SECTION REMOVED -->
+
+        <div id="setupSection" class="setup-wrapper" style="display: none;">
+            <div class="setup-card">
+                <div class="setup-header">
+                    <div class="setup-icon"><i class="fas fa-user-shield"></i></div>
+                    <h2>Aktivasi Akun Baru</h2>
+                    <p>Halo! Selesaikan pengaturan akun Anda untuk mulai mengakses dashboard Paketin Cargo Finance.</p>
+                </div>
+                <div class="setup-form">
+                    <div class="form-group">
+                        <label>Nama Lengkap</label>
+                        <div class="input-group">
+                            <span class="input-icon"><i class="fas fa-user"></i></span>
+                            <input type="text" id="setupName" placeholder="Masukkan nama lengkap" class="form-input">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Password Baru</label>
+                        <div class="input-group">
+                            <span class="input-icon"><i class="fas fa-key"></i></span>
+                            <input type="password" id="setupPassword" placeholder="Minimal 6 karakter"
+                                class="form-input">
+                            <span class="password-toggle" id="setupPasswordToggle">
+                                <i class="fas fa-eye"></i>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Konfirmasi Password</label>
+                        <div class="input-group">
+                            <span class="input-icon"><i class="fas fa-check-double"></i></span>
+                            <input type="password" id="setupConfirmPassword" placeholder="Ulangi password"
+                                class="form-input">
+                            <span class="password-toggle" id="setupConfirmToggle">
+                                <i class="fas fa-eye"></i>
+                            </span>
+                        </div>
+                    </div>
+                    <div id="setupError" class="invite-error" style="display:none; margin-top:10px;"></div>
+                    <div id="setupSuccess" class="setup-success" style="display:none;">
+                        <i class="fas fa-check-circle"></i> Akun berhasil diaktifkan! Mengalihkan...
+                    </div>
+                    <button class="btn-login" id="setupButton" onclick="handleSetup()"
+                        style="margin-top:20px; width:100%;">
+                        <span class="btn-text">Aktifkan Akun</span>
+                        <span class="btn-icon"><i class="fas fa-check"></i></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== DASHBOARD CONTAINER ========== -->
+
+        <div id="dashboardContainer" class="dashboard-container" style="display: none;">
+
+            <!-- PAGE: Dashboard -->
+            <div id="page-dashboard" class="page-content">
+                <div class="container">
+                    <div class="page-header">
+                        <div>
+                            <h2><i class="ph-duotone ph-chart-pie"></i> Financial Dashboard</h2>
+                            <p id="lastUpdated" class="last-updated"></p>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-main-content">
+                        <div class="dashboard-main-area">
+                            <!-- Sub-header for context -->
+                            <div class="dashboard-section-title">
+                                <span><i class="ph-duotone ph-calendar"></i> Recap Tahun <span
+                                        id="displayYear">...</span></span>
+                                <div class="dashboard-actions" id="dashboardMonthFilter">
+                                    <!-- Filter pills will be injected here -->
+                                </div>
+                            </div>
+
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-icon bg-danger-subtle text-danger">
+                                        <i class="ph-duotone ph-wallet"></i>
+                                    </div>
+                                    <div class="stat-info">
+                                        <span class="stat-value" id="totalRevenue">Rp 0</span>
+                                        <span class="stat-label">Total Revenue</span>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon bg-success-subtle text-success">
+                                        <i class="ph-duotone ph-seal-check"></i>
+                                    </div>
+                                    <div class="stat-info">
+                                        <span class="stat-value" id="totalProfit">Rp 0</span>
+                                        <span class="stat-label">Total Profit</span>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon bg-warning-subtle text-warning">
+                                        <i class="ph-duotone ph-package"></i>
+                                    </div>
+                                    <div class="stat-info">
+                                        <span class="stat-value" id="totalShipments">0</span>
+                                        <span class="stat-label">Total Pengiriman</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="charts-grid">
+                                <div class="chart-card main-chart">
+                                    <div class="chart-header">
+                                        <div class="chart-title">
+                                            <i class="ph-duotone ph-chart-bar" style="color: var(--red); margin-right: 8px;"></i>
+                                            <span>Revenue & Profit Bulanan</span>
+                                            <small>Klik diagram balok untuk melihat detail bulan</small>
+                                        </div>
+                                        <div class="chart-actions" id="dashboardMonthFilter">
+                                            <!-- Pills and Year Select generated by JS -->
+                                        </div>
+                                    </div>
+                                    <div class="dashboard-chart-container">
+                                        <canvas id="revenueChart"></canvas>
+                                    </div>
+                                </div>
+                                <div class="chart-card secondary-chart">
+                                    <div class="chart-header">
+                                        <div class="chart-title">
+                                            <i class="ph-duotone ph-chart-pie" style="color: var(--red); margin-right: 8px;"></i>
+                                            <span>Distribusi Customer Lewat Perusahaan</span>
+                                        </div>
+                                    </div>
+                                    <div class="dashboard-chart-container" style="padding: 10px;">
+                                        <canvas id="serviceChart"></canvas>
+                                    </div>
+                                </div>
+                                <div class="chart-card secondary-chart">
+                                    <div class="chart-header">
+                                        <div class="chart-title">
+                                            <i class="ph-duotone ph-trophy" style="color: var(--red); margin-right: 8px;"></i>
+                                            <span>Top 5 Customer (Profit)</span>
+                                        </div>
+                                    </div>
+                                    <div class="dashboard-chart-container" style="padding: 10px;">
+                                        <canvas id="topCustomerChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="recent-data-card">
+                        <div class="recent-data-header">
+                            <h3><i class="ph-duotone ph-table" style="color: var(--red); margin-right: 8px;"></i> Data Rekap Customer</h3>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="mini-table customer-recap-table">
+                                <thead>
+                                    <tr>
+                                        <th class="col-no">NO</th>
+                                        <th>PERUSAHAAN</th>
+                                        <th>NAMA CUSTOMER</th>
+                                        <th class="col-pod">POD</th>
+                                        <th class="col-revenue">TOTAL REVENUE</th>
+                                        <th class="col-profit">TOTAL PROFIT</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recentTableBody">
+                                    <tr>
+                                        <td colspan="6" class="text-center">Loading...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Monthly Detail Modal (shown when button is clicked) -->
+                    <div id="monthlyDetailPanel" class="monthly-modal-overlay">
+                        <div class="monthly-modal-content">
+                            <div class="monthly-modal-header">
+                                <h3 id="monthlyDetailTitle"><i class="ph-duotone ph-calendar-check"></i> Detail Januari 2026
+                                </h3>
+                                <button class="btn-close-monthly" onclick="chartsManager.hideMonthlyDetail()"><i
+                                        class="ph-duotone ph-x"></i></button>
+                            </div>
+                            <div class="monthly-modal-body">
+                                <div class="monthly-detail-grid">
+                                    <div class="monthly-detail-stat">
+                                        <div class="mds-icon bg-danger-subtle text-danger"><i class="ph-duotone ph-wallet"></i></div>
+                                        <div class="mds-info">
+                                            <span class="mds-value" id="monthlyRevenue">Rp 0</span>
+                                            <span class="mds-label">Revenue</span>
+                                        </div>
+                                    </div>
+                                    <div class="monthly-detail-stat">
+                                        <div class="mds-icon bg-success-subtle text-success"><i class="ph-duotone ph-seal-check"></i></div>
+                                        <div class="mds-info">
+                                            <span class="mds-value" id="monthlyProfit">Rp 0</span>
+                                            <span class="mds-label">Net Profit</span>
+                                        </div>
+                                    </div>
+                                    <div class="monthly-detail-stat">
+                                        <div class="mds-icon bg-warning-subtle text-warning"><i class="ph-duotone ph-receipt"></i></div>
+                                        <div class="mds-info">
+                                            <span class="mds-value" id="monthlyCost">Rp 0</span>
+                                            <span class="mds-label">Total Biaya</span>
+                                        </div>
+                                    </div>
+                                    <div class="monthly-detail-stat">
+                                        <div class="mds-icon bg-info-subtle text-info"><i class="ph-duotone ph-percent"></i></div>
+                                        <div class="mds-info">
+                                            <span class="mds-value" id="monthlyMargin">0%</span>
+                                            <span class="mds-label">Avg Margin</span>
+                                        </div>
+                                    </div>
+                                    <div class="monthly-detail-stat">
+                                        <div class="mds-icon bg-primary-subtle text-primary"><i class="ph-duotone ph-package"></i></div>
+                                        <div class="mds-info">
+                                            <span class="mds-value" id="monthlyShipments">0</span>
+                                            <span class="mds-label">Pengiriman</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAGE: Data KPI Table -->
+            <div id="page-table" class="page-content">
+                <div class="spreadsheet-page">
+
+                    <div class="readonly-banner" id="readonlyBanner">
+                        <i class="fas fa-lock"></i>
+                        <span>Mode Read-Only — Anda belum diberikan akses edit oleh admin. Hubungi admin untuk mengatur
+                            hak akses kolom.</span>
+                    </div>
+
+                    <div class="find-bar" id="findBar" style="display:none;">
+                        <div class="find-bar-inner">
+                            <div class="find-input-group">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="findInput" placeholder="Cari...">
+                                <span class="find-count" id="findCount">0/0</span>
+                                <button class="find-btn" onclick="tableManager.findPrev()" title="Sebelumnya"><i
+                                        class="ph-duotone ph-caret-up"></i></button>
+                                <button class="find-btn" onclick="tableManager.findNext()" title="Selanjutnya"><i
+                                        class="ph-duotone ph-caret-down"></i></button>
+                            </div>
+                            <div class="find-input-group" id="replaceGroup" style="display:none;">
+                                <i class="ph-duotone ph-arrows-left-right"></i>
+                                <input type="text" id="replaceInput" placeholder="Ganti dengan...">
+                                <button class="find-btn" onclick="tableManager.replaceOne()"
+                                    title="Ganti">Ganti</button>
+                                <button class="find-btn" onclick="tableManager.replaceAll()"
+                                    title="Ganti Semua">Semua</button>
+                            </div>
+                            <div class="find-actions">
+                                <button class="find-btn-text" id="toggleReplaceBtn"
+                                    onclick="tableManager.toggleReplace()">Ganti</button>
+                                <button class="find-btn-close" onclick="tableManager.closeFind()"><i
+                                        class="ph-duotone ph-x"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="spreadsheet-header-new">
+                        <div class="header-brand-group">
+                            <i class="ph-duotone ph-grid-four sheet-brand-icon"></i>
+                            <button type="button" class="btn-file-menu" id="btnFileMenu" title="Menu File KPI Tahunan"
+                                onclick="toggleFilePanel()">
+                                <i class="ph-duotone ph-list"></i>
+                            </button>
+                            <span id="activeFileNameDisplay" class="fs-active-file-name">KPI Finance</span>
+                        </div>
+
+                        <div class="toolbar-container">
+                            <!-- SpreadsheetToolbar will be injected here -->
+                        </div>
+
+                        <div class="header-actions-group">
+                            <input type="file" id="fileImportExcel" style="display:none;" accept=".xlsx, .xls, .csv"
+                                onchange="importExcel(event)">
+                        </div>
+                    </div>
+
+                    <div class="formula-bar-container">
+                        <div class="fx-label">ƒx</div>
+                        <input type="text" id="formulaBar" class="formula-bar-input" placeholder="Masukkan rumus...">
+                    </div>
+
+                    <div class="spreadsheet-container">
+                        <div class="spreadsheet-wrapper" id="spreadsheetWrapper">
+                            <table class="spreadsheet-table" id="kpiTable">
+                                <thead>
+                                    <!-- Alphabet Helper Row -->
+                                    <tr class="alphabet-helper-row">
+                                        <th class="col-index"></th>
+                                        <th>A</th>
+                                        <th>B</th>
+                                        <th>C</th>
+                                        <th>D</th>
+                                        <th>E</th>
+                                        <th>F</th>
+                                        <th>G</th>
+                                        <th>H</th>
+                                        <th>I</th>
+                                        <th>J</th>
+                                        <th>K</th>
+                                        <th>L</th>
+                                        <th>M</th>
+                                        <th>N</th>
+                                        <th>O</th>
+                                        <th>P</th>
+                                        <th>Q</th>
+                                        <th>R</th>
+                                        <th>S</th>
+                                        <th>T</th>
+                                        <th>U</th>
+                                        <th>V</th>
+                                        <th>W</th>
+                                        <th>X</th>
+                                        <th>Y</th>
+                                        <th>Z</th>
+                                        <th>AA</th>
+                                        <th>AB</th>
+                                        <th>AC</th>
+                                        <th>AD</th>
+                                        <th>AE</th>
+                                        <th>AF</th>
+                                        <th>AG</th>
+                                        <th>AH</th>
+                                        <th>AI</th>
+                                        <th>AJ</th>
+                                        <th>AK</th>
+                                        <th>AL</th>
+                                        <th>AM</th>
+                                        <th>AN</th>
+                                    </tr>
+                                    <tr>
+                                        <th class="col-index">#</th>
+                                        <th style="min-width:120px; width:120px; max-width:120px;"
+                                            data-field="tanggal_pickup">TANGGAL</th>
+                                        <th style="min-width:150px; width:150px; max-width:150px;" data-field="nama">IP
+                                            PERUSAHAAN</th>
+                                        <th style="min-width:120px; width:120px; max-width:120px;" data-field="awb">AWB
+                                        </th>
+                                        <th style="min-width:170px; width:170px; max-width:170px;"
+                                            data-field="awb_sistem">AWB SISTEM</th>
+                                        <th style="min-width:130px; width:130px; max-width:130px;"
+                                            data-field="pengirim">CUSTOMER</th>
+                                        <th style="min-width:150px; width:150px; max-width:150px;" data-field="sales">
+                                            SALES</th>
+                                        <th style="min-width:250px; width:250px; max-width:250px;"
+                                            data-field="penerima">PENERIMA</th>
+                                        <th style="min-width:80px; width:80px; max-width:80px;" data-field="service">
+                                            SERVICE</th>
+                                        <th style="min-width:60px; width:60px; max-width:60px;" data-field="via">VIA
+                                        </th>
+                                        <th style="min-width:80px; width:80px; max-width:80px;" data-field="aktual">
+                                            AKTUAL</th>
+                                        <th style="min-width:80px; width:80px; max-width:80px;" data-field="vol">VOL
+                                        </th>
+                                        <th style="min-width:70px; width:70px; max-width:70px;" data-field="unit">UNIT
+                                        </th>
+                                        <th style="min-width:90px; width:90px; max-width:90px;" data-field="kubik">KUBIK
+                                        </th>
+                                        <th style="min-width:60px; width:60px; max-width:60px;" data-field="p">P</th>
+                                        <th style="min-width:60px; width:60px; max-width:60px;" data-field="l">L</th>
+                                        <th style="min-width:60px; width:60px; max-width:60px;" data-field="t">T</th>
+                                        <th style="min-width:70px; width:70px; max-width:70px;" data-field="koil">KOLI
+                                        </th>
+                                        <th style="min-width:140px; width:140px; max-width:140px;" data-field="harga">
+                                            HARGA PERKILO</th>
+                                        <th style="min-width:140px; width:140px; max-width:140px;"
+                                            data-field="surcharge">SURCHARGE</th>
+                                        <th style="min-width:140px; width:140px; max-width:140px;" data-field="packing">
+                                            PACKING</th>
+                                        <th style="min-width:140px; width:140px; max-width:140px;"
+                                            data-field="handling">HANDLING</th>
+                                        <th style="min-width:140px; width:140px; max-width:140px;"
+                                            data-field="penjualan">PENJUALAN</th>
+                                        <th style="min-width:150px; width:150px; max-width:150px;"
+                                            data-field="asal_pickup">ASAL PICK UP</th>
+                                        <th style="min-width:150px; width:150px; max-width:150px;"
+                                            data-field="jenis_barang">JENIS BARANG</th>
+                                        <th style="min-width:150px; width:150px; max-width:150px;" data-field="tujuan">
+                                            TUJUAN</th>
+                                        <th style="min-width:150px; width:150px; max-width:150px;"
+                                            data-field="nama_vendor">NAMA VENDOR I</th>
+                                        <th style="min-width:150px; width:150px; max-width:150px;"
+                                            data-field="nama_vendor_ii">NAMA VENDOR II</th>
+                                        <th style="min-width:150px; width:150px; max-width:150px;"
+                                            data-field="nama_vendor_iii">NAMA VENDOR III</th>
+                                        <th style="min-width:150px; width:150px; max-width:150px;"
+                                            data-field="nama_vendor_iv">NAMA VENDOR IV</th>
+                                        <th style="min-width:120px; width:120px; max-width:120px;"
+                                            data-field="vendor_i">HARGA VENDOR I</th>
+                                        <th style="min-width:120px; width:120px; max-width:120px;"
+                                            data-field="vendor_ii">HARGA VENDOR II</th>
+                                        <th style="min-width:120px; width:120px; max-width:120px;"
+                                            data-field="vendor_iii">HARGA VENDOR III</th>
+                                        <th style="min-width:120px; width:120px; max-width:120px;"
+                                            data-field="vendor_iv">HARGA VENDOR IV</th>
+                                        <th style="min-width:120px; width:120px; max-width:120px;" data-field="ops">OPS
+                                        </th>
+                                        <th style="min-width:130px; width:130px; max-width:130px;"
+                                            data-field="total_biaya">TOTAL BIAYA</th>
+                                        <th style="min-width:130px; width:130px; max-width:130px;" data-field="profit">
+                                            PROFIT</th>
+                                        <th style="min-width:100px; width:100px; max-width:100px;"
+                                            data-field="idx_profit">IDX PROFIT</th>
+                                        <th style="min-width:120px; width:120px; max-width:120px;"
+                                            data-field="asuransi">ASURANSI</th>
+                                        <th style="min-width:150px; width:150px; max-width:150px;"
+                                            data-field="nilai_barang">NILAI BARANG</th>
+                                        <th style="min-width:120px; width:120px; max-width:120px;"
+                                            data-field="asuransi_jasindo">ASURANSI JASINDO</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="kpiTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- SHEETS BAR -->
+                    <div class="spreadsheet-sheets">
+                        <div class="sheets-list" id="sheetsList">
+                            <div class="sheet-tab active" data-id="1">
+                                <i class="fas fa-bars sheet-menu-icon" title="Opsi Sheet"></i>
+                                <span class="sheet-name">Sheet1</span>
+                                <i class="fas fa-caret-down sheet-dropdown-icon"></i>
+                            </div>
+                        </div>
+                        <div class="sheets-actions">
+                            <button class="btn-add-sheet" id="btnAddSheet" title="Tambah Sheet Baru">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="spreadsheet-pagination">
+                        <span id="rowCount">0 baris data</span>
+                        <span class="statusbar-separator">|</span>
+                        <span id="cellInfo">Klik cell untuk edit | Navigasi dengan panah/tab</span>
+                        <span class="statusbar-separator">|</span>
+                        <span id="lastEditInfo" style="color:var(--text-muted);"></span>
+                        <span style="flex:1;"></span>
+                        <button class="btn-pagination" onclick="tableManager.loadMoreRows()" id="btnLoadMore">
+                            <i class="fas fa-chevron-down"></i> Load 100 more (100/1000)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAGE: Rekap -->
+            <div id="page-recap" class="page-content">
+                <div class="recap-layout">
+                    <!-- SIDEBAR: Navigation Menu -->
+                    <div class="recap-sidebar">
+                        <h3
+                            style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid var(--border-light); padding-bottom: 8px; text-align: center;">
+                            Menu
+                        </h3>
+                        <div class="recap-menu-list" style="display: flex; flex-direction: column; gap: 8px;">
+                            <button id="recapMenuBtn-revenue" class="recap-menu-btn active"
+                                onclick="recapPageManager.switchTab('revenue')">
+                                <i class="fas fa-money-bill-wave"></i> Revenue
+                            </button>
+                            <button id="recapMenuBtn-profit" class="recap-menu-btn"
+                                onclick="recapPageManager.switchTab('profit')">
+                                <i class="fas fa-chart-line"></i> Profit
+                            </button>
+                            <button id="recapMenuBtn-customer" class="recap-menu-btn"
+                                onclick="recapPageManager.switchTab('customer')">
+                                <i class="fas fa-users"></i> List Customer
+                            </button>
+                            <button id="recapMenuBtn-insurance" class="recap-menu-btn"
+                                onclick="recapPageManager.switchTab('insurance')">
+                                <i class="fas fa-shield-alt"></i> Asuransi
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- MAIN RECAP AREA -->
+                    <div class="recap-main">
+                        <div class="page-header"
+                            style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h2 style="margin: 0; font-size: 1.4rem; font-weight: 700; color: var(--text-primary);">
+                                    <i class="fas fa-list-alt" style="color: var(--red); margin-right: 8px;"></i> Rekap
+                                    Data Worksheet
+                                </h2>
+                                <p class="last-updated"
+                                    style="margin: 2px 0 0; font-size: 0.78rem; color: var(--text-muted);">Visualisasi,
+                                    filter, dan rekapitulasi dinamis seluruh data worksheet</p>
+                            </div>
+                        </div>
+
+                        <!-- Filter and Search Bar (Transparent with padding, sitting right above the table) -->
+                        <div id="recapFilterBar"
+                            style="background: transparent; padding: 8px 0; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px; border: none; box-shadow: none;">
+                            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                                <select id="recapFilterYear" class="recap-pill-select">
+                                    <!-- Dynamically populated -->
+                                </select>
+                                <select id="recapFilterMonth" class="recap-pill-select"
+                                    onchange="recapPageManager.filterData()">
+                                    <!-- Dynamically populated -->
+                                </select>
+
+                            </div>
+
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="position: relative;">
+                                    <i class="fas fa-search"
+                                        style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.8rem;"></i>
+                                    <input type="text" id="recapSearch" placeholder="Cari data..."
+                                        style="padding: 8px 14px 8px 36px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.78rem; outline: none; width: 250px; transition: all 0.2s;"
+                                        oninput="recapPageManager.filterData()">
+                                </div>
+
+                                <div id="recapFilterContainer" class="recap-filter-container">
+                                    <button class="btn-pill" id="recapFilterAdvBtn"
+                                        onclick="recapPageManager.toggleAdvFilter()" title="Filter Data Lanjutan">
+                                        <i class="fas fa-filter"></i> Filter
+                                    </button>
+
+                                    <div id="recapFilterPopover" class="recap-filter-popover" style="display: none;">
+                                        <div class="recap-filter-popover-header">
+                                            <h4><i class="fas fa-filter"></i> Filter Lanjutan</h4>
+                                            <button class="recap-filter-close"
+                                                onclick="recapPageManager.toggleAdvFilter(true)">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+
+                                        <div class="recap-filter-group">
+                                            <label class="recap-filter-label" for="recapSortOrder">Pengurutan
+                                                Data</label>
+                                            <select id="recapSortOrder" class="recap-filter-select-adv">
+                                                <option value="desc">Data Terbaru</option>
+                                                <option value="asc">Data Terlama</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="recap-filter-group">
+                                            <label class="recap-filter-label"
+                                                for="recapAdvFilterPerusahaan">Perusahaan</label>
+                                            <select id="recapAdvFilterPerusahaan" class="recap-filter-select-adv">
+                                                <option value="all">Semua Perusahaan</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="recap-filter-group">
+                                            <label class="recap-filter-label" for="recapAdvFilterCustomer">Nama
+                                                Customer</label>
+                                            <select id="recapAdvFilterCustomer" class="recap-filter-select-adv">
+                                                <option value="all">Semua Customer</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="recap-filter-group">
+                                            <label class="recap-filter-label" for="recapAdvFilterSales">Sales</label>
+                                            <select id="recapAdvFilterSales" class="recap-filter-select-adv">
+                                                <option value="all">Semua Sales</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="recap-filter-group">
+                                            <label class="recap-filter-label"
+                                                for="recapAdvFilterService">Service</label>
+                                            <select id="recapAdvFilterService" class="recap-filter-select-adv">
+                                                <option value="all">Semua Service</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="recap-filter-group">
+                                            <label class="recap-filter-label">Rentang Waktu (Pickup)</label>
+                                            <div class="recap-filter-row">
+                                                <input type="date" id="recapAdvFilterStartDate"
+                                                    class="recap-filter-input-adv" placeholder="Mulai">
+                                                <input type="date" id="recapAdvFilterEndDate"
+                                                    class="recap-filter-input-adv" placeholder="Selesai">
+                                            </div>
+                                        </div>
+
+                                        <div class="recap-filter-group">
+                                            <label class="recap-filter-label">Rentang Revenue</label>
+                                            <div class="recap-filter-row">
+                                                <input type="number" id="recapAdvFilterMinRev"
+                                                    class="recap-filter-input-adv" placeholder="Min Rp">
+                                                <input type="number" id="recapAdvFilterMaxRev"
+                                                    class="recap-filter-input-adv" placeholder="Max Rp">
+                                            </div>
+                                        </div>
+
+                                        <div class="recap-filter-popover-footer">
+                                            <button class="recap-filter-btn-clear"
+                                                onclick="recapPageManager.clearAdvFilters()">Hapus</button>
+                                            <button class="recap-filter-btn-apply"
+                                                onclick="recapPageManager.applyAdvFilters()">Terapkan</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button class="btn-pill" onclick="recapPageManager.refreshData()" title="Refresh Data">
+                                    <i class="fas fa-sync-alt"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Table display card -->
+                        <div id="recapTableCard" class="card-glass"
+                            style="background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-light); box-shadow: var(--shadow-sm); overflow: hidden; display: flex; flex-direction: column; flex: 1; height: 100%;">
+                            <div style="overflow-x: auto; overflow-y: auto; flex: 1;">
+                                <table class="mini-table"
+                                    style="width: 100%; border-collapse: collapse; min-width: 800px;">
+                                    <thead id="recapTableHead" style="position: sticky; top: 0; z-index: 10;">
+                                        <!-- Dynamically injected -->
+                                    </thead>
+                                    <tbody id="recapTableBody">
+                                        <!-- Dynamically injected -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+            <!-- PAGE: Rekap -->
+            <div id="page-recap" class="page-content">
+                <div class="recap-layout">
+                    <!-- SIDEBAR: Navigation Menu -->
+                    <div class="recap-sidebar">
+                        <h3
+                            style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid var(--border-light); padding-bottom: 8px; text-align: center;">
+                            Menu
+                        </h3>
+                        <div class="recap-menu-list" style="display: flex; flex-direction: column; gap: 8px;">
+                            <button id="recapMenuBtn-revenue" class="recap-menu-btn active"
+                                onclick="recapPageManager.switchTab('revenue')">
+                                <i class="fas fa-money-bill-wave"></i> Revenue
+                            </button>
+                            <button id="recapMenuBtn-profit" class="recap-menu-btn"
+                                onclick="recapPageManager.switchTab('profit')">
+                                <i class="fas fa-chart-line"></i> Profit
+                            </button>
+                            <button id="recapMenuBtn-customer" class="recap-menu-btn"
+                                onclick="recapPageManager.switchTab('customer')">
+                                <i class="fas fa-users"></i> List Customer
+                            </button>
+                            <button id="recapMenuBtn-insurance" class="recap-menu-btn"
+                                onclick="recapPageManager.switchTab('insurance')">
+                                <i class="fas fa-shield-alt"></i> Asuransi
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- MAIN RECAP AREA -->
+                    <div class="recap-main">
+                        <div class="page-header"
+                            style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h2 style="margin: 0; font-size: 1.4rem; font-weight: 700; color: var(--text-primary);">
+                                    <i class="fas fa-list-alt" style="color: var(--red); margin-right: 8px;"></i> Rekap
+                                    Data Worksheet
+                                </h2>
+                                <p class="last-updated"
+                                    style="margin: 2px 0 0; font-size: 0.78rem; color: var(--text-muted);">Visualisasi,
+                                    filter, dan rekapitulasi dinamis seluruh data worksheet</p>
+                            </div>
+                        </div>
+
+                        <!-- Filter and Search Bar (Transparent with padding, sitting right above the table) -->
+                        <div id="recapFilterBar"
+                            style="background: transparent; padding: 8px 0; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px; border: none; box-shadow: none;">
+                            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                                <select id="recapFilterYear" class="recap-pill-select">
+                                    <!-- Dynamically populated -->
+                                </select>
+                                <select id="recapFilterMonth" class="recap-pill-select"
+                                    onchange="recapPageManager.filterData()">
+                                    <!-- Dynamically populated -->
+                                </select>
+
+                            </div>
+
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="position: relative;">
+                                    <i class="fas fa-search"
+                                        style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.8rem;"></i>
+                                    <input type="text" id="recapSearch" placeholder="Cari data..."
+                                        style="padding: 8px 14px 8px 36px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.78rem; outline: none; width: 250px; transition: all 0.2s;"
+                                        oninput="recapPageManager.filterData()">
+                                </div>
+
+                                <div id="recapFilterContainer" class="recap-filter-container">
+                                    <button class="btn-pill" id="recapFilterAdvBtn"
+                                        onclick="recapPageManager.toggleAdvFilter()" title="Filter Data Lanjutan">
+                                        <i class="fas fa-filter"></i> Filter
+                                    </button>
+
+                                    <div id="recapFilterPopover" class="recap-filter-popover" style="display: none;">
+                                        <div class="recap-filter-popover-header">
+                                            <h4><i class="fas fa-filter"></i> Filter Lanjutan</h4>
+                                            <button class="recap-filter-close"
+                                                onclick="recapPageManager.toggleAdvFilter(true)">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+
+                                        <div class="recap-filter-group">
+                                            <label class="recap-filter-label" for="recapSortOrder">Pengurutan
+                                                Data</label>
+                                            <select id="recapSortOrder" class="recap-filter-select-adv">
+                                                <option value="desc">Data Terbaru</option>
+                                                <option value="asc">Data Terlama</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="recap-filter-group">
+                                            <label class="recap-filter-label"
+                                                for="recapAdvFilterPerusahaan">Perusahaan</label>
+                                            <select id="recapAdvFilterPerusahaan" class="recap-filter-select-adv">
+                                                <option value="all">Semua Perusahaan</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="recap-filter-group">
+                                            <label class="recap-filter-label" for="recapAdvFilterCustomer">Nama
+                                                Customer</label>
+                                            <select id="recapAdvFilterCustomer" class="recap-filter-select-adv">
+                                                <option value="all">Semua Customer</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="recap-filter-group">
+                                            <label class="recap-filter-label" for="recapAdvFilterSales">Sales</label>
+                                            <select id="recapAdvFilterSales" class="recap-filter-select-adv">
+                                                <option value="all">Semua Sales</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="recap-filter-group">
+                                            <label class="recap-filter-label"
+                                                for="recapAdvFilterService">Service</label>
+                                            <select id="recapAdvFilterService" class="recap-filter-select-adv">
+                                                <option value="all">Semua Service</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="recap-filter-group">
+                                            <label class="recap-filter-label">Rentang Waktu (Pickup)</label>
+                                            <div class="recap-filter-row">
+                                                <input type="date" id="recapAdvFilterStartDate"
+                                                    class="recap-filter-input-adv" placeholder="Mulai">
+                                                <input type="date" id="recapAdvFilterEndDate"
+                                                    class="recap-filter-input-adv" placeholder="Selesai">
+                                            </div>
+                                        </div>
+
+                                        <div class="recap-filter-group">
+                                            <label class="recap-filter-label">Rentang Revenue</label>
+                                            <div class="recap-filter-row">
+                                                <input type="number" id="recapAdvFilterMinRev"
+                                                    class="recap-filter-input-adv" placeholder="Min Rp">
+                                                <input type="number" id="recapAdvFilterMaxRev"
+                                                    class="recap-filter-input-adv" placeholder="Max Rp">
+                                            </div>
+                                        </div>
+
+                                        <div class="recap-filter-popover-footer">
+                                            <button class="recap-filter-btn-clear"
+                                                onclick="recapPageManager.clearAdvFilters()">Hapus</button>
+                                            <button class="recap-filter-btn-apply"
+                                                onclick="recapPageManager.applyAdvFilters()">Terapkan</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button class="btn-pill" onclick="recapPageManager.refreshData()" title="Refresh Data">
+                                    <i class="fas fa-sync-alt"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Table display card -->
+                        <div id="recapTableCard" class="card-glass"
+                            style="background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-light); box-shadow: var(--shadow-sm); overflow: hidden; display: flex; flex-direction: column; flex: 1; height: 100%;">
+                            <div style="overflow-x: auto; overflow-y: auto; flex: 1;">
+                                <table class="mini-table"
+                                    style="width: 100%; border-collapse: collapse; min-width: 800px;">
+                                    <thead id="recapTableHead" style="position: sticky; top: 0; z-index: 10;">
+                                        <!-- Dynamically injected -->
+                                    </thead>
+                                    <tbody id="recapTableBody">
+                                        <!-- Dynamically injected -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- PAGE: Admin Panel -->
+            <div id="page-admin" class="page-content">
+                <div class="admin-page">
+                    <div class="admin-container">
+                        <h2 class="admin-page-title"><i class="fas fa-cog"></i> Pengaturan Hak Akses PIC</h2>
+                        <div id="adminPanelContent"></div>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- PAGE: Supervisor Monitoring -->
+            <div id="page-monitoring" class="page-content" style="margin-top: 70px;">
+                <div class="recap-layout">
+                    <!-- SIDEBAR: Navigation Menu -->
+                    <div class="recap-sidebar">
+                        <h3
+                            style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid var(--border-light); padding-bottom: 8px; text-align: center;">
+                            Menu
+                        </h3>
+                        <div class="recap-menu-list" style="display: flex; flex-direction: column; gap: 8px;">
+                            <button id="monitoringMenuBtn-dashboard" class="recap-menu-btn active"
+                                onclick="monitoringManager.switchTab('dashboard')">
+                                <i class="fas fa-chart-pie"></i> Dashboard
+                            </button>
+                            <button id="monitoringMenuBtn-pic" class="recap-menu-btn"
+                                onclick="monitoringManager.switchTab('pic')">
+                                <i class="fas fa-users"></i> Kinerja PIC
+                            </button>
+                            <button id="monitoringMenuBtn-anomaly" class="recap-menu-btn"
+                                onclick="monitoringManager.switchTab('anomaly')">
+                                <i class="fas fa-exclamation-triangle"></i> Deteksi Anomali
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- MAIN AREA -->
+                    <div class="recap-main">
+                        <div class="page-header"
+                            style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h2 id="monitoringPageTitle"
+                                    style="margin: 0; font-size: 1.4rem; font-weight: 700; color: var(--text-primary);">
+                                    <i class="fas fa-chart-pie" style="color: var(--red); margin-right: 8px;"></i>
+                                    Dashboard Overview
+                                </h2>
+                                <p id="monitoringPageSubtitle" class="last-updated"
+                                    style="margin: 2px 0 0; font-size: 0.78rem; color: var(--text-muted);">
+                                    Ringkasan analitik tingkat tinggi dan monitoring kinerja operasional.
+                                </p>
+                            </div>
+                            <button class="btn-pill" onclick="monitoringManager.init()" title="Refresh Data">
+                                <i class="ph-duotone ph-arrows-clockwise"></i> Refresh
+                            </button>
+                        </div>
+
+                        <!-- PANEL: Dashboard -->
+                        <div id="monitoringPanel-dashboard"
+                            style="display:flex; flex-direction:column; gap:16px; flex:1; overflow-y:auto; margin-top: 10px;">
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-icon bg-info-subtle text-info"><i class="ph-duotone ph-keyboard"></i></div>
+                                    <div class="stat-info">
+                                        <span class="stat-value" id="monitorEntriesToday">0</span>
+                                        <span class="stat-label">Total Data Entry</span>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon bg-danger-subtle text-danger"><i class="ph-duotone ph-warning"></i></div>
+                                    <div class="stat-info">
+                                        <span class="stat-value" id="monitorMinusCount">0</span>
+                                        <span class="stat-label">Pengiriman Minus</span>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon bg-warning-subtle text-warning"><i class="ph-duotone ph-clock-counter-clockwise"></i></div>
+                                    <div class="stat-info">
+                                        <span class="stat-value" id="monitorAuditTop">0</span>
+                                        <span class="stat-label">Total Revisi Log</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card-glass"
+                                style="background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-light); box-shadow: var(--shadow-md); overflow: hidden; display: flex; flex-direction: column;">
+                                <div
+                                    style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-light); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-weight: 700; color: var(--text-primary); font-size: 1rem;">
+                                        <i class="fas fa-robot" style="color: var(--red); margin-right: 8px;"></i> AI
+                                        Executive Summary
+                                    </span>
+                                    <button class="btn-pill" onclick="monitoringManager.generateAiSummary()"
+                                        style="padding: 6px 16px;">
+                                        <i class="fas fa-bolt"></i> Generate
+                                    </button>
+                                </div>
+                                <div style="padding: 24px; min-height: 120px;">
+                                    <div id="monitoringAiSummary"
+                                        style="color:var(--text-muted); font-style:italic; line-height: 1.7; white-space: pre-wrap; font-size: 0.88rem;">
+                                        Klik tombol "Generate" untuk menganalisis data menggunakan Virtual CFO...</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PANEL: PIC -->
+                        <div id="monitoringPanel-pic"
+                            style="display:none; flex-direction:column; gap:16px; flex:1; overflow-y:auto; overflow-x: hidden; margin-top: 10px;">
+                            <!-- PIC Stats Cards -->
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-icon bg-blue"><i class="fas fa-user-check"></i></div>
+                                    <div class="stat-info">
+                                        <span class="stat-label">Total PIC Aktif</span>
+                                        <span class="stat-value" id="monitorPicTotal">0</span>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon" style="background: rgba(22,163,74,0.1); color: #16a34a;"><i
+                                            class="fas fa-trophy"></i></div>
+                                    <div class="stat-info">
+                                        <span class="stat-label">PIC Terproduktif</span>
+                                        <span class="stat-value" id="monitorPicTop" style="font-size: 0.95rem;">—</span>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon bg-orange"><i class="fas fa-chart-bar"></i></div>
+                                    <div class="stat-info">
+                                        <span class="stat-label">Rata-rata Input/PIC</span>
+                                        <span class="stat-value" id="monitorPicAvg">0</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- PIC Leaderboard Table -->
+                            <div class="card-glass"
+                                style="background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-light); box-shadow: var(--shadow-md); overflow: hidden; display: flex; flex-direction: column; flex: 1;">
+                                <div
+                                    style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-light); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-weight: 700; color: var(--text-primary); font-size: 1rem;">
+                                        <i class="fas fa-list-alt" style="color: var(--red); margin-right: 8px;"></i>
+                                        Leaderboard Kinerja PIC
+                                    </span>
+                                    <span id="monitorPicCountLabel"
+                                        style="font-size: 0.75rem; font-weight: 700; background: var(--bg-primary); padding: 4px 10px; border-radius: 12px; border: 1px solid var(--border-color); color: var(--text-muted);">0
+                                        PIC</span>
+                                </div>
+                                <div style="overflow-x: auto; overflow-y: auto; flex: 1;">
+                                    <table class="mini-table"
+                                        style="width: 100%; border-collapse: collapse; min-width: 700px;">
+                                        <thead>
+                                            <tr>
+                                                <th
+                                                    style="width: 50px; text-align: center !important; background: var(--red); color: white;">
+                                                    NO</th>
+                                                <th
+                                                    style="text-align: left !important; background: var(--red); color: white;">
+                                                    NAMA PIC / EMAIL</th>
+                                                <th
+                                                    style="text-align: center !important; background: var(--red); color: white;">
+                                                    TOTAL AWB</th>
+                                                <th
+                                                    style="text-align: right !important; background: var(--red); color: white;">
+                                                    TOTAL REVENUE (Rp)</th>
+                                                <th
+                                                    style="text-align: right !important; background: var(--red); color: white;">
+                                                    TOTAL PROFIT (Rp)</th>
+                                                <th
+                                                    style="text-align: right !important; background: var(--red); color: white;">
+                                                    MARGIN %</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="monitoringPicTableBody">
+                                            <tr>
+                                                <td colspan="6"
+                                                    style="padding: 60px; text-align: center; color: var(--text-muted); font-weight: 600;">
+                                                    <i class="fas fa-spinner fa-spin"
+                                                        style="font-size: 2rem; display: block; margin-bottom: 12px; color: var(--red); opacity: 0.8;"></i>
+                                                    Memuat data kinerja PIC...
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PANEL: Anomaly -->
+                        <div id="monitoringPanel-anomaly"
+                            style="display:none; flex-direction:column; gap:16px; flex:1; overflow-y:auto; overflow-x: hidden; margin-top: 10px;">
+                            <div class="card-glass"
+                                style="background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-light); box-shadow: var(--shadow-md); overflow: hidden; display: flex; flex-direction: column; flex: 1;">
+                                <div
+                                    style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-light); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-weight: 700; color: var(--text-primary); font-size: 1rem;">
+                                        <i class="fas fa-exclamation-triangle"
+                                            style="color: #d97706; margin-right: 8px;"></i> Pengiriman Minus / Rugi
+                                    </span>
+                                    <span id="monitorAnomalyCountLabel"
+                                        style="font-size: 0.75rem; font-weight: 700; background: #fef2f2; padding: 4px 10px; border-radius: 12px; border: 1px solid #fecaca; color: #dc2626;">0
+                                        Anomali</span>
+                                </div>
+                                <div style="overflow-x: auto; overflow-y: auto; flex: 1;">
+                                    <table class="mini-table"
+                                        style="width: 100%; border-collapse: collapse; min-width: 800px;">
+                                        <thead>
+                                            <tr>
+                                                <th
+                                                    style="width: 50px; text-align: center !important; background: var(--red); color: white;">
+                                                    NO</th>
+                                                <th
+                                                    style="text-align: center !important; background: var(--red); color: white;">
+                                                    TANGGAL</th>
+                                                <th
+                                                    style="text-align: left !important; background: var(--red); color: white;">
+                                                    PERUSAHAAN</th>
+                                                <th
+                                                    style="text-align: left !important; background: var(--red); color: white;">
+                                                    CUSTOMER</th>
+                                                <th
+                                                    style="text-align: right !important; background: var(--red); color: white;">
+                                                    REVENUE</th>
+                                                <th
+                                                    style="text-align: right !important; background: var(--red); color: white;">
+                                                    TOTAL BIAYA</th>
+                                                <th
+                                                    style="text-align: right !important; background: var(--red); color: white;">
+                                                    PROFIT (RUGI)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="monitoringAnomalyTableBody">
+                                            <tr>
+                                                <td colspan="7"
+                                                    style="padding: 60px; text-align: center; color: var(--text-muted); font-weight: 600;">
+                                                    <i class="fas fa-spinner fa-spin"
+                                                        style="font-size: 2rem; display: block; margin-bottom: 12px; color: var(--red); opacity: 0.8;"></i>
+                                                    Memuat data anomali...
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAGE: Audit Logs -->
+            <div id="page-audit" class="page-content">
+                <div class="container">
+                    <!-- Wrapper to align header and table edges -->
+                    <div style="width: 100%; margin: 0 auto; max-width: 1400px;">
+                        <div class="dashboard-section-title"
+                            style="margin-top: 10px; margin-bottom: 20px; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 0;">
+                            <span><i class="fas fa-history"></i> Audit Log History</span>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <button class="btn-pill" onclick="renderAuditLogsPage()" title="Refresh Logs">
+                                    <i class="fas fa-sync-alt"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+
+                        <div
+                            style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--border-light); padding-bottom: 10px;">
+                            <button id="tabBtnData" class="btn-pill active" onclick="switchHistoryTab('data')"
+                                style="padding: 8px 16px; font-weight: 600; border-radius: 8px; transition: all 0.2s;">
+                                <i class="fas fa-edit"></i> Riwayat Perubahan Data
+                            </button>
+                            <button id="tabBtnLogin" class="btn-pill" onclick="switchHistoryTab('login')"
+                                style="padding: 8px 16px; font-weight: 600; border-radius: 8px; transition: all 0.2s; background: transparent; color: var(--text-muted); border: 1px solid transparent;">
+                                <i class="fas fa-sign-in-alt"></i> Sesi Login
+                            </button>
+                        </div>
+
+                        <!-- Panel: Riwayat Perubahan Data -->
+                        <div id="panelHistoryData" class="card-glass"
+                            style="background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-light); box-shadow: var(--shadow-md); overflow: hidden; display: flex; flex-direction: column; width: 100%;">
+                            <div
+                                style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-light); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-weight: 700; color: var(--text-primary); font-size: 1rem;"><i
+                                        class="fas fa-list-alt" style="color: var(--red); margin-right: 8px;"></i>
+                                    Detail Perubahan</span>
+                                <span id="dataCountDisplay"
+                                    style="font-size: 0.75rem; font-weight: 700; background: var(--bg-primary); padding: 4px 10px; border-radius: 12px; border: 1px solid var(--border-color); color: var(--text-muted);">0
+                                    Data</span>
+                            </div>
+                            <div id="auditLogsPageList_data" class="audit-table-container"
+                                style="min-height: 300px; max-height: 70vh; overflow-y: auto; width: 100%;">
+                                <div style="padding: 80px; text-align: center; color: var(--text-muted);">
+                                    <i class="fas fa-spinner fa-spin"
+                                        style="font-size: 2.5rem; margin-bottom: 15px; color: var(--red); display: block; opacity: 0.8;"></i>
+                                    <p style="font-weight: 600;">Memuat riwayat perubahan...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel: Sesi Login Pengguna -->
+                        <div id="panelHistoryLogin" class="card-glass"
+                            style="background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-light); box-shadow: var(--shadow-md); overflow: hidden; display: none; flex-direction: column; width: 100%;">
+                            <div
+                                style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-light); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-weight: 700; color: var(--text-primary); font-size: 1rem;"><i
+                                        class="fas fa-shield-alt" style="color: var(--red); margin-right: 8px;"></i>
+                                    Keamanan & Akses Login</span>
+                                <span id="loginCountDisplay"
+                                    style="font-size: 0.75rem; font-weight: 700; background: var(--bg-primary); padding: 4px 10px; border-radius: 12px; border: 1px solid var(--border-color); color: var(--text-muted);">0
+                                    Login</span>
+                            </div>
+                            <div id="auditLogsPageList_login" class="audit-table-container"
+                                style="min-height: 300px; max-height: 70vh; overflow-y: auto; width: 100%;">
+                                <div style="padding: 80px; text-align: center; color: var(--text-muted);">
+                                    <i class="fas fa-spinner fa-spin"
+                                        style="font-size: 2.5rem; margin-bottom: 15px; color: var(--red); display: block; opacity: 0.8;"></i>
+                                    <p style="font-weight: 600;">Memuat riwayat login...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAGE: Rekap -->
+            <div id="page-recap" class="page-content">
+                <div class="recap-layout">
+                    <!-- SIDEBAR: Navigation Menu -->
+                    <div class="recap-sidebar">
+                        <h3
+                            style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid var(--border-light); padding-bottom: 8px; text-align: center;">
+                            Menu
+                        </h3>
+                        <div class="recap-menu-list" style="display: flex; flex-direction: column; gap: 8px;">
+                            <button id="recapMenuBtn-revenue" class="recap-menu-btn active"
+                                onclick="recapPageManager.switchTab('revenue')">
+                                <i class="fas fa-money-bill-wave"></i> Revenue
+                            </button>
+                            <button id="recapMenuBtn-profit" class="recap-menu-btn"
+                                onclick="recapPageManager.switchTab('profit')">
+                                <i class="fas fa-chart-line"></i> Profit
+                            </button>
+                            <button id="recapMenuBtn-customer" class="recap-menu-btn"
+                                onclick="recapPageManager.switchTab('customer')">
+                                <i class="fas fa-users"></i> List Customer
+                            </button>
+                            <button id="recapMenuBtn-insurance" class="recap-menu-btn"
+                                onclick="recapPageManager.switchTab('insurance')">
+                                <i class="fas fa-shield-alt"></i> Asuransi
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- MAIN RECAP AREA -->
+                    <div class="recap-main">
+                        <div class="page-header"
+                            style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h2 style="margin: 0; font-size: 1.4rem; font-weight: 700; color: var(--text-primary);">
+                                    <i class="fas fa-list-alt" style="color: var(--red); margin-right: 8px;"></i> Rekap
+                                    Data Worksheet
+                                </h2>
+                                <p class="last-updated"
+                                    style="margin: 2px 0 0; font-size: 0.78rem; color: var(--text-muted);">Visualisasi,
+                                    filter, dan rekapitulasi dinamis seluruh data worksheet</p>
+                            </div>
+                        </div>
+
+                        <!-- Filter and Search Bar (Transparent with padding, sitting right above the table) -->
+                        <div id="recapFilterBar"
+                            style="background: transparent; padding: 8px 0; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px; border: none; box-shadow: none;">
+                            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                                <select id="recapFilterYear" class="recap-pill-select">
+                                    <!-- Dynamically populated -->
+                                </select>
+                                <select id="recapFilterMonth" class="recap-pill-select"
+                                    onchange="recapPageManager.filterData()">
+                                    <!-- Dynamically populated -->
+                                </select>
+
+                            </div>
+
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="position: relative;">
+                                    <i class="fas fa-search"
+                                        style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.8rem;"></i>
+                                    <input type="text" id="recapSearch" placeholder="Cari data..."
+                                        style="padding: 8px 14px 8px 36px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.78rem; outline: none; width: 250px; transition: all 0.2s;"
+                                        oninput="recapPageManager.filterData()">
+                                </div>
+
+                                <div id="recapFilterContainer" class="recap-filter-container">
+                                    <button class="btn-pill" id="recapFilterAdvBtn"
+                                        onclick="recapPageManager.toggleAdvFilter()" title="Filter Data Lanjutan">
+                                        <i class="fas fa-filter"></i> Filter
+                                    </button>
+
+                                    <div id="recapFilterPopover" class="recap-filter-popover" style="display: none;">
+                                        <div class="recap-filter-popover-header">
+                                            <h4><i class="fas fa-filter"></i> Filter Lanjutan</h4>
+                                            <button class="recap-filter-close"
+                                                onclick="recapPageManager.toggleAdvFilter(true)">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+
+                                        <div class="recap-filter-group">
+                                            <label class="recap-filter-label" for="recapSortOrder">Pengurutan
+                                                Data</label>
+                                            <select id="recapSortOrder" class="recap-filter-select-adv">
+                                                <option value="desc">Data Terbaru</option>
+                                                <option value="asc">Data Terlama</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="recap-filter-group">
+                                            <label class="recap-filter-label"
+                                                for="recapAdvFilterPerusahaan">Perusahaan</label>
+                                            <select id="recapAdvFilterPerusahaan" class="recap-filter-select-adv">
+                                                <option value="all">Semua Perusahaan</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="recap-filter-group">
+                                            <label class="recap-filter-label" for="recapAdvFilterCustomer">Nama
+                                                Customer</label>
+                                            <select id="recapAdvFilterCustomer" class="recap-filter-select-adv">
+                                                <option value="all">Semua Customer</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="recap-filter-group">
+                                            <label class="recap-filter-label" for="recapAdvFilterSales">Sales</label>
+                                            <select id="recapAdvFilterSales" class="recap-filter-select-adv">
+                                                <option value="all">Semua Sales</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="recap-filter-group">
+                                            <label class="recap-filter-label"
+                                                for="recapAdvFilterService">Service</label>
+                                            <select id="recapAdvFilterService" class="recap-filter-select-adv">
+                                                <option value="all">Semua Service</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="recap-filter-group">
+                                            <label class="recap-filter-label">Rentang Waktu (Pickup)</label>
+                                            <div class="recap-filter-row">
+                                                <input type="date" id="recapAdvFilterStartDate"
+                                                    class="recap-filter-input-adv" placeholder="Mulai">
+                                                <input type="date" id="recapAdvFilterEndDate"
+                                                    class="recap-filter-input-adv" placeholder="Selesai">
+                                            </div>
+                                        </div>
+
+                                        <div class="recap-filter-group">
+                                            <label class="recap-filter-label">Rentang Revenue</label>
+                                            <div class="recap-filter-row">
+                                                <input type="number" id="recapAdvFilterMinRev"
+                                                    class="recap-filter-input-adv" placeholder="Min Rp">
+                                                <input type="number" id="recapAdvFilterMaxRev"
+                                                    class="recap-filter-input-adv" placeholder="Max Rp">
+                                            </div>
+                                        </div>
+
+                                        <div class="recap-filter-popover-footer">
+                                            <button class="recap-filter-btn-clear"
+                                                onclick="recapPageManager.clearAdvFilters()">Hapus</button>
+                                            <button class="recap-filter-btn-apply"
+                                                onclick="recapPageManager.applyAdvFilters()">Terapkan</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button class="btn-pill" onclick="recapPageManager.refreshData()" title="Refresh Data">
+                                    <i class="fas fa-sync-alt"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Table display card -->
+                        <div id="recapTableCard" class="card-glass"
+                            style="background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-light); box-shadow: var(--shadow-sm); overflow: hidden; display: flex; flex-direction: column; flex: 1; height: 100%;">
+                            <div style="overflow-x: auto; overflow-y: auto; flex: 1;">
+                                <table class="mini-table"
+                                    style="width: 100%; border-collapse: collapse; min-width: 800px;">
+                                    <thead id="recapTableHead" style="position: sticky; top: 0; z-index: 10;">
+                                        <!-- Dynamically injected -->
+                                    </thead>
+                                    <tbody id="recapTableBody">
+                                        <!-- Dynamically injected -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ========== YEARLY FILE PANEL ========== -->
+        <div id="filePanelOverlay" class="file-panel-overlay" style="display:none;">
+            <div class="file-panel-back-header">
+                <button class="btn-back-to-sheet" onclick="toggleFilePanel()">
+                    <i class="fas fa-arrow-left"></i> Kembali ke Spreadsheet
+                </button>
+            </div>
+
+            <!-- Start a new spreadsheet section removed -->
+
+
+            <div class="file-panel-fs-bottom">
+                <div class="fs-container">
+                    <div class="fs-header-row">
+                        <div class="fs-section-title">Recent Spreadsheet</div>
+                        <button class="btn-add-file-fs" onclick="yearlyFileManager.addNewFile()">
+                            <i class="fas fa-plus"></i> Tambah File Baru
+                        </button>
+                    </div>
+                    <div class="fs-list-header">
+                        <div class="fs-col-name">Name</div>
+                        <div class="fs-col-owner">Owned by anyone <i class="fas fa-caret-down"></i></div>
+                        <div class="fs-col-date">Last opened by me</div>
+                        <div class="fs-col-actions"><i class="fas fa-folder"></i> <i class="fas fa-sort-alpha-down"></i>
+                        </div>
+                    </div>
+                    <div id="yearlyFileList" class="fs-file-list">
+                        <!-- File list items will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ========== AI COPILOT CHAT ========== -->
+    <div id="aiChatFab" class="ai-chat-fab">
+        <i class="fas fa-robot"></i>
+    </div>
+
+    <div id="aiChatWidget" class="ai-chat-widget collapsed">
+        <div class="ai-chat-header">
+            <div class="ai-chat-title">
+                <i class="fas fa-robot"></i> AI Assistant
+            </div>
+            <div class="ai-chat-controls">
+                <button id="aiChatExpandBtn"><i class="fas fa-expand-alt"></i></button>
+                <button id="aiChatCloseBtn"><i class="fas fa-chevron-down"></i></button>
+            </div>
+        </div>
+        <div class="ai-chat-body">
+            <div id="aiChatMessages" class="ai-chat-messages">
+                <div class="ai-msg system">Halo! Saya AI Assistant Anda. Ada yang bisa saya bantu analisa hari ini?
+                </div>
+            </div>
+        </div>
+        <div class="ai-chat-footer">
+            <div class="ai-context-indicator" id="aiContextIndicator">
+                <i class="fas fa-table"></i> Konteks: Worksheet
+            </div>
+            <div class="ai-input-wrapper">
+                <input type="text" id="aiChatInput" placeholder="Tanya sesuatu tentang data...">
+                <button id="aiChatSendBtn"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="contextMenu" class="context-menu"></div>
+    <div id="columnContextMenu" class="context-menu"></div>
+
+    <script src="/static/finance/src/js/core/config.js"></script>
+    <script src="/static/finance/src/js/utils/helpers.js"></script>
+    <script src="/static/finance/src/js/utils/format.js"></script>
+    <script src="/static/finance/src/js/engine/formula.js"></script>
+    <script src="/static/finance/src/js/services/auth.js?v=2.2"></script>
+    <script src="/static/finance/src/js/services/database.js?v=2.7"></script>
+    <script src="/static/finance/src/js/services/yearly_file_manager.js"></script>
+    <script src="/static/finance/src/js/components/sheets.js?v=2.2"></script>
+    <script src="/static/finance/src/js/utils/calculations.js"></script>
+    <script src="/static/finance/src/js/components/toolbar.js"></script>
+    <script src="/static/finance/src/js/components/history.js"></script>
+    <script src="/static/finance/src/js/components/selection.js"></script>
+    <script src="/static/finance/src/js/components/keyboard.js"></script>
+    <script src="/static/finance/src/js/components/table.js?v=2.7"></script>
+    <script src="/static/finance/src/js/components/chart.js"></script>
+    <script src="/static/finance/src/js/components/recap.js"></script>
+    <script src="/static/finance/src/js/components/chat.js"></script>
+    <script src="/static/finance/src/js/components/monitoring.js"></script>
+    <script src="/static/finance/src/js/components/resizer.js"></script>
+    <script src="/static/finance/src/js/core/app.js?v=2.2"></script>
+</body>
+
+</html>

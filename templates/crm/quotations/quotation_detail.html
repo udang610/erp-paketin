@@ -1,0 +1,318 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ quotation.quotation_number }}{% endblock %}
+{% block page_title %}Detail Quotation{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="mb-3">
+        <a href="{% url 'crm:quotation-list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="ph-duotone ph-arrow-left me-1"></i> Kembali
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card card-custom">
+                <div class="card-header card-header-custom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="ph-duotone ph-file-text me-2"></i>{{ quotation.quotation_number }}</h5>
+                    <div>
+                        <a href="{% url 'crm:quotation-print' quotation.pk %}" class="btn btn-sm btn-outline-secondary me-1" target="_blank"><i class="ph-duotone ph-printer me-1"></i>Cetak PDF</a>
+                        <a href="{% url 'crm:quotation-update' quotation.pk %}" class="btn btn-sm btn-outline-primary me-1"><i class="ph-duotone ph-pencil-simple me-1"></i>Edit</a>
+                        {% if is_admin %}
+                        <a href="{% url 'crm:quotation-delete' quotation.pk %}" class="btn btn-sm btn-outline-danger"><i class="ph-duotone ph-trash me-1"></i>Hapus</a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Client</label>
+                            <p class="fw-semibold">{{ quotation.lead.client.company_name }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Layanan</label>
+                            <p>
+                                {% for svc in quotation.get_service_display_list %}
+                                <span class="badge bg-danger-subtle text-danger me-1">{{ svc }}</span>
+                                {% empty %}
+                                <span class="text-muted">-</span>
+                                {% endfor %}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Asal</label>
+                            <p class="fw-semibold">{{ quotation.origin }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Tujuan</label>
+                            <p class="fw-semibold">{{ quotation.destination }}</p>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h6 class="mb-3">Dimensi & Berat</h6>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="metric-card text-center">
+                                <span class="metric-label">Panjang</span>
+                                <span class="metric-value">{{ quotation.panjang }} cm</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-card text-center">
+                                <span class="metric-label">Lebar</span>
+                                <span class="metric-value">{{ quotation.lebar }} cm</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-card text-center">
+                                <span class="metric-label">Tinggi</span>
+                                <span class="metric-value">{{ quotation.tinggi }} cm</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-card text-center">
+                                <span class="metric-label">Berat Aktual</span>
+                                <span class="metric-value">{{ quotation.actual_weight }} kg</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <div class="metric-card text-center">
+                                <span class="metric-label">Berat Volumetrik (P×L×T÷6000)</span>
+                                <span class="metric-value text-danger">{{ quotation.volumetric_weight }} kg</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="metric-card text-center">
+                                <span class="metric-label">Jumlah Koli</span>
+                                <span class="metric-value">{{ quotation.quantity }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if quotation.items.exists %}
+                    <h6 class="mb-3 mt-4 text-secondary">Detail Item Tambahan (Multiple Colly)</h6>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Koli</th>
+                                    <th>Berat Aktual (kg)</th>
+                                    <th>Panjang (cm)</th>
+                                    <th>Lebar (cm)</th>
+                                    <th>Tinggi (cm)</th>
+                                    <th>Packing</th>
+                                    <th>Deskripsi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in quotation.items.all %}
+                                <tr>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>{{ item.actual_weight }}</td>
+                                    <td>{{ item.panjang }}</td>
+                                    <td>{{ item.lebar }}</td>
+                                    <td>{{ item.tinggi }}</td>
+                                    <td>{{ item.packing }}</td>
+                                    <td>{{ item.description }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-2 text-end">
+                        <button class="btn btn-sm btn-link text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#calcBreakdownDetail">
+                            <i class="ph-bold ph-info"></i> Tampilkan Rincian Perhitungan Berat
+                        </button>
+                    </div>
+                    <div class="collapse mb-3" id="calcBreakdownDetail">
+                        <div class="card card-body bg-light border-0 small font-monospace">
+                            <strong>Barang Utama:</strong><br>
+                            Volumetrik: ({{ quotation.panjang|default:"0" }} x {{ quotation.lebar|default:"0" }} x {{ quotation.tinggi|default:"0" }}) / 6000 = {{ quotation.panjang|default:"0"|add:"0" }} * {{ quotation.lebar|default:"0"|add:"0" }} * {{ quotation.tinggi|default:"0"|add:"0" }} / 6000<br>
+                            Chargeable: Max(Vol vs Aktual {{ quotation.actual_weight|default:"0" }}) x {{ quotation.quantity }} Koli<br>
+                            
+                            {% if quotation.items.exists %}
+                            <br><strong>Barang Tambahan:</strong><br>
+                            {% for item in quotation.items.all %}
+                            - Item {{ forloop.counter }}: Vol(({{ item.panjang|default:"0" }} x {{ item.lebar|default:"0" }} x {{ item.tinggi|default:"0" }}) / 6000) vs Act({{ item.actual_weight|default:"0" }} kg) x {{ item.quantity }} Koli<br>
+                            {% endfor %}
+                            {% endif %}
+                            
+                            <br><span class="text-danger fw-bold">TOTAL CHARGEABLE WEIGHT = {{ quotation.volumetric_weight }} kg</span>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h6 class="mb-3">Harga</h6>
+                    <div class="table-responsive">
+                        <table class="table table-bordered mb-0">
+                            <tbody>
+                                <tr>
+                                    <td class="text-muted">Harga per Kg</td>
+                                    <td class="text-end">Rp {{ quotation.price_per_kg|floatformat:"0"|intcomma }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Asuransi</td>
+                                    <td class="text-end">Rp {{ quotation.insurance|floatformat:"0"|intcomma }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Packing</td>
+                                    <td class="text-end">Rp {{ quotation.packing|floatformat:"0"|intcomma }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted text-success">Diskon</td>
+                                    <td class="text-end text-success">- Rp {{ quotation.discount|floatformat:"0"|intcomma }}</td>
+                                </tr>
+                                <tr class="table-danger">
+                                    <td class="fw-bold">Estimasi Total Harga</td>
+                                    <td class="text-end fw-bold fs-5">Rp {{ quotation.total_price|floatformat:"0"|intcomma }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {% if quotation.notes %}
+                    <hr>
+                    <label class="form-label text-muted small">Catatan</label>
+                    <p>{{ quotation.notes }}</p>
+                    {% endif %}
+
+                    {% if quotation.attachment %}
+                    <hr>
+                    <h6 class="mb-3">Lampiran Penawaran</h6>
+                    
+                    <div class="mb-3">
+                        {% if quotation.is_attachment_image %}
+                            <a href="{{ quotation.attachment.url }}" target="_blank">
+                                <img src="{{ quotation.attachment.url }}" alt="Lampiran" class="img-fluid rounded border shadow-sm" style="max-height: 400px; object-fit: contain;">
+                            </a>
+                        {% elif quotation.is_attachment_pdf %}
+                            <!-- PDF.js Container -->
+                            <div id="pdf-container" style="height: auto; background: #525659; text-align: center; padding: 20px;" class="border rounded shadow-sm">
+                                <div class="spinner-border text-light my-5" id="pdf-loading" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+
+                            <!-- Muat library PDF.js dari CDN -->
+                            <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+                            <script>
+                                document.addEventListener("DOMContentLoaded", function() {
+                                    // Set worker path
+                                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                                    
+                                    const url = '{{ quotation.attachment.url }}';
+                                    const container = document.getElementById('pdf-container');
+                                    const loading = document.getElementById('pdf-loading');
+
+                                    // Render PDF
+                                    pdfjsLib.getDocument(url).promise.then(pdf => {
+                                        loading.style.display = 'none';
+                                        
+                                        // Render semua halaman PDF satu per satu
+                                        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                                            pdf.getPage(pageNum).then(page => {
+                                                const scale = 1.5; // Kualitas ketajaman zoom
+                                                const viewport = page.getViewport({ scale: scale });
+
+                                                const canvas = document.createElement('canvas');
+                                                const ctx = canvas.getContext('2d');
+                                                canvas.height = viewport.height;
+                                                canvas.width = viewport.width;
+                                                canvas.className = 'mb-3 shadow bg-white';
+                                                canvas.style.maxWidth = '100%';
+                                                canvas.style.height = 'auto';
+
+                                                container.appendChild(canvas);
+
+                                                const renderContext = {
+                                                    canvasContext: ctx,
+                                                    viewport: viewport
+                                                };
+                                                page.render(renderContext);
+                                            });
+                                        }
+                                    }).catch(error => {
+                                        loading.style.display = 'none';
+                                        container.innerHTML = '<div class="alert alert-danger m-3">Gagal memuat PDF. <a href="' + url + '">Klik di sini untuk download file</a></div>';
+                                        console.error('Error memuat PDF:', error);
+                                    });
+                                });
+                            </script>
+                        {% elif quotation.is_attachment_excel %}
+                            <!-- Excel.js Container -->
+                            <div class="border rounded shadow-sm bg-white p-3 mb-3" style="max-height: 500px; overflow: auto;">
+                                <div class="spinner-border text-primary my-4 mx-auto d-block" id="excel-loading" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <div id="excel-table-wrapper" class="table-responsive"></div>
+                            </div>
+                            
+                            <!-- Muat library SheetJS dari CDN -->
+                            <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+                            <script>
+                                document.addEventListener("DOMContentLoaded", function() {
+                                    const url = '{{ quotation.attachment.url }}';
+                                    fetch(url)
+                                        .then(res => res.arrayBuffer())
+                                        .then(ab => {
+                                            const wb = XLSX.read(ab, {type: "array"});
+                                            // Ambil sheet pertama
+                                            const wsName = wb.SheetNames[0];
+                                            const ws = wb.Sheets[wsName];
+                                            // Konversi ke tag <table> HTML
+                                            let html = XLSX.utils.sheet_to_html(ws, { id: "excel-table" });
+                                            
+                                            document.getElementById('excel-loading').style.display = 'none';
+                                            document.getElementById('excel-table-wrapper').innerHTML = html;
+                                            
+                                            // Tambahkan styling Bootstrap pada tabel hasil render
+                                            const table = document.getElementById("excel-table");
+                                            if (table) {
+                                                table.className = "table table-bordered table-striped table-sm mb-0 align-middle";
+                                                table.style.whiteSpace = "nowrap";
+                                            }
+                                        })
+                                        .catch(err => {
+                                            console.error("Error loading Excel:", err);
+                                            document.getElementById('excel-loading').style.display = 'none';
+                                            document.getElementById('excel-table-wrapper').innerHTML = '<div class="alert alert-danger mb-0">Gagal memuat preview Excel. File mungkin diproteksi atau format tidak didukung.</div>';
+                                        });
+                                });
+                            </script>
+                        {% else %}
+                            <div class="alert alert-secondary d-flex align-items-center">
+                                <i class="ph-duotone ph-file-text fs-4 me-2"></i>
+                                <div>File lampiran tidak dapat di-preview secara langsung. Silakan klik tombol di bawah untuk membukanya.</div>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <a href="{{ quotation.attachment.url }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                        <i class="ph-duotone ph-download-simple me-1"></i> Download / Buka Lampiran
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card card-custom">
+                <div class="card-body">
+                    <small class="text-muted">
+                        <i class="ph-duotone ph-user me-1"></i> PIC: {{ quotation.owner.get_full_name|default:quotation.owner.username }}<br>
+                        <i class="ph-duotone ph-calendar-blank me-1"></i> Dibuat: {{ quotation.created_at|date:"d M Y H:i" }}<br>
+                        <i class="ph-duotone ph-pencil-simple me-1"></i> Update: {{ quotation.updated_at|date:"d M Y H:i" }}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

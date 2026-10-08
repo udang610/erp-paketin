@@ -1,0 +1,470 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Invoice & Billing - ERP Paketin{% endblock %}
+{% block page_title %}Invoice{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Actions Bar (Search + Filter Pop-up + Actions) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <form class="d-flex align-items-center gap-2" method="get">
+            <input type="hidden" name="main_tab" value="{{ main_tab }}">
+            <input type="hidden" name="tab" value="{{ tab }}">
+            <!-- Search Input -->
+            <div class="search-box-clean d-flex align-items-center bg-white px-3" style="width: 280px; max-width: 320px; height: 38px;">
+                <i class="ph-bold ph-magnifying-glass me-2 text-muted" style="font-size: 1rem; color: #64748b;"></i>
+                <input type="text" name="q" class="border-0 shadow-none p-0 bg-transparent flex-grow-1" placeholder="Cari invoice, klien, vendor..." value="{{ search|default:'' }}" style="outline: none !important; font-size: 0.88rem; color: #1e293b; height: 100%;">
+            </div>
+
+            <!-- Filter Button with Pop-up Dropdown -->
+            <div class="dropdown">
+                <button class="btn shadow-sm position-relative rounded-3 d-inline-flex align-items-center gap-2 px-3 border" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Filter Invoice" style="height: 38px; font-size: 0.88rem; font-weight: 600; color: #1e293b; background-color: #ffffff !important; border-color: #cbd5e1 !important;">
+                    <i class="ph-bold ph-faders fs-5" style="color: #1e293b;"></i>
+                    <span>Filter</span>
+                    {% if search or date_from or date_to %}
+                    <span class="active-filter-dot" title="Filter Aktif"></span>
+                    {% endif %}
+                </button>
+                <div class="dropdown-menu filter-dropdown-menu dropdown-menu-start p-3 shadow-lg border-0" style="width: 300px; z-index: 1050; border-radius: 12px; border: 1px solid #e2e8f0 !important;">
+                    <h6 class="dropdown-header px-0 text-dark mb-2"><i class="ph-bold ph-faders me-2 text-dark"></i>Filter Invoice</h6>
+                    
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary mb-1">Dari Tanggal</label>
+                            <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary mb-1">Sampai</label>
+                            <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to }}">
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                        <a href="{% url 'finance:invoice_list' %}?main_tab={{ main_tab }}" class="btn btn-sm btn-link text-decoration-none text-secondary p-0 fw-semibold">Reset</a>
+                        <button type="submit" class="btn btn-sm btn-danger px-3 fw-bold shadow-sm">Terapkan</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div class="d-flex gap-2">
+            <a href="{% url 'finance:ldp_list' %}" class="btn btn-outline-secondary bg-white px-3 fw-semibold shadow-sm d-inline-flex align-items-center" style="height: 38px;">
+                <i class="ph-bold ph-clipboard-text me-1"></i> Buka LDP Batching
+            </a>
+            <a href="{% url 'finance:invoice_create' %}" class="btn btn-danger px-4 fw-bold shadow-sm d-inline-flex align-items-center" style="height: 38px;">
+                <i class="ph-bold ph-plus me-1"></i> Buat Baru
+            </a>
+        </div>
+    </div>
+
+    <style>
+        /* Clean Table Styling */
+        .table-premium {
+            border-collapse: separate;
+            border-spacing: 0;
+            border: none;
+        }
+        .table-premium thead th {
+            background-color: #f8fafc !important;
+            color: #475569;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+            border-bottom: 1px solid #eaedf1 !important;
+            padding: 14px 16px;
+            vertical-align: middle;
+        }
+        .table-premium tbody td {
+            padding: 12px 16px;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 13px;
+            color: #1e293b;
+            background-color: #ffffff;
+            transition: background-color 0.2s ease;
+        }
+        .table-premium tbody tr:hover td {
+            background-color: #f8fafc;
+        }
+        .table-premium tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Clean Nav Tabs with Uniform Thick Vertical Dividers (Exact Pickup Pattern) */
+        .nav-tabs-custom {
+            background-color: transparent !important;
+            padding: 0 !important;
+            border-bottom: 1px solid #eaedf1 !important;
+            gap: 0 !important;
+            margin-bottom: 0 !important;
+            display: flex;
+            align-items: stretch;
+        }
+        .nav-tabs-custom .nav-item {
+            position: relative;
+            margin-bottom: -1px;
+            display: flex;
+            align-items: center;
+        }
+        .nav-tabs-custom .nav-item:first-child::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 1px;
+            height: 16px;
+            background-color: #94a3b8;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 1;
+        }
+        .nav-tabs-custom .nav-item:first-child:has(.active)::before,
+        .nav-tabs-custom .nav-item:first-child:has(.nav-link:hover)::before {
+            opacity: 0;
+        }
+        .nav-tabs-custom .nav-item::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 1px;
+            height: 16px;
+            background-color: #94a3b8;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 1;
+        }
+        .nav-tabs-custom .nav-item:has(.active)::after,
+        .nav-tabs-custom .nav-item:has(+ .nav-item .active)::after,
+        .nav-tabs-custom .nav-item:has(.nav-link:hover)::after,
+        .nav-tabs-custom .nav-item:has(+ .nav-item .nav-link:hover)::after {
+            opacity: 0;
+        }
+        .nav-tabs-custom .nav-link {
+            background-color: transparent !important;
+            border: 1px solid transparent !important;
+            border-bottom: 1px solid transparent !important;
+            color: #334155 !important;
+            font-weight: 600;
+            border-radius: 10px 10px 0 0 !important;
+            padding: 0 20px !important;
+            height: 42px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            transition: all 0.2s ease-in-out;
+            box-shadow: none !important;
+            position: relative;
+            white-space: nowrap;
+        }
+        .nav-tabs-custom .nav-link i {
+            opacity: 0.9 !important;
+        }
+        .nav-tabs-custom .nav-link:hover {
+            background-color: rgba(241, 245, 249, 0.8) !important;
+            color: #0f172a !important;
+        }
+        .nav-tabs-custom .nav-link.active {
+            background-color: #f8fafc !important;
+            border: 1px solid #eaedf1 !important;
+            border-bottom: 1px solid #f8fafc !important;
+            color: #0f172a !important;
+            font-weight: 700;
+            box-shadow: none !important;
+            z-index: 2;
+        }
+    </style>
+
+    <!-- Top-Level Multi-Tabs (Matching Pickup List) -->
+    <ul class="nav nav-tabs nav-tabs-custom" id="invoiceMainTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <a href="?main_tab=client{% if search %}&q={{ search }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}" class="nav-link {% if main_tab == 'client' %}active{% endif %} px-4 py-2 fw-semibold">
+                <i class="ph-duotone ph-receipt me-2 text-danger"></i> Invoice Klien (AR)
+                <span class="badge bg-danger text-white ms-2 rounded-pill fw-bold">{{ total_client_all }}</span>
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a href="?main_tab=vendor{% if search %}&q={{ search }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}" class="nav-link {% if main_tab == 'vendor' %}active{% endif %} px-4 py-2 fw-semibold">
+                <i class="ph-duotone ph-truck me-2 text-primary"></i> Invoice Vendor (AP)
+                <span class="badge bg-danger text-white ms-2 rounded-pill fw-bold">{{ total_vendor_all }}</span>
+            </a>
+        </li>
+    </ul>
+
+    <!-- Tab Contents Container -->
+    <div class="tab-content" id="invoiceTabsContent">
+        {% if main_tab == 'client' %}
+        <!-- TAB 1: INVOICE KLIEN (AR) -->
+        <div class="tab-pane fade show active" id="tabClient" role="tabpanel">
+            <!-- Table Client Invoices -->
+            <div class="table-responsive shadow-sm mt-0" style="border: 1px solid #eaedf1; border-top: none; border-radius: 0 0 16px 16px; background-color: #fff;">
+                <table class="table table-premium mb-0" id="clientInvoiceTable">
+                    <thead>
+                        <tr>
+                            <th class="ps-4" style="width: 40px;">
+                                <div class="form-check d-flex justify-content-center">
+                                    <input class="form-check-input" type="checkbox" id="selectAllClientInv">
+                                </div>
+                            </th>
+                            <th>No. Invoice</th>
+                            <th>Kustomer / Perusahaan</th>
+                            <th>Periode Tagihan</th>
+                            <th class="text-end">Total Tagihan</th>
+                            <th class="text-end">Terbayar</th>
+                            <th class="text-end">Sisa Piutang</th>
+                            <th>Dibuat</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-center pe-4">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for inv in invoices %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="form-check d-flex justify-content-center">
+                                    <input class="form-check-input row-inv-check" type="checkbox" value="{{ inv.id }}">
+                                </div>
+                            </td>
+                            <td>
+                                <a href="{% url 'finance:invoice_detail' inv.id %}" class="fw-bold text-dark text-decoration-none">
+                                    {{ inv.invoice_number }}
+                                </a>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark">{{ inv.client_name }}</div>
+                                {% if inv.pic_invoice %}
+                                    <small class="text-muted"><i class="ph-bold ph-user me-1"></i>PIC: {{ inv.pic_invoice }}</small>
+                                {% endif %}
+                            </td>
+                            <td class="text-muted small">
+                                {% if inv.periode_awal and inv.periode_akhir %}
+                                    {{ inv.periode_awal|date:"d/m/Y" }} - {{ inv.periode_akhir|date:"d/m/Y" }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="text-end fw-bold text-dark">
+                                Rp {{ inv.total_amount|floatformat:0|intcomma }}
+                            </td>
+                            <td class="text-end text-dark fw-semibold">
+                                Rp {{ inv.amount_paid|floatformat:0|intcomma }}
+                            </td>
+                            <td class="text-end fw-bold {% if inv.sisa_tagihan > 0 %}text-danger{% else %}text-muted{% endif %}">
+                                Rp {{ inv.sisa_tagihan|floatformat:0|intcomma }}
+                            </td>
+                            <td class="text-muted small">
+                                {{ inv.created_at|date:"d/m/Y H:i" }}
+                            </td>
+                            <td class="text-center">
+                                {% if inv.status == 'DRAFT' %}
+                                    <span class="badge bg-secondary text-white px-3 py-1 rounded-pill fw-bold" style="font-size: 0.72rem;">DRAFT</span>
+                                {% elif inv.status == 'SENT' %}
+                                    <span class="badge bg-primary text-white px-3 py-1 rounded-pill fw-bold" style="font-size: 0.72rem;">TERKIRIM</span>
+                                {% elif inv.status == 'PARTIAL' %}
+                                    <span class="badge bg-warning text-dark px-3 py-1 rounded-pill fw-bold" style="font-size: 0.72rem;">SEBAGIAN</span>
+                                {% elif inv.status == 'PAID' %}
+                                    <span class="badge bg-success text-white px-3 py-1 rounded-pill fw-bold" style="font-size: 0.72rem;">LUNAS</span>
+                                {% elif inv.status == 'VOID' %}
+                                    <span class="badge bg-dark text-white px-3 py-1 rounded-pill fw-bold" style="font-size: 0.72rem;">DIBATALKAN</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center pe-4">
+                                <div class="dropdown">
+                                    <button class="btn btn-action-table dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Aksi">
+                                        <i class="ph-bold ph-list"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border-radius: 10px; border: 1px solid #eaedf1; font-size: 0.85rem;">
+                                        <li>
+                                            <a class="dropdown-item py-2" href="{% url 'finance:invoice_detail' inv.id %}">
+                                                <i class="ph-bold ph-eye text-primary me-2"></i> Detail / Rekonsiliasi
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item py-2" href="{% url 'finance:invoice_pdf' inv.id %}" target="_blank">
+                                                <i class="ph-bold ph-printer text-dark me-2"></i> Cetak PDF
+                                            </a>
+                                        </li>
+                                        {% if request.user.is_superuser %}
+                                        <li><hr class="dropdown-divider my-1"></li>
+                                        <li>
+                                            <a class="dropdown-item py-2 text-danger" href="javascript:void(0)" onclick="confirmDeleteInvoice('{{ inv.id }}', '{{ inv.invoice_number }}')">
+                                                <i class="ph-bold ph-trash me-2"></i> Hapus Invoice
+                                            </a>
+                                        </li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="10" class="text-center py-5 text-muted">
+                                <i class="ph-duotone ph-receipt fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                                Tidak ada data invoice klien yang ditemukan.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if invoices.has_other_pages %}
+            <div class="d-flex justify-content-between align-items-center mt-3 px-2">
+                <span class="text-muted small">Menampilkan halaman {{ invoices.number }} dari {{ invoices.paginator.num_pages }}</span>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        {% if invoices.has_previous %}
+                        <li class="page-item"><a class="page-link" href="?main_tab=client&page={{ invoices.previous_page_number }}{% if search %}&q={{ search }}{% endif %}{% if tab %}&tab={{ tab }}{% endif %}">&laquo;</a></li>
+                        {% endif %}
+                        {% for i in invoices.paginator.page_range %}
+                            {% if invoices.number == i %}
+                            <li class="page-item active"><span class="page-link bg-danger border-danger">{{ i }}</span></li>
+                            {% elif i > invoices.number|add:'-3' and i < invoices.number|add:'3' %}
+                            <li class="page-item"><a class="page-link" href="?main_tab=client&page={{ i }}{% if search %}&q={{ search }}{% endif %}{% if tab %}&tab={{ tab }}{% endif %}">{{ i }}</a></li>
+                            {% endif %}
+                        {% endfor %}
+                        {% if invoices.has_next %}
+                        <li class="page-item"><a class="page-link" href="?main_tab=client&page={{ invoices.next_page_number }}{% if search %}&q={{ search }}{% endif %}{% if tab %}&tab={{ tab }}{% endif %}">&raquo;</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+
+        {% else %}
+        <!-- TAB 2: INVOICE VENDOR (AP) -->
+        <div class="tab-pane fade show active" id="tabVendor" role="tabpanel">
+            <!-- Table Vendor Bills / Costs -->
+            <div class="table-responsive shadow-sm mt-0" style="border: 1px solid #eaedf1; border-top: none; border-radius: 0 0 16px 16px; background-color: #fff;">
+                <table class="table table-premium mb-0" id="vendorInvoiceTable">
+                    <thead>
+                        <tr>
+                            <th class="ps-4" style="width: 40px;">#</th>
+                            <th>Nama Vendor</th>
+                            <th>No. Resi / SPK Vendor</th>
+                            <th>Rute / Pengiriman</th>
+                            <th>Moda Transportasi</th>
+                            <th class="text-end">Biaya HPP / Tagihan (Rp)</th>
+                            <th>Catatan</th>
+                            <th class="text-center">Status Verifikasi</th>
+                            <th class="text-center pe-4">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cost in vendor_costs %}
+                        <tr>
+                            <td class="ps-4 text-muted small">{{ forloop.counter }}</td>
+                            <td>
+                                <div class="fw-bold text-dark">{{ cost.vendor.name }}</div>
+                                {% if cost.vendor.contact_person %}
+                                    <small class="text-muted"><i class="ph-bold ph-user me-1"></i>{{ cost.vendor.contact_person }} ({{ cost.vendor.phone|default:"-" }})</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="fw-bold text-dark">{{ cost.transaction.awb|default:"-" }}</span>
+                                {% if cost.transaction.shipment %}
+                                    <div class="small text-muted">{{ cost.transaction.shipment.resi_number }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="small">
+                                <div><b>Asal:</b> {{ cost.transaction.asal_pickup|default:"-" }}</div>
+                                <div><b>Tujuan:</b> {{ cost.transaction.tujuan|default:"-" }}</div>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border">{{ cost.vendor.primary_transport_mode|default:cost.transaction.via|default:"DARAT" }}</span>
+                            </td>
+                            <td class="text-end fw-bold text-danger">
+                                Rp {{ cost.cost|floatformat:0|intcomma }}
+                            </td>
+                            <td class="text-muted small">
+                                {{ cost.notes|default:"-" }}
+                            </td>
+                            <td class="text-center">
+                                {% if cost.transaction.cost_verification_status == 'verified' %}
+                                    <span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold" style="font-size: 0.72rem;">TERVERIFIKASI</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark rounded-pill px-3 py-1 fw-bold" style="font-size: 0.72rem;">PENDING</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center pe-4">
+                                <a href="{% url 'finance:worksheet' %}" class="btn btn-sm btn-light border px-2 py-1" title="Lihat di Finance Worksheet">
+                                    <i class="ph-bold ph-arrow-square-out text-primary"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center py-5 text-muted">
+                                <i class="ph-duotone ph-truck fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                                Belum ada data tagihan vendor / vendor cost.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if vendor_costs.has_other_pages %}
+            <div class="d-flex justify-content-between align-items-center mt-3 px-2">
+                <span class="text-muted small">Menampilkan halaman {{ vendor_costs.number }} dari {{ vendor_costs.paginator.num_pages }}</span>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        {% if vendor_costs.has_previous %}
+                        <li class="page-item"><a class="page-link" href="?main_tab=vendor&page={{ vendor_costs.previous_page_number }}{% if search %}&q={{ search }}{% endif %}">&laquo;</a></li>
+                        {% endif %}
+                        {% for i in vendor_costs.paginator.page_range %}
+                            {% if vendor_costs.number == i %}
+                            <li class="page-item active"><span class="page-link bg-primary border-primary">{{ i }}</span></li>
+                            {% elif i > vendor_costs.number|add:'-3' and i < vendor_costs.number|add:'3' %}
+                            <li class="page-item"><a class="page-link" href="?main_tab=vendor&page={{ i }}{% if search %}&q={{ search }}{% endif %}">{{ i }}</a></li>
+                            {% endif %}
+                        {% endfor %}
+                        {% if vendor_costs.has_next %}
+                        <li class="page-item"><a class="page-link" href="?main_tab=vendor&page={{ vendor_costs.next_page_number }}{% if search %}&q={{ search }}{% endif %}">&raquo;</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Hidden form for Delete Invoice Submission -->
+<form id="deleteInvoiceForm" method="post" action="" style="display: none;">
+    {% csrf_token %}
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var checkAll = document.getElementById('selectAllClientInv');
+    if (checkAll) {
+        checkAll.addEventListener('change', function() {
+            document.querySelectorAll('.row-inv-check').forEach(cb => { cb.checked = checkAll.checked; });
+        });
+    }
+});
+
+function confirmDeleteInvoice(invoiceId, invoiceNumber) {
+    const form = document.getElementById('deleteInvoiceForm');
+    form.action = '/finance/invoices/' + invoiceId + '/delete/';
+    PaketinModal.confirm({
+        title: 'Hapus invoice ini secara permanen?',
+        description: 'Invoice ' + invoiceNumber + ' akan dihapus permanen beserta seluruh rincian penagihannya. Tindakan ini tidak dapat dibatalkan.',
+        theme: 'danger',
+        confirmText: 'Hapus Permanen',
+        cancelText: 'Batal',
+        icon: 'ph-trash',
+        form: form
+    });
+}
+</script>
+{% endblock %}

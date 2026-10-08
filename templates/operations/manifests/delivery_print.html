@@ -1,0 +1,153 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Delivery Runsheet - {{ manifest.manifest_number }}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Libre+Barcode+39&display=swap');
+        @page { size: A4; margin: 0; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 8mm 15mm 12mm;
+            font-family: Arial, sans-serif;
+            font-size: 9px;
+            color: #000;
+            line-height: 1.12;
+        }
+        .header-table, .info-table, .signature-table, .data-table {
+            border-collapse: collapse;
+        }
+        .header-table, .info-table, .signature-table, .data-table { width: 88%; margin-left: auto; margin-right: auto; }
+        .header-table td { vertical-align: middle; }
+        .logo-cell { width: 22%; text-align: left; }
+        .logo-cell img { width: 34mm; height: auto; }
+        .title-cell { width: 56%; text-align: center; }
+        .title { font-size: 17px; font-weight: bold; white-space: nowrap; }
+        .subtitle { font-size: 8px; margin-top: 1px; }
+        .spacer-cell { width: 22%; }
+        .barcode { font-family: 'Libre Barcode 39', cursive; font-size: 28px; line-height: .65; white-space: nowrap; margin: 2mm auto 0; display: inline-block; transform: scaleX(.65); transform-origin: center; }
+        .barcode-label { font-size: 6px; margin-top: 2px; }
+        .info-table { margin-top: 9mm; margin-bottom: 4mm; table-layout: fixed; }
+        .info-table td { padding: 1px 0; vertical-align: top; }
+        .info-table .label { width: 22%; white-space: nowrap; }
+        .info-table .value { width: 28%; }
+        .info-table .label-right { width: 22%; padding-left: 4mm; white-space: nowrap; }
+        .data-table { table-layout: fixed; font-size: 7px; }
+        .data-table th, .data-table td { border: 1px solid #222; padding: 3px 2px; text-align: center; vertical-align: middle; }
+        .data-table th { font-weight: bold; }
+        .data-table .left { text-align: left; }
+        .data-table .no { width: 6%; }
+        .data-table .resi { width: 14%; }
+        .data-table .package-id { width: 15%; }
+        .data-table .receiver { width: 14%; }
+        .data-table .destination { width: 11%; }
+        .data-table .service { width: 12%; }
+        .data-table .colly { width: 6%; }
+        .data-table .weight { width: 7%; }
+        .data-table .type { width: 8%; }
+        .data-table .description { width: 13%; }
+        .data-table tfoot td { font-weight: bold; }
+        .signature-table { margin-top: 8mm; font-weight: bold; }
+        .signature-table td { width: 50%; vertical-align: top; text-align: center; }
+        .signature-space { height: 19mm; }
+        .signature-name { font-weight: normal; font-size: 8px; }
+        .muted { color: #222; }
+    </style>
+</head>
+<body>
+    <table class="header-table">
+        <tr>
+            <td class="logo-cell"><img src="{% static 'img/logo-surat.webp' %}" alt="Paketin Cargo"></td>
+            <td class="title-cell">
+                <div class="title">Delivery Runsheet</div>
+                <div class="subtitle">PT. Amanah Cargo Jaya Mandiri</div>
+                <div class="barcode">*{{ manifest.manifest_number }}*</div>
+                <div class="barcode-label">Delivery No : {{ manifest.manifest_number }}</div>
+            </td>
+            <td class="spacer-cell"></td>
+        </tr>
+    </table>
+
+    <table class="info-table">
+        <tr>
+            <td class="label">No. Manifest</td><td class="value">: {{ manifest.manifest_number }}</td>
+            <td class="label-right">Dibuat Oleh</td><td>: {{ manifest.created_by.username|default:"System" }}</td>
+        </tr>
+        <tr>
+            <td class="label">Tanggal Manifest</td><td class="value">: {{ manifest.date|date:"Y-m-d" }}{% if manifest.created_at %} {{ manifest.created_at|date:"H:i:s" }}{% endif %}</td>
+            <td class="label-right">Tanggal Cetak</td><td>: {% now "d M Y H:i" %}</td>
+        </tr>
+        <tr>
+            <td class="label">Kurir</td>
+            <td class="value">: {% if manifest.driver %}{{ manifest.driver.get_full_name|default:manifest.driver.username }}{% elif manifest.vendor %}{{ manifest.vendor.name }}{% else %}-{% endif %}</td>
+            <td class="label-right">Total COD</td><td>: {{ cod_count }} awb - Rp {{ total_cod|floatformat:2 }}</td>
+        </tr>
+    </table>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th class="no">No.</th><th class="resi">Resi NO.</th><th class="package-id">Package id</th>
+                <th class="receiver">Nama Penerima</th><th class="destination">Tujuan</th>
+                <th class="service">Jenis<br>Layanan</th><th class="service">DO<br>Balik</th><th class="colly">Koli</th>
+                <th class="weight">Berat<br>(Kg)</th><th class="type">Tipe<br>Kiriman</th><th class="description">Keterangan</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for shipment in shipments %}
+            {% with items=shipment.items.all items_count=shipment.items.count %}
+                {% if items_count > 0 %}
+                    {% for item in items %}
+                    <tr>
+                        {% if forloop.first %}
+                        <td rowspan="{{ items_count }}">{{ forloop.parentloop.counter }}</td>
+                        <td rowspan="{{ items_count }}">{{ shipment.resi_number }}</td>
+                        {% endif %}
+                        <td>{{ shipment.resi_number }}-{{ forloop.counter|stringformat:"04d" }}</td>
+                        {% if forloop.first %}
+                        <td class="left" rowspan="{{ items_count }}">{{ shipment.receiver_name|default:"-"|slice:":26" }}</td>
+                        <td rowspan="{{ items_count }}">{{ shipment.get_city_dest|default:"-"|slice:":15" }}</td>
+                        <td rowspan="{{ items_count }}">{{ shipment.get_service_type_display|default:"-"|upper }}</td>
+                        <td rowspan="{{ items_count }}">{% if shipment.is_do_balik %}<b style="color:red;">YA</b>{% else %}-{% endif %}</td>
+                        {% endif %}
+                        <td>{{ item.quantity|default:"1" }}</td>
+                        <td>{{ item.actual_weight|default:"0"|floatformat:0 }}</td>
+                        {% if forloop.first %}<td rowspan="{{ items_count }}">{{ shipment.get_shipment_type_detail_display|default:"PAKET"|upper }}</td>{% endif %}
+                        <td class="left">{{ item.description|default:shipment.description_item|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ shipment.resi_number }}</td>
+                        <td>{{ shipment.resi_number }}-0001</td>
+                        <td class="left">{{ shipment.receiver_name|default:"-"|slice:":26" }}</td>
+                        <td>{{ shipment.get_city_dest|default:"-"|slice:":15" }}</td>
+                        <td>{{ shipment.get_service_type_display|default:"-"|upper }}</td>
+                        <td>{% if shipment.is_do_balik %}<b style="color:red;">YA</b>{% else %}-{% endif %}</td>
+                        <td>{{ shipment.total_colly|default:"1" }}</td>
+                        <td>{{ shipment.chargeable_weight|default:shipment.weight|default:"0"|floatformat:0 }}</td>
+                        <td>{{ shipment.get_shipment_type_detail_display|default:"PAKET"|upper }}</td>
+                        <td class="left">{{ shipment.description_item|default:"-" }}</td>
+                    </tr>
+                {% endif %}
+            {% endwith %}
+            {% empty %}
+            <tr><td colspan="11">Belum ada data resi dalam delivery runsheet.</td></tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr><td colspan="7" style="text-align:right;">Total :</td><td>{{ total_colly }}</td><td>{{ total_weight|floatformat:0 }}</td><td colspan="2"></td></tr>
+        </tfoot>
+    </table>
+
+    <table class="signature-table">
+        <tr>
+            <td>Ttd Petugas<div class="signature-space"></div><div>( &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; )</div></td>
+            <td>Ttd Kurir<div class="signature-space"></div><div class="signature-name">( {% if manifest.driver %}{{ manifest.driver.get_full_name|default:manifest.driver.username }}{% elif manifest.vendor %}{{ manifest.vendor.name }}{% else %}-{% endif %} )</div></td>
+        </tr>
+    </table>
+</body>
+</html>

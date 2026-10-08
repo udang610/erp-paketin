@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Buat Pouch Dokumen DO Balik - ERP Paketin{% endblock %}
+{% block page_title %}Buat Pouch Dokumen DO Balik{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="mb-3">
+        <a href="{% url 'operations:do-balik-list' %}" class="btn btn-secondary btn-sm shadow-sm">
+            <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+        </a>
+    </div>
+
+    
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="row g-4">
+            <!-- Left Column: Form Details -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+                        <h6 class="fw-bold text-dark mb-0"><i class="ph-bold ph-info text-primary me-2"></i>Informasi Pouch Dokumen</h6>
+                    </div>
+                    <div class="card-body p-4">
+                <h5 class="fw-bold text-dark border-bottom pb-3 mb-4">Buat Pouch Dokumen (Pengiriman Balik)</h5>
+
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-semibold">Hub Pengirim (Hub Tujuan Bongkar)</label>
+                            <select name="origin_branch" class="form-select form-select-sm">
+                                <option value="">-- Pilih Cabang Pengirim --</option>
+                                {% for b in branches %}
+                                <option value="{{ b.id }}">{{ b.name }} ({{ b.code }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-semibold text-danger">Hub Penerima (Hub Asal Pengirim) *</label>
+                            <select name="dest_branch" class="form-select form-select-sm" required>
+                                <option value="">-- Pilih Cabang Tujuan --</option>
+                                {% for b in branches %}
+                                <option value="{{ b.id }}">{{ b.name }} ({{ b.code }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-semibold">Kurir / Ekspedisi Pengirim</label>
+                            <input type="text" name="courier_service" class="form-control form-control-sm" placeholder="Contoh: Kurir Internal / JNE / J&T">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-semibold">No. Resi Pengiriman Dokumen</label>
+                            <input type="text" name="airwaybill_no" class="form-control form-control-sm" placeholder="Nomor Resi Paket Surat">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-semibold">Catatan</label>
+                            <textarea name="notes" class="form-control form-control-sm" rows="3" placeholder="Keterangan tambahan amplop dokumen..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-danger px-4 fw-bold shadow-sm w-100 mt-2">
+                            <i class="ph-bold ph-paper-plane-tilt me-1"></i> Berangkatkan Pouch
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Checklist Resi -->
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden">
+                    <div class="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center">
+                        <h6 class="fw-bold text-dark mb-0"><i class="ph-bold ph-list-checks text-success me-2"></i>Pilih Resi DO Balik yang Dimasukkan ke Pouch</h6>
+                        <span class="badge bg-light text-dark border">Pilih Minimal 1 Resi</span>
+                    </div>
+                    <div class="card-body p-0 table-responsive" style="max-height: 550px;">
+                        <table class="table table-hover align-middle mb-0" style="font-size: 13px;">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="ps-3" style="width: 40px;">
+                                        <input type="checkbox" id="checkAll" class="form-check-input">
+                                    </th>
+                                    <th>No. Resi AWB</th>
+                                    <th>Klien / Pengirim</th>
+                                    <th>Penerima</th>
+                                    <th>Asal &rarr; Tujuan</th>
+                                    <th>Status AWB</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for s in available_shipments %}
+                                <tr>
+                                    <td class="ps-3">
+                                        <input type="checkbox" name="shipment_ids" value="{{ s.id }}" class="form-check-input item-check">
+                                    </td>
+                                    <td class="fw-bold text-primary">{{ s.resi_number }}</td>
+                                    <td>{{ s.client.company_name|default:s.sender_name }}</td>
+                                    <td>{{ s.receiver_name }}</td>
+                                    <td>{{ s.origin }} &rarr; {{ s.destination }}</td>
+                                    <td><span class="badge bg-secondary">{{ s.get_status_display }}</span></td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-5 text-muted">
+                                        <i class="ph-duotone ph-check-circle display-6 mb-2 text-success d-block"></i>
+                                        Tidak ada resi yang siap dibuatkan pouch saat ini.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+document.getElementById('checkAll')?.addEventListener('change', function() {
+    document.querySelectorAll('.item-check').forEach(cb => cb.checked = this.checked);
+});
+</script>
+{% endblock %}

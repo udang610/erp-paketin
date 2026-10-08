@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Catat Gagal Antar &amp; Retur - ERP Paketin{% endblock %}
+{% block page_title %}Catat Gagal Antar / Retur{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="mb-3">
+            <a href="{% url 'operations:return-list' %}" class="btn btn-outline-secondary bg-white px-3 shadow-sm btn-sm">
+            <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+        </a>
+        </div>
+
+        
+        <div class="card bg-white border-0 shadow-sm rounded-4 mb-4">
+
+            <div class="card-body p-4">
+                <h5 class="fw-bold text-dark border-bottom pb-3 mb-4">Catat Gagal Antar / Retur</h5>
+
+                <form method="post" action="{% url 'operations:return-create' %}" id="returnScanForm" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark">Scan Barcode (No. Resi AWB)</label>
+                            <div class="input-group input-group-lg shadow-sm">
+                                <span class="input-group-text bg-white border-end-0"><i class="ph-bold ph-scan text-success"></i></span>
+                                <input type="text" id="addScanNo" class="form-control border-start-0 ps-0" placeholder="Scan No. Resi disini..." autofocus>
+                                <button class="btn btn-success" type="button" id="btnAddScan">Scan &amp; Tambah</button>
+                            </div>
+                            <small class="text-muted mt-1 d-block">Arahkan scanner ke No. Resi. Tekan <b>Enter</b> pada scanner untuk scan berulang.</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark">Hapus dari Antrean (Batal)</label>
+                            <div class="input-group input-group-lg shadow-sm">
+                                <span class="input-group-text bg-white border-end-0"><i class="ph-bold ph-trash text-dark"></i></span>
+                                <input type="text" id="delScanNo" class="form-control border-start-0 ps-0" placeholder="Scan untuk membatalkan...">
+                                <button class="btn btn-danger" type="button" id="btnDelScan">Hapus</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detail Section: Alasan & Bukti -->
+                    <div class="row g-3 mb-4 p-3 rounded" style="background-color: #fff; border: 1px solid #dee2e6;">
+                        <h6 class="fw-bold mb-2 text-danger">
+                            <i class="ph-bold ph-warning-octagon me-1"></i> Detail Laporan Gagal Antar:
+                        </h6>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Alasan Gagal Antar (Reason) <span class="text-danger">*</span></label>
+                            <select name="reason" id="selectReason" class="form-select" required>
+                                {% for r_code, r_label in reason_choices %}
+                                <option value="{{ r_code }}" {% if r_code == 'RECIPIENT_NOT_HOME' %}selected{% endif %}>{{ r_label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Foto Bukti Gagal Antar (Rumah Tutup / Lokasi)</label>
+                            <input type="file" name="evidence_image" id="evidenceImageInput" class="form-control" accept="image/*">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label text-muted small fw-semibold">Catatan Detail Kejadian (Opsional)</label>
+                            <textarea name="reason_detail" class="form-control" rows="2" placeholder="Contoh: Penerima tidak ada di tempat, rumah terkunci pagar digembok..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Table Antrean -->
+                    <div class="table-responsive bg-white rounded-3 shadow-sm border border-light mb-4">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light text-secondary">
+                                <tr>
+                                    <th class="ps-4">No. Resi</th>
+                                    <th>Asal</th>
+                                    <th>Tujuan</th>
+                                    <th>Layanan</th>
+                                    <th>Koli</th>
+                                    <th>Berat (Kg)</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scanTableBody">
+                                <tr id="emptyRow">
+                                    <td colspan="7" class="text-center text-muted py-4">Belum ada resi yang discan.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div id="hiddenInputs"></div>
+
+                    <div class="d-flex justify-content-end gap-2 mb-2">
+                        <button type="button" class="btn btn-light border px-4" onclick="location.reload()">Reset</button>
+                        <button type="submit" id="btnSubmit" class="btn btn-danger px-4" disabled>
+                            <i class="ph-bold ph-check-circle me-2"></i> Simpan ke Laporan Masuk
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        const scannedIds = new Set();
+
+        const updateCounter = () => {
+            const count = scannedIds.size;
+            if(count > 0) {
+                $('#emptyRow').hide();
+                $('#btnSubmit').prop('disabled', false);
+            } else {
+                $('#emptyRow').show();
+                $('#btnSubmit').prop('disabled', true);
+            }
+        };
+
+        const appendToTable = (resiNo, origin, destination, service, colly, weight) => {
+            if(scannedIds.has(resiNo)) {
+                alert('No. Resi ' + resiNo + ' sudah ada di antrean!');
+                return;
+            }
+            scannedIds.add(resiNo);
+
+            const tr = `
+                <tr id="row-${resiNo}">
+                    <td class="ps-4 fw-bold text-dark">${resiNo}</td>
+                    <td>${origin || '-'}</td>
+                    <td>${destination || '-'}</td>
+                    <td><span class="text-dark">${service || '-'}</span></td>
+                    <td>${colly || '1'}</td>
+                    <td>${weight || '1'} Kg</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-remove border-0" data-id="${resiNo}">
+                            <i class="ph-bold ph-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+            $('#scanTableBody').append(tr);
+            $('#hiddenInputs').append(`<input type="hidden" name="scanned_items" value="${resiNo}" id="input-${resiNo}">`);
+            updateCounter();
+        };
+
+        const removeRow = (id) => {
+            scannedIds.delete(id);
+            $(`#row-${id}`).remove();
+            $(`#input-${id}`).remove();
+            updateCounter();
+        };
+
+        const processAddScan = () => {
+            const scanNo = $('#addScanNo').val().trim();
+            if(!scanNo) return;
+
+            $.ajax({
+                url: '{% url "operations:api-verify-resi" %}',
+                data: { resi_number: scanNo, purpose: 'pod' },
+                success: function(response) {
+                    if(response.status === 'success') {
+                        appendToTable(response.data.resi_number, response.data.origin, response.data.destination, response.data.service, response.data.colly, response.data.weight);
+                        $('#addScanNo').val('');
+                    } else {
+                        alert(response.message || 'No. Resi tidak ditemukan.');
+                        $('#addScanNo').val('');
+                    }
+                },
+                error: function(xhr) {
+                    let msg = 'No. Resi tidak ditemukan.';
+                    if(xhr.responseJSON && xhr.responseJSON.message) {
+                        msg = xhr.responseJSON.message;
+                    }
+                    alert(msg);
+                    $('#addScanNo').val('');
+                }
+            });
+        };
+
+        const processDelScan = () => {
+            const scanNo = $('#delScanNo').val().trim();
+            if(!scanNo) return;
+
+            if(scannedIds.has(scanNo)) {
+                removeRow(scanNo);
+                $('#delScanNo').val('');
+            } else {
+                alert('Item tidak ditemukan di antrean!');
+            }
+        };
+
+        $('#btnAddScan').click(processAddScan);
+        $('#addScanNo').keypress(function(e) {
+            if(e.which == 13) { e.preventDefault(); processAddScan(); }
+        });
+
+        $('#btnDelScan').click(processDelScan);
+        $('#delScanNo').keypress(function(e) {
+            if(e.which == 13) { e.preventDefault(); processDelScan(); }
+        });
+
+        $(document).on('click', '.btn-remove', function() {
+            removeRow($(this).data('id'));
+        });
+    });
+</script>
+{% endblock %}

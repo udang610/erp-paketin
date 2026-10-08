@@ -1,0 +1,86 @@
+<div class="card border-0 shadow-sm mt-4" style="border-radius: 12px;">
+    <div class="card-header bg-white border-bottom pt-4 pb-3 px-4">
+        <h5 class="mb-0 fw-bold text-dark">
+            <i class="ph-duotone ph-clock-counter-clockwise me-2 text-secondary"></i>{{ history_title }}
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-secondary">
+                    <tr>
+                        <th class="ps-4">Waktu Scan</th>
+                        <th>No. Manifest / Resi</th>
+                        <th>{{ history_location_label }}</th>
+                        <th>Keterangan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for history in history_page %}
+                    <tr>
+                        <td class="ps-4">{{ history.occurred_at|date:"d M Y H:i" }}</td>
+                        <td class="fw-bold text-dark">
+                            <a tabindex="0" class="text-dark text-decoration-none fw-bold" role="button"
+                               data-bs-toggle="popover" data-bs-trigger="hover focus" title="Detail Pengiriman"
+                               data-bs-html="true" data-bs-custom-class="custom-popover-wide"
+                               data-bs-content="
+                               <div style='max-height: 420px; overflow-y: auto; overflow-x: hidden; width: 100%; min-width: 0;'>
+                                   <div class='border-bottom pb-2 mb-2'>
+                                       <strong>Resi:</strong> {{ history.shipment.resi_number }}<br>
+                                       <strong>Wilayah / Hub:</strong> {{ history.location|default:'-' }}<br>
+                                       <strong>Asal:</strong> {{ history.shipment.get_tlc_origin }} - {{ history.shipment.get_city_origin }}<br>
+                                       <strong>Tujuan:</strong> {{ history.shipment.get_tlc_dest }} - {{ history.shipment.get_city_dest }}<br>
+                                       <strong>Status Saat Ini:</strong> {{ history.shipment.get_status_display }}<br>
+                                       <strong>Total Riwayat:</strong> {{ history.shipment.tracking_history.count }} update<br>
+                                       {% with latest=history.shipment.tracking_history.first %}
+                                       <strong>Update Terakhir:</strong> {{ latest.occurred_at|date:'d M Y H:i' }} · {{ latest.formatted_location|default:'-' }}
+                                       {% endwith %}
+                                   </div>
+                                   <div class='transit-history-steps'>
+                                       {% for tr in history.shipment.tracking_history.all %}
+                                       <div class='transit-history-step'>
+                                           <div class='transit-history-dot'><i class='ph-fill ph-truck'></i></div>
+                                           <strong class='transit-history-label text-primary'>{{ tr.get_status_display }}</strong>
+                                           <div class='transit-history-meta'>
+                                               <span class='transit-history-location'><i class='ph-fill ph-map-pin text-danger me-1'></i>{{ tr.formatted_location|default:'-' }}</span>
+                                               <span class='transit-history-date'>{{ tr.occurred_at|date:'d M Y, H:i' }}</span>
+                                           </div>
+                                           {% if tr.professional_description %}<div class='transit-history-description'>{{ tr.professional_description }}</div>{% endif %}
+                                       </div>
+                                       {% endfor %}
+                                   </div>
+                               </div>">
+                                {{ history.shipment.manifests.last.manifest_number|default:history.shipment.resi_number }}
+                            </a>
+                        </td>
+                        <td>{{ history.location|default:"-" }}</td>
+                        <td>{{ history.description|default:"-" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center text-muted py-4">{{ history_empty_text }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if history_page.has_other_pages %}
+        <div class="card-footer bg-white border-top border-0 pt-3 pb-3">
+            <nav aria-label="Page navigation">
+                <ul class="pagination pagination-sm justify-content-center mb-0">
+                    {% if history_page.has_previous %}
+                    <li class="page-item"><a class="page-link text-dark border-0 shadow-none px-3" href="?page={{ history_page.previous_page_number }}"><i class="ph-bold ph-caret-left"></i></a></li>
+                    {% else %}
+                    <li class="page-item disabled"><a class="page-link text-muted border-0 shadow-none px-3 bg-transparent" tabindex="-1" aria-disabled="true"><i class="ph-bold ph-caret-left"></i></a></li>
+                    {% endif %}
+                    <li class="page-item disabled d-none d-md-block"><span class="page-link text-dark fw-medium px-4 border-0 shadow-none bg-transparent">Halaman {{ history_page.number }} dari {{ history_page.paginator.num_pages }}</span></li>
+                    {% if history_page.has_next %}
+                    <li class="page-item"><a class="page-link text-dark border-0 shadow-none px-3" href="?page={{ history_page.next_page_number }}"><i class="ph-bold ph-caret-right"></i></a></li>
+                    {% else %}
+                    <li class="page-item disabled"><a class="page-link text-muted border-0 shadow-none px-3 bg-transparent" tabindex="-1" aria-disabled="true"><i class="ph-bold ph-caret-right"></i></a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>

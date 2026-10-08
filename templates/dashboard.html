@@ -1,0 +1,2463 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Dasbor Utama{% endblock %}
+{% block page_title %}Dasbor Utama{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<style>
+    /* ─── Original Design System & Styling ─── */
+    .dashboard-shell {
+        position: relative;
+    }
+
+    /* Executive Metric Cards */
+    .premium-metric-card {
+        border-radius: 16px !important;
+        border: 1px solid #cbd5e1 !important;
+        background: #ffffff;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05) !important;
+        transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+    .premium-metric-card:hover {
+        transform: translateY(-3px);
+        border-color: #94a3b8 !important;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.09) !important;
+    }
+    .metric-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+    .metric-icon.bg-primary-subtle,
+    .metric-icon.text-primary {
+        background-color: #e0f2fe !important;
+        color: #0284c7 !important;
+    }
+    .metric-icon.bg-primary-subtle i,
+    .metric-icon.text-primary i {
+        color: #0284c7 !important;
+    }
+    .metric-icon.bg-warning-subtle,
+    .metric-icon.text-warning {
+        background-color: #fef3c7 !important;
+        color: #d97706 !important;
+    }
+    .metric-icon.bg-warning-subtle i,
+    .metric-icon.text-warning i {
+        color: #d97706 !important;
+    }
+    .metric-icon.bg-success-subtle,
+    .metric-icon.text-success {
+        background-color: #d1fae5 !important;
+        color: #059669 !important;
+    }
+    .metric-icon.bg-success-subtle i,
+    .metric-icon.text-success i {
+        color: #059669 !important;
+    }
+    .metric-icon.bg-info-subtle,
+    .metric-icon.text-info {
+        background-color: #ede9fe !important;
+        color: #7c3aed !important;
+    }
+    .metric-icon.bg-info-subtle i,
+    .metric-icon.text-info i {
+        color: #7c3aed !important;
+    }
+    .metric-icon.bg-danger-subtle,
+    .metric-icon.text-danger {
+        background-color: #fee2e2 !important;
+        color: #dc2626 !important;
+    }
+    .metric-icon.bg-danger-subtle i,
+    .metric-icon.text-danger i {
+        color: #dc2626 !important;
+    }
+
+    /* Chart Cards with Red Brand Top Accent Line */
+    .chart-card-accent {
+        border-radius: 16px !important;
+        border: 1px solid #cbd5e1 !important;
+        background: #ffffff;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05) !important;
+        position: relative;
+        overflow: hidden !important;
+        transition: box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+    .chart-card-accent::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3.5px;
+        background-color: #ed1c2e;
+        z-index: 5;
+        border-top-left-radius: 15px;
+        border-top-right-radius: 15px;
+    }
+    .chart-card-accent:hover {
+        border-color: #94a3b8 !important;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08) !important;
+    }
+
+    /* All Cards Across Every Tab Slide */
+    .dashboard-slide-panel .card {
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 16px !important;
+        background-color: #ffffff;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .dashboard-slide-panel .card:hover {
+        border-color: #94a3b8 !important;
+    }
+
+    /* Clean Midnight Navy Logistics Map matching Sidebar */
+    .premium-map-shell {
+        background: #16213e !important;
+        position: relative;
+        overflow: hidden;
+    }
+    #indoMap {
+        background: #16213e !important;
+    }
+    #indoMap .leaflet-tile-pane {
+        filter: sepia(100%) hue-rotate(185deg) saturate(380%) brightness(88%) contrast(115%);
+    }
+    
+    /* Clean Animated Glowing Route Lines */
+    @keyframes mapDashFlow {
+        from {
+            stroke-dashoffset: 24;
+        }
+        to {
+            stroke-dashoffset: 0;
+        }
+    }
+    .animated-route-flow {
+        stroke-dasharray: 6, 8;
+        animation: mapDashFlow 1.2s linear infinite;
+        stroke-linecap: round;
+    }
+    .route-glow-path {
+        stroke-linecap: round;
+        filter: drop-shadow(0 0 3px currentColor);
+    }
+
+    /* Map Route Status Tab Style (Exact match with top nav tab behavior) */
+    .map-filter-pills {
+        display: inline-flex;
+        align-items: center;
+        gap: 0;
+        flex-wrap: nowrap;
+        background: transparent;
+        position: relative;
+    }
+    .map-pill-item {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        padding: 0;
+        margin: 0;
+    }
+    /* Pembatas vertikal antar tab */
+    .map-pill-item::after {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 1px;
+        height: 14px;
+        background-color: #94a3b8;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+        z-index: 2;
+    }
+    /* Sembunyikan garis pembatas saat tab aktif atau di sebelah tab aktif */
+    .map-pill-item:has(.active)::after,
+    .map-pill-item:has(+ .map-pill-item .active)::after,
+    .map-pill-item:last-child::after {
+        opacity: 0 !important;
+        display: none !important;
+    }
+
+    .map-filter-pills .btn {
+        background: transparent !important;
+        border: 1px solid transparent !important;
+        color: #64748b !important;
+        font-size: 0.78rem !important;
+        font-weight: 600 !important;
+        padding: 5px 12px !important;
+        border-radius: 6px !important;
+        transition: all 0.15s ease-in-out !important;
+        box-shadow: none !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer;
+        line-height: 1.2;
+        text-decoration: none !important;
+        margin: 0 1px !important;
+        white-space: nowrap;
+    }
+    .map-filter-pills .btn:hover {
+        background: #f1f5f9 !important;
+        color: #0f172a !important;
+    }
+    .map-filter-pills .btn.active {
+        background-color: #f1f5f9 !important; /* Warna abu-abu tombol filter */
+        border: 1px solid #cbd5e1 !important;
+        color: #0f172a !important;
+        font-weight: 700 !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    }
+
+    /* ─── Universal Map Filter Styles (Light Card Theme) ─── */
+    .map-universal-filter-toggle {
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        color: #334155;
+        font-size: 0.75rem;
+        transition: all 0.2s ease;
+    }
+    .map-universal-filter-toggle:hover, 
+    .map-universal-filter-toggle[aria-expanded="true"] {
+        background: #f8fafc;
+        border-color: #94a3b8;
+        color: #0f172a;
+    }
+    .map-universal-filter-toggle[aria-expanded="true"] #mapFilterChevron {
+        transform: rotate(180deg);
+    }
+    .map-filter-select, .map-filter-input {
+        background-color: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        color: #1e293b !important;
+        font-size: 0.78rem !important;
+        border-radius: 8px !important;
+    }
+    .map-filter-select:focus, .map-filter-input:focus {
+        border-color: #ed1c2e !important;
+        box-shadow: 0 0 0 2px rgba(237, 28, 46, 0.15) !important;
+        outline: none !important;
+    }
+
+    .map-legend {
+        position: absolute;
+        left: 16px;
+        bottom: 16px;
+        z-index: 500;
+        display: flex;
+        gap: 12px;
+        padding: 6px 14px;
+        border: 1px solid rgba(255,255,255,.15);
+        border-radius: 8px;
+        background: rgba(22, 33, 62, 0.88);
+        color: #e2e8f0;
+        font-size: 11px;
+        backdrop-filter: blur(8px);
+    }
+    .legend-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 5px;
+    }
+    .legend-dot.origin { background: #38bdf8; }
+    .legend-dot.outgoing { background: #2563eb; }
+    .legend-dot.transit { background: #8b5cf6; }
+    .legend-dot.incoming { background: #0d9488; }
+    .legend-dot.delivery { background: #f97316; }
+
+    /* ─── Exact Pickup Style Tabs (Seragam dengan menu pickup) ─── */
+    .dashboard-chrome-tabs-wrapper {
+        background: transparent;
+        border-bottom: 1px solid #eaedf1;
+        margin-bottom: 0;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 12px;
+        position: relative;
+        z-index: 10;
+    }
+    .nav-tabs-custom {
+        background-color: transparent !important;
+        padding: 0 !important;
+        padding-right: 4px !important;
+        border-bottom: none !important;
+        gap: 0 !important;
+        margin: 0 !important;
+        margin-bottom: -1px !important;
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: stretch;
+        list-style: none;
+        overflow-x: auto !important;
+        overflow-y: visible !important;
+        scrollbar-width: none;
+    }
+    .nav-tabs-custom::-webkit-scrollbar {
+        display: none;
+    }
+    .nav-tabs-custom .nav-item {
+        position: relative;
+        margin-bottom: 0;
+        display: flex;
+        align-items: center;
+        flex: 0 0 auto;
+    }
+    /* Pembatas di pojok paling kiri (sebelum tab pertama / Home) */
+    .nav-tabs-custom .nav-item:first-of-type::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 1px;
+        height: 16px;
+        background-color: #94a3b8;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+        z-index: 2;
+    }
+    /* Sembunyikan garis kiri saat tab pertama aktif atau di-hover */
+    .nav-tabs-custom .nav-item:first-of-type:has(.active)::before,
+    .nav-tabs-custom .nav-item:first-of-type:has(.chrome-tab-btn:hover)::before {
+        opacity: 0;
+    }
+
+    /* Pembatas vertikal di sisi kanan setiap tab (antar tab dan ujung paling kanan) */
+    .nav-tabs-custom .nav-item::after {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 1px;
+        height: 16px;
+        background-color: #94a3b8;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+        z-index: 2;
+    }
+    /* Sembunyikan garis pembatas saat tab aktif atau di-hover */
+    .nav-tabs-custom .nav-item:has(.active)::after,
+    .nav-tabs-custom .nav-item:has(+ .nav-item .active)::after,
+    .nav-tabs-custom .nav-item:has(.chrome-tab-btn:hover)::after,
+    .nav-tabs-custom .nav-item:has(+ .nav-item .chrome-tab-btn:hover)::after {
+        opacity: 0 !important;
+    }
+    /* Divider kanan tab terakhir selalu muncul kecuali tab itu sendiri aktif/hover */
+    .nav-tabs-custom .nav-item:last-of-type::after {
+        opacity: 1 !important;
+        display: block !important;
+    }
+    .nav-tabs-custom .nav-item:last-of-type:has(.active)::after,
+    .nav-tabs-custom .nav-item:last-of-type:has(.chrome-tab-btn:hover)::after {
+        opacity: 0 !important;
+    }
+
+    /* Gliding Tab Active Indicator Bubble/Pill */
+    .chrome-tab-glider {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: 0;
+        background-color: #ffffff;
+        border: 1px solid #eaedf1;
+        border-bottom: 1px solid #ffffff;
+        border-radius: 9px 9px 0 0;
+        transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), width 0.22s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s ease;
+        pointer-events: none;
+        z-index: 4;
+        opacity: 0;
+        box-shadow: 0 -2px 6px rgba(15, 23, 42, 0.02);
+    }
+    /* Seamless mask penutup garis bawah pada glider */
+    .chrome-tab-glider::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: -1px;
+        right: -1px;
+        height: 4px;
+        background-color: #ffffff;
+        z-index: 6;
+        pointer-events: none;
+    }
+
+    .nav-tabs-custom .chrome-tab-btn {
+        background-color: transparent;
+        border: 1px solid transparent;
+        border-bottom: 1px solid transparent;
+        color: #64748b !important;
+        font-weight: 600;
+        font-size: 0.82rem !important;
+        letter-spacing: 0.2px;
+        border-radius: 9px 9px 0 0 !important;
+        padding: 0 16px !important;
+        height: 42px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        transition: all 0.2s ease-in-out;
+        box-shadow: none !important;
+        position: relative;
+        z-index: 5;
+        white-space: nowrap;
+        cursor: pointer;
+        text-decoration: none;
+    }
+    .nav-tabs-custom .chrome-tab-btn:not(.active):hover {
+        background-color: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        border-bottom: 1px solid transparent;
+        color: #0f172a !important;
+        box-shadow: 0 -2px 6px rgba(15, 23, 42, 0.04);
+    }
+    .nav-tabs-custom .chrome-tab-btn.active {
+        color: #0f172a !important;
+        font-weight: 700;
+        background-color: #ffffff !important;
+        border: 1px solid #eaedf1 !important;
+        border-bottom: 1px solid #ffffff !important;
+        z-index: 7;
+    }
+
+    /* Dashboard Filter Pill Button */
+    .dashboard-filter-btn {
+        background: #ffffff !important;
+        color: #1e293b !important;
+        border: 1px solid #cbd5e1 !important;
+        transition: all 0.2s ease;
+    }
+    .dashboard-filter-btn:hover {
+        background: #f1f5f9 !important;
+        color: #0f172a !important;
+    }
+    [data-theme="dark"] .dashboard-filter-btn {
+        background: #1e293b !important;
+        color: #f8fafc !important;
+        border-color: #334155 !important;
+    }
+    [data-theme="dark"] .dashboard-filter-btn:hover {
+        background: #334155 !important;
+        color: #ffffff !important;
+    }
+
+    /* Content Wrapper (White Background wrapping all cards seamlessly beneath tab) */
+    .dashboard-content-wrapper {
+        background-color: #ffffff;
+        border: 1px solid #eaedf1;
+        border-top: none;
+        border-radius: 0 16px 16px 16px;
+        padding: 24px;
+        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+        margin-top: 0;
+        margin-bottom: 24px;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Map Shell & Leaflet Container */
+    #indoMap, .leaflet-container {
+        background: transparent !important;
+    }
+
+    /* Leaflet Dark Glassmorphism Popups */
+    .leaflet-popup-content-wrapper {
+        background: #0f172a !important;
+        color: #ffffff !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+        padding: 4px !important;
+    }
+    .leaflet-popup-tip {
+        background: #0f172a !important;
+    }
+    .leaflet-popup-close-button {
+        color: #94a3b8 !important;
+        padding-top: 4px !important;
+        padding-right: 6px !important;
+    }
+    .leaflet-popup-close-button:hover {
+        color: #ffffff !important;
+    }
+    .paketin-map-tooltip {
+        background: #0f172a !important;
+        color: #ffffff !important;
+        border: 1px solid #334155 !important;
+        border-radius: 6px !important;
+        font-size: 0.75rem !important;
+        font-weight: 600 !important;
+        padding: 3px 8px !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+    }
+    .paketin-map-tooltip::before {
+        border-top-color: #0f172a !important;
+    }
+
+    /* Slide Panels with Directional Smooth Slide Transition */
+    .dashboard-slide-panel {
+        display: none;
+    }
+    .dashboard-slide-panel.active-panel {
+        display: block;
+    }
+    .dashboard-slide-panel.active-panel.slide-from-right {
+        animation: dashboardSlideRight 0.22s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
+    .dashboard-slide-panel.active-panel.slide-from-left {
+        animation: dashboardSlideLeft 0.22s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
+    .dashboard-slide-panel.active-panel.slide-initial {
+        animation: dashboardFadeSlide 0.22s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
+
+    @keyframes dashboardSlideRight {
+        0% {
+            opacity: 0;
+            transform: translateX(12px);
+        }
+        100% {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    @keyframes dashboardSlideLeft {
+        0% {
+            opacity: 0;
+            transform: translateX(-12px);
+        }
+        100% {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    @keyframes dashboardFadeSlide {
+        0% {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Operational Action Alerts */
+    .action-alert-card {
+        border-radius: 14px;
+        border: 1px solid #eaedf1;
+        background: #ffffff;
+        padding: 12px 16px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .action-alert-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0 dashboard-shell">
+    
+    <!-- ─── 1. Executive Clean Text Header with Timestamp ─── -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <div>
+            <h3 class="fw-bold mb-1 text-dark" style="font-size: 1.65rem; letter-spacing: -0.3px;">Paketin Cargo Dashboard</h3>
+            <div class="text-muted" style="font-size: 0.92rem;">
+                Pusat kendali serta manajemen bisnis secara menyeluruh.
+                <span class="ms-2 text-secondary"><i class="ph-bold ph-clock me-1"></i>Data diperbarui: <strong class="text-dark">{% now "d M Y, H:i" %} WIB</strong></span>
+                {% if request.GET.start_date and request.GET.end_date %}
+                    <span class="badge bg-danger-subtle text-danger ms-2 px-2 py-1 rounded-pill"><i class="ph-bold ph-calendar me-1"></i>Periode: {{ request.GET.start_date }} s/d {{ request.GET.end_date }}</span>
+                {% elif request.GET.filter and request.GET.filter != 'semua' %}
+                    <span class="badge bg-primary-subtle text-primary ms-2 px-2 py-1 rounded-pill"><i class="ph-bold ph-funnel me-1"></i>Filter: {{ request.GET.filter|title }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ─── 2. Pickup Style Tab Bar Navigation (Seragam dengan menu pickup) ─── -->
+    <div class="dashboard-chrome-tabs-wrapper">
+        <!-- Module Tabs (Role-Based Dynamic Access) -->
+        <ul class="nav-tabs-custom dashboard-chrome-tabs position-relative" id="slideNavPills" role="tablist">
+            <!-- Smooth Gliding Active Indicator Pill -->
+            <div class="chrome-tab-glider" id="chromeTabGlider"></div>
+            {% if is_superuser or has_monitoring or not is_single_role or not has_crm and not has_ops and not has_fin and not has_hr and not has_vm %}
+            <li class="nav-item">
+                <button class="chrome-tab-btn active" data-slide="1" role="tab" aria-selected="true">
+                    <span>Home</span>
+                </button>
+            </li>
+            {% endif %}
+
+            {% if is_superuser or has_crm %}
+            <li class="nav-item">
+                <button class="chrome-tab-btn" data-slide="2" role="tab" aria-selected="false">
+                    <span>Sales</span>
+                </button>
+            </li>
+            {% endif %}
+
+            {% if is_superuser or has_ops %}
+            <li class="nav-item">
+                <button class="chrome-tab-btn" data-slide="3" role="tab" aria-selected="false">
+                    <span>Operasional</span>
+                </button>
+            </li>
+            {% endif %}
+
+            {% if is_superuser or has_fin %}
+            <li class="nav-item">
+                <button class="chrome-tab-btn" data-slide="4" role="tab" aria-selected="false">
+                    <span>Finance</span>
+                </button>
+            </li>
+            {% endif %}
+
+            {% if is_superuser or has_hr %}
+            <li class="nav-item">
+                <button class="chrome-tab-btn" data-slide="5" role="tab" aria-selected="false">
+                    <span>HRGA</span>
+                </button>
+            </li>
+            {% endif %}
+
+            {% if is_superuser or has_vm %}
+            <li class="nav-item">
+                <button class="chrome-tab-btn" data-slide="6" role="tab" aria-selected="false">
+                    <span>Vendor Management</span>
+                </button>
+            </li>
+            {% endif %}
+        </ul>
+
+        <!-- Filter Pill Button moved to right side of tabs bar -->
+        <div class="dropdown pb-1 ms-auto">
+            <button class="btn px-3 py-1 fw-medium dropdown-toggle shadow-sm dashboard-filter-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.82rem;">
+                <i class="ph-duotone ph-funnel me-1"></i> Filter Data
+            </button>
+            <div class="dropdown-menu dropdown-menu-end p-3 shadow-lg border-0" style="width: 260px; border-radius: 14px; z-index: 1050;">
+                <form method="GET">
+                    <div class="mb-2">
+                        <label class="form-label text-muted fw-bold mb-1" style="font-size: 0.75rem;">Kategori Filter</label>
+                        <select name="user_category" class="form-select form-select-sm text-muted">
+                            <option value="">Semua Data</option>
+                            <option value="sales" {% if request.GET.user_category == 'sales' %}selected{% endif %}>Sales</option>
+                            <option value="driver" {% if request.GET.user_category == 'driver' %}selected{% endif %}>Driver</option>
+                            <option value="admin" {% if request.GET.user_category == 'admin' %}selected{% endif %}>Admin / Staff</option>
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label text-muted fw-bold mb-1" style="font-size: 0.75rem;">Tanggal Mulai</label>
+                        <input type="date" name="start_date" class="form-control form-control-sm text-muted" value="{{ request.GET.start_date }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted fw-bold mb-1" style="font-size: 0.75rem;">Tanggal Akhir</label>
+                        <input type="date" name="end_date" class="form-control form-control-sm text-muted" value="{{ request.GET.end_date }}">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold mb-2 rounded">Terapkan Filter</button>
+                    <a href="?" class="btn btn-light btn-sm w-100 fw-bold rounded border text-dark">Reset Filter</a>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ─── 3. Modular Content Container (Muted White Wrapper) ─── -->
+    <div class="dashboard-content-wrapper">
+
+        <!-- ══════════════════════════════════════════════════════════════
+             SLIDE 1: PETA DISTRIBUSI & IKHTISAR (HOME OVERVIEW)
+             ══════════════════════════════════════════════════════════════ -->
+        {% if is_superuser or has_monitoring or not is_single_role or not has_crm and not has_ops and not has_fin and not has_hr and not has_vm %}
+        <div class="dashboard-slide-panel active-panel" id="panelSlide-1" role="tabpanel">
+        
+        <!-- Original Executive Metric Row -->
+        <div class="row g-3 mb-3">
+            {% if is_superuser or has_crm %}
+            <div class="col-md-3">
+                <div class="card premium-metric-card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="metric-icon bg-primary-subtle text-primary"><i class="ph-fill ph-buildings"></i></div>
+                        </div>
+                        <h6 class="text-muted fw-bold mb-1 text-uppercase text-start" style="font-size: 0.75rem; letter-spacing: 0.5px;">Total Klien Aktif</h6>
+                        <h2 class="mb-0 fw-bold text-dark text-start">{{ crm_clients|default:0 }}</h2>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if is_superuser or has_ops %}
+            <div class="col-md-3">
+                <div class="card premium-metric-card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="metric-icon bg-warning-subtle text-warning"><i class="ph-fill ph-truck"></i></div>
+                        </div>
+                        <h6 class="text-muted fw-bold mb-1 text-uppercase text-start" style="font-size: 0.75rem; letter-spacing: 0.5px;">Pengiriman Aktif</h6>
+                        <a href="{% url 'operations:shipment-list' %}" class="dashboard-kpi-link text-start"><h2 class="mb-0 fw-bold text-dark">{{ ops_in_transit|add:ops_pending|default:0 }}</h2></a>
+                        <div class="small text-muted mt-2 text-start"><span class="text-danger fw-semibold">{{ ops_transit|default:0 }} Transit</span><span class="mx-1">·</span><span class="fw-semibold">{{ ops_transfer|default:0 }} Transfer Location</span></div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if is_superuser or has_fin %}
+            <div class="col-md-3">
+                <div class="card premium-metric-card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="metric-icon bg-success-subtle text-success"><i class="ph-fill ph-currency-circle-dollar"></i></div>
+                        </div>
+                        <h6 class="text-muted fw-bold mb-1 text-uppercase text-start" style="font-size: 0.75rem; letter-spacing: 0.5px;">Total Pendapatan</h6>
+                        <h3 class="mb-0 fw-bold text-dark text-start">Rp {{ total_revenue|floatformat:0|intcomma|default:"0" }}</h3>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if is_superuser or has_hr %}
+            <div class="col-md-3">
+                <div class="card premium-metric-card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="metric-icon bg-info-subtle text-info"><i class="ph-fill ph-users-three"></i></div>
+                        </div>
+                        <h6 class="text-muted fw-bold mb-1 text-uppercase text-start" style="font-size: 0.75rem; letter-spacing: 0.5px;">Karyawan Hadir</h6>
+                        <h2 class="mb-0 fw-bold text-dark text-start">{{ hr_present|default:0 }} <span class="text-muted fs-6 fw-normal">/ {{ hr_employees|default:0 }}</span></h2>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Charts: Revenue & Profit vs Operational Status -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-8">
+                <div class="card chart-card-accent border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-bottom border-light pt-3 pb-2 text-start">
+                        <h6 class="fw-bold mb-0 text-dark text-uppercase text-start" style="font-size: 0.75rem;">
+                            <i class="ph-duotone ph-chart-line-up text-primary me-2"></i>Revenue & Profit Trend Bulanan
+                        </h6>
+                    </div>
+                    <div class="card-body p-3">
+                        <div style="height: 280px; width: 100%;">
+                            <canvas id="financeChart_s1"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card chart-card-accent border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-bottom border-light pt-3 pb-2 text-start">
+                        <h6 class="fw-bold mb-0 text-dark text-uppercase text-start" style="font-size: 0.75rem;">
+                            <i class="ph-duotone ph-chart-donut text-primary me-2"></i>Status Operasional Terkini
+                        </h6>
+                    </div>
+                    <div class="card-body d-flex align-items-center justify-content-center p-3">
+                        <div style="height: 250px; width: 100%;">
+                            <canvas id="opsChart_s1"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Clean Logistics Tracing Map Container Card -->
+        <div class="row g-4 mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden map-container-card">
+                    <div class="card-header bg-white border-bottom border-light pt-3 pb-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <h6 class="fw-bold mb-0 text-dark text-uppercase text-start" style="font-size: 0.8rem; letter-spacing: 0.5px;">
+                                <i class="ph-duotone ph-airplane-tilt text-danger me-2"></i>PETA RUTE DISTRIBUSI & TRACING LOGISTIK NASIONAL
+                            </h6>
+                            <span class="badge bg-danger text-white px-2 py-1 rounded-pill fw-semibold" id="mapActiveRouteBadge" style="font-size: 0.72rem;">
+                                <span id="mapRouteCountText">{{ active_route_count|default:0 }}</span> Rute Aktif
+                            </span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <!-- Quick Filter Pill Buttons (Header Right with vertical dividers) -->
+                            <div class="map-filter-pills d-flex align-items-center" role="tablist">
+                                <div class="map-pill-item">
+                                    <button type="button" class="btn btn-sm active" data-map-filter="ALL">Semua</button>
+                                </div>
+                                <div class="map-pill-item">
+                                    <button type="button" class="btn btn-sm" data-map-filter="PENDING">Pending</button>
+                                </div>
+                                <div class="map-pill-item">
+                                    <button type="button" class="btn btn-sm" data-map-filter="OUTGOING">Outgoing</button>
+                                </div>
+                                <div class="map-pill-item">
+                                    <button type="button" class="btn btn-sm" data-map-filter="TRANSIT">Transit</button>
+                                </div>
+                                <div class="map-pill-item">
+                                    <button type="button" class="btn btn-sm" data-map-filter="INCOMING_DESTINATION">Incoming</button>
+                                </div>
+                                <div class="map-pill-item">
+                                    <button type="button" class="btn btn-sm" data-map-filter="DELIVERY">Delivery</button>
+                                </div>
+                            </div>
+
+                            <!-- Button Icon Filter -->
+                            <button class="btn btn-outline-secondary btn-sm px-3 py-1 fw-semibold d-flex align-items-center gap-1 shadow-sm map-universal-filter-toggle rounded-pill" 
+                                    id="btnToggleMapFilter" 
+                                    type="button" 
+                                    data-bs-toggle="collapse" 
+                                    data-bs-target="#mapUniversalFilterCollapse" 
+                                    aria-expanded="{% if map_status or map_origin or map_destination or map_service or map_start_date or map_end_date %}true{% else %}false{% endif %}" 
+                                    aria-controls="mapUniversalFilterCollapse" 
+                                    title="Tampilkan / Sembunyikan Filter">
+                                <i class="ph-bold ph-funnel text-danger"></i>
+                                <span>Filter Detail</span>
+                                {% if map_status or map_origin or map_destination or map_service or map_start_date or map_end_date %}
+                                <span class="badge bg-danger rounded-pill px-1 py-0 ms-1" style="font-size: 0.65rem;">Aktif</span>
+                                {% endif %}
+                                <i class="ph-bold ph-caret-down ms-1" id="mapFilterChevron" style="transition: transform 0.3s ease;"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Collapsible Universal Map Filter Drawer (White / Light Theme) -->
+                    <div class="map-universal-filter-panel collapse {% if map_status or map_origin or map_destination or map_service or map_start_date or map_end_date %}show{% endif %}" id="mapUniversalFilterCollapse">
+                        <div class="p-3 px-4 bg-white" style="border-bottom: 1px solid #eaedf1;">
+                            <form method="GET" id="mapFilterForm" class="row g-3 align-items-end">
+                                {% if request.GET.filter %}
+                                <input type="hidden" name="filter" value="{{ request.GET.filter }}">
+                                {% endif %}
+                                {% if request.GET.user_category %}
+                                <input type="hidden" name="user_category" value="{{ request.GET.user_category }}">
+                                {% endif %}
+                                
+                                <!-- Status Filter -->
+                                <div class="col-6 col-md-3 col-lg-2">
+                                    <label class="form-label text-muted fw-bold mb-1" style="font-size: 0.72rem; letter-spacing: 0.3px;">STATUS RESI</label>
+                                    <select name="map_status" class="form-select form-select-sm map-filter-select">
+                                        <option value="">Semua Status</option>
+                                        {% for code, label in map_status_choices %}
+                                        <option value="{{ code }}" {% if map_status == code %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <!-- Origin Hub Filter (TLC & Daerah) -->
+                                <div class="col-6 col-md-3 col-lg-2">
+                                    <label class="form-label text-muted fw-bold mb-1" style="font-size: 0.72rem; letter-spacing: 0.3px;">KOTA / HUB ASAL</label>
+                                    <select name="map_origin" class="form-select form-select-sm map-filter-select">
+                                        <option value="">Semua Kota Asal</option>
+                                        {% for orig_val, orig_label in map_origin_choices %}
+                                        <option value="{{ orig_val }}" {% if map_origin == orig_val %}selected{% endif %}>{{ orig_label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <!-- Destination Hub Filter (TLC & Daerah) -->
+                                <div class="col-6 col-md-3 col-lg-2">
+                                    <label class="form-label text-muted fw-bold mb-1" style="font-size: 0.72rem; letter-spacing: 0.3px;">KOTA / HUB TUJUAN</label>
+                                    <select name="map_destination" class="form-select form-select-sm map-filter-select">
+                                        <option value="">Semua Kota Tujuan</option>
+                                        {% for dest_val, dest_label in map_destination_choices %}
+                                        <option value="{{ dest_val }}" {% if map_destination == dest_val %}selected{% endif %}>{{ dest_label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <!-- Service Type Filter -->
+                                <div class="col-6 col-md-3 col-lg-2">
+                                    <label class="form-label text-muted fw-bold mb-1" style="font-size: 0.72rem; letter-spacing: 0.3px;">LAYANAN</label>
+                                    <select name="map_service" class="form-select form-select-sm map-filter-select">
+                                        <option value="">Semua Layanan</option>
+                                        {% for code, label in map_service_choices %}
+                                        <option value="{{ code }}" {% if map_service == code %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <!-- Date Range Filter (Empty by default with dd/mm/yyyy placeholder) -->
+                                <div class="col-6 col-md-3 col-lg-2">
+                                    <label class="form-label text-muted fw-bold mb-1" style="font-size: 0.72rem; letter-spacing: 0.3px;">TANGGAL AWAL</label>
+                                    <input type="{% if map_start_date %}date{% else %}text{% endif %}" name="map_start_date" class="form-control form-control-sm map-filter-input" value="{{ map_start_date|default:'' }}" placeholder="dd/mm/yyyy" onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'" autocomplete="off">
+                                </div>
+                                <div class="col-6 col-md-3 col-lg-2">
+                                    <label class="form-label text-muted fw-bold mb-1" style="font-size: 0.72rem; letter-spacing: 0.3px;">TANGGAL AKHIR</label>
+                                    <input type="{% if map_end_date %}date{% else %}text{% endif %}" name="map_end_date" class="form-control form-control-sm map-filter-input" value="{{ map_end_date|default:'' }}" placeholder="dd/mm/yyyy" onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'" autocomplete="off">
+                                </div>
+
+                                <!-- Action Buttons & Active Filters Row -->
+                                <div class="col-12 d-flex flex-wrap align-items-center justify-content-between gap-2 pt-1">
+                                    <!-- Left Side: Active Filter Badges Display (TLC & Daerah) -->
+                                    <div>
+                                        {% if map_status or map_origin or map_destination or map_service or map_start_date or map_end_date %}
+                                        <div class="d-flex align-items-center gap-1 flex-wrap" style="font-size: 0.75rem;">
+                                            <span class="text-muted me-1 fw-medium">Filter Aktif:</span>
+                                            {% if map_status %}
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-1">Status: {{ map_status }}</span>
+                                            {% endif %}
+                                            {% if map_origin %}
+                                            <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2 py-1">Asal: {{ map_origin_label|default:map_origin }}</span>
+                                            {% endif %}
+                                            {% if map_destination %}
+                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-2 py-1">Tujuan: {{ map_destination_label|default:map_destination }}</span>
+                                            {% endif %}
+                                            {% if map_service %}
+                                            <span class="badge bg-light text-dark border rounded-pill px-2 py-1">Layanan: {{ map_service }}</span>
+                                            {% endif %}
+                                            {% if map_start_date %}
+                                            <span class="badge bg-light text-dark border rounded-pill px-2 py-1">Dari: {{ map_start_date_display|default:map_start_date }}</span>
+                                            {% endif %}
+                                            {% if map_end_date %}
+                                            <span class="badge bg-light text-dark border rounded-pill px-2 py-1">Sampai: {{ map_end_date_display|default:map_end_date }}</span>
+                                            {% endif %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Right Side: Action Buttons -->
+                                    <div class="d-flex align-items-center gap-2 ms-auto">
+                                        <a href="?" class="btn btn-outline-secondary btn-sm px-3 fw-semibold text-dark border d-flex align-items-center gap-1 bg-light">
+                                            <i class="ph-bold ph-arrow-counter-clockwise"></i> Reset
+                                        </a>
+                                        <button type="submit" class="btn btn-danger btn-sm px-3 fw-bold d-flex align-items-center gap-1 shadow-sm">
+                                            <i class="ph-bold ph-magnifying-glass"></i> Terapkan Filter
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="card-body p-0 position-relative">
+                        <div class="premium-map-shell" style="height: 500px; width: 100%; position: relative;">
+                            <div id="indoMap" style="height: 100%; width: 100%; position: relative; z-index: 1;"></div>
+                            
+                            <!-- Legend Bottom Left -->
+                            <div class="map-legend">
+                                <div><span class="legend-dot origin"></span>Origin / Hub</div>
+                                <div><span class="legend-dot" style="background-color: #f59e0b;"></span>Pending</div>
+                                <div><span class="legend-dot outgoing"></span>Outgoing</div>
+                                <div><span class="legend-dot transit"></span>Transit</div>
+                                <div><span class="legend-dot incoming"></span>Incoming</div>
+                                <div><span class="legend-dot delivery"></span>Delivery</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        </div>
+        {% endif %}
+
+
+        <!-- ══════════════════════════════════════════════════════════════
+             SLIDE 2: SALES & CRM MODULE (PELUANG, PENAWARAN & KLIEN)
+             ══════════════════════════════════════════════════════════════ -->
+        {% if is_superuser or has_crm %}
+        <div class="dashboard-slide-panel" id="panelSlide-2" role="tabpanel">
+        
+        <!-- CRM KPI Metrics -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="card premium-metric-card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="metric-icon bg-warning-subtle text-warning"><i class="ph-fill ph-funnel"></i></div>
+                        </div>
+                        <h6 class="text-muted fw-bold mb-1 text-uppercase text-start" style="font-size: 0.75rem;">Total Peluang (Leads)</h6>
+                        <h2 class="mb-0 fw-bold text-dark text-start">{{ crm_leads|default:0 }}</h2>
+                        <div class="small text-muted mt-2 text-start"><span class="text-success fw-bold">{{ crm_leads_won|default:0 }} Won</span> · <span class="text-danger fw-bold">{{ crm_leads_lost|default:0 }} Lost</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card premium-metric-card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="metric-icon bg-primary-subtle text-primary"><i class="ph-fill ph-chart-line-up"></i></div>
+                        </div>
+                        <h6 class="text-muted fw-bold mb-1 text-uppercase text-start" style="font-size: 0.75rem;">Nilai Pipeline Berjalan</h6>
+                        <h3 class="mb-0 fw-bold text-dark text-start">Rp {{ crm_total_pipeline_val|floatformat:0|intcomma|default:"0" }}</h3>
+                        <div class="small text-muted mt-2 text-start">Estimasi peluang aktif</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card premium-metric-card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="metric-icon bg-success-subtle text-success"><i class="ph-fill ph-handshake"></i></div>
+                        </div>
+                        <h6 class="text-muted fw-bold mb-1 text-uppercase text-start" style="font-size: 0.75rem;">Total Deals Won</h6>
+                        <h3 class="mb-0 fw-bold text-dark text-start">Rp {{ crm_total_won_val|floatformat:0|intcomma|default:"0" }}</h3>
+                        <div class="small text-muted mt-2 text-start">Peluang berhasil closing</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card premium-metric-card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="metric-icon bg-info-subtle text-info"><i class="ph-fill ph-file-text"></i></div>
+                        </div>
+                        <h6 class="text-muted fw-bold mb-1 text-uppercase text-start" style="font-size: 0.75rem;">Penawaran (Quotation)</h6>
+                        <h2 class="mb-0 fw-bold text-dark text-start">{{ crm_quotations|default:0 }}</h2>
+                        <div class="small text-muted mt-2 text-start">Dokumen penawaran harga</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CRM Charts Row 1: Funnel & PIC -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-6">
+                <div class="card chart-card-accent border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-bottom border-light pt-3 pb-2 text-start">
+                        <h6 class="fw-bold mb-0 text-dark text-uppercase text-start" style="font-size: 0.75rem;">
+                            <i class="ph-duotone ph-funnel text-primary me-2"></i>Funnel Tahapan Peluang (Lead Pipeline)
+                        </h6>
+                    </div>
+                    <div class="card-body p-3">
+                        <div style="height: 280px; width: 100%;">
+                            <canvas id="crmFunnelChart_s2"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card chart-card-accent border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-bottom border-light pt-3 pb-2 text-start">
+                        <h6 class="fw-bold mb-0 text-dark text-uppercase text-start" style="font-size: 0.75rem;">
+                            <i class="ph-duotone ph-users-three text-info me-2"></i>Performa Aktivitas Sales per PIC
+                        </h6>
+                    </div>
+                    <div class="card-body p-3">
+                        <div style="height: 280px; width: 100%;">
+                            <canvas id="crmPicChart_s2"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CRM Charts Row 2: Interaction Types & Quotation Status -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-6">
+                <div class="card chart-card-accent border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-bottom border-light pt-3 pb-2 text-start">
+                        <h6 class="fw-bold mb-0 text-dark text-uppercase text-start" style="font-size: 0.75rem;">
+                            <i class="ph-duotone ph-phone-call text-success me-2"></i>Komposisi Tipe Interaksi Sales
+                        </h6>
+                    </div>
+                    <div class="card-body d-flex align-items-center justify-content-center p-3">
+                        <div style="height: 250px; width: 100%;">
+                            <canvas id="crmActTypeChart_s2"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card chart-card-accent border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-bottom border-light pt-3 pb-2 text-start">
+                        <h6 class="fw-bold mb-0 text-dark text-uppercase text-start" style="font-size: 0.75rem;">
+                            <i class="ph-duotone ph-files text-secondary me-2"></i>Status Penawaran (Quotation Status)
+                        </h6>
+                    </div>
+                    <div class="card-body d-flex align-items-center justify-content-center p-3">
+                        <div style="height: 250px; width: 100%;">
+                            <canvas id="crmQuotChart_s2"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    {% endif %}
+
+
+    <!-- ══════════════════════════════════════════════════════════════
+         SLIDE 3: OPERASIONAL & LOGISTIK (PICK UP, RESI, MANIFEST & POD)
+         ══════════════════════════════════════════════════════════════ -->
+    {% if is_superuser or has_ops %}
+    <div class="dashboard-slide-panel" id="panelSlide-3" role="tabpanel">
+        
+        <!-- Ops KPI Metrics -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="card premium-metric-card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="metric-icon bg-primary-subtle text-primary"><i class="ph-fill ph-package"></i></div>
+                        </div>
+                        <h6 class="text-muted fw-bold mb-1 text-uppercase text-start" style="font-size: 0.75rem;">Total Resi / POS</h6>
+                        <h2 class="mb-0 fw-bold text-dark text-start">{{ ops_total|default:0 }}</h2>
+                        <div class="small text-muted mt-2 text-start">Total shipment operasional</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card premium-metric-card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="metric-icon bg-warning-subtle text-warning"><i class="ph-fill ph-clock"></i></div>
+                        </div>
+                        <h6 class="text-muted fw-bold mb-1 text-uppercase text-start" style="font-size: 0.75rem;">Menunggu Penugasan</h6>
+                        <h2 class="mb-0 fw-bold text-dark text-start">{{ ops_pending|default:0 }}</h2>
+                        <div class="small text-muted mt-2 text-start">Siap dialokasikan / di-assign</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card premium-metric-card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="metric-icon bg-info-subtle text-info"><i class="ph-fill ph-arrows-left-right"></i></div>
+                        </div>
+                        <h6 class="text-muted fw-bold mb-1 text-uppercase text-start" style="font-size: 0.75rem;">Sedang Berjalan</h6>
+                        <h2 class="mb-0 fw-bold text-dark text-start">{{ ops_in_transit|default:0 }}</h2>
+                        <div class="small text-muted mt-2 text-start">Outgoing, Transit & Delivery</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card premium-metric-card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="metric-icon bg-success-subtle text-success"><i class="ph-fill ph-check-circle"></i></div>
+                        </div>
+                        <h6 class="text-muted fw-bold mb-1 text-uppercase text-start" style="font-size: 0.75rem;">Terkirim (POD)</h6>
+                        <h2 class="mb-0 fw-bold text-dark text-start">{{ ops_delivered|default:0 }}</h2>
+                        <div class="small text-muted mt-2 text-start">Success Rate: <span class="fw-bold text-success">{{ ops_pod_rate }}%</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ops Charts Row 1: Full Lifecycle & Top Destinations -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-6">
+                <div class="card chart-card-accent border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-bottom border-light pt-3 pb-2 text-start">
+                        <h6 class="fw-bold mb-0 text-dark text-uppercase text-start" style="font-size: 0.75rem;">
+                            <i class="ph-duotone ph-chart-bar text-primary me-2"></i>Arus Lengkap Status Resi (Full Lifecycle)
+                        </h6>
+                    </div>
+                    <div class="card-body p-3">
+                        <div style="height: 280px; width: 100%;">
+                            <canvas id="opsStatusAllChart_s3"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card chart-card-accent border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-bottom border-light pt-3 pb-2 text-start">
+                        <h6 class="fw-bold mb-0 text-dark text-uppercase text-start" style="font-size: 0.75rem;">
+                            <i class="ph-duotone ph-map-pin text-danger me-2"></i>Top 8 Kota Destinasi Pengiriman Terbanyak
+                        </h6>
+                    </div>
+                    <div class="card-body p-3">
+                        <div style="height: 280px; width: 100%;">
+                            <canvas id="opsTopDestChart_s3"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ops Charts Row 2: Service Types & Manifest Types -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-6">
+                <div class="card chart-card-accent border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-bottom border-light pt-3 pb-2 text-start">
+                        <h6 class="fw-bold mb-0 text-dark text-uppercase text-start" style="font-size: 0.75rem;">
+                            <i class="ph-duotone ph-cube text-info me-2"></i>Distribusi Layanan Pengiriman (Service Type)
+                        </h6>
+                    </div>
+                    <div class="card-body d-flex align-items-center justify-content-center p-3">
+                        <div style="height: 250px; width: 100%;">
+                            <canvas id="opsServiceChart_s3"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card chart-card-accent border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-bottom border-light pt-3 pb-2 text-start">
+                        <h6 class="fw-bold mb-0 text-dark text-uppercase text-start" style="font-size: 0.75rem;">
+                            <i class="ph-duotone ph-clipboard-text text-warning me-2"></i>Komposisi Tipe Manifest Operasional
+                        </h6>
+                    </div>
+                    <div class="card-body d-flex align-items-center justify-content-center p-3">
+                        <div style="height: 250px; width: 100%;">
+                            <canvas id="opsManifestChart_s3"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    {% endif %}
+
+
+    <!-- ══════════════════════════════════════════════════════════════
+         SLIDE 4: FINANCE, BILLING & MARGIN (KEUANGAN & PENAGIHAN)
+         ══════════════════════════════════════════════════════════════ -->
+    {% if is_superuser or has_fin %}
+    <div class="dashboard-slide-panel" id="panelSlide-4" role="tabpanel">
+        
+        <!-- Finance KPI Metrics -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="card premium-metric-card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="metric-icon bg-primary-subtle text-primary"><i class="ph-fill ph-wallet"></i></div>
+                        </div>
+                        <h6 class="text-muted fw-bold mb-1 text-uppercase text-start" style="font-size: 0.75rem;">Total Omset (Revenue)</h6>
+                        <h3 class="mb-0 fw-bold text-dark text-start">Rp {{ total_revenue|floatformat:0|intcomma|default:"0" }}</h3>
+                        <div class="small text-muted mt-2 text-start">{{ finance_records|default:0 }} Invoice Lunas</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card premium-metric-card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="metric-icon bg-success-subtle text-success"><i class="ph-fill ph-chart-line-up"></i></div>
+                        </div>
+                        <h6 class="text-muted fw-bold mb-1 text-uppercase text-start" style="font-size: 0.75rem;">Total Net Profit</h6>
+                        <h3 class="mb-0 fw-bold text-dark text-start">Rp {{ total_profit|floatformat:0|intcomma|default:"0" }}</h3>
+                        <div class="small text-muted mt-2 text-start">Keuntungan bersih operasional</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card premium-metric-card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="metric-icon bg-warning-subtle text-warning"><i class="ph-fill ph-percent"></i></div>
+                        </div>
+                        <h6 class="text-muted fw-bold mb-1 text-uppercase text-start" style="font-size: 0.75rem;">Rata-rata Margin Profit</h6>
+                        <h2 class="mb-0 fw-bold text-dark text-start">{{ fin_margin_pct|default:0 }}%</h2>
+                        <div class="small text-muted mt-2 text-start">Rasio profit terhadap revenue</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card premium-metric-card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="metric-icon bg-info-subtle text-info"><i class="ph-fill ph-receipt"></i></div>
+                        </div>
+                        <h6 class="text-muted fw-bold mb-1 text-uppercase text-start" style="font-size: 0.75rem;">Invoice Lunas (Paid)</h6>
+                        <h2 class="mb-0 fw-bold text-dark text-start">{{ fin_invoices_paid|default:0 }}</h2>
+                        <div class="small text-muted mt-2 text-start">Dari total status tagihan aktif</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Finance Charts Row 1: Trend & Invoice Breakdown -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-8">
+                <div class="card chart-card-accent border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-bottom border-light pt-3 pb-2 text-start">
+                        <h6 class="fw-bold mb-0 text-dark text-uppercase text-start" style="font-size: 0.75rem;">
+                            <i class="ph-duotone ph-trend-up text-primary me-2"></i>Tren Bulanan Revenue vs Profit (Tahun Berjalan)
+                        </h6>
+                    </div>
+                    <div class="card-body p-3">
+                        <div style="height: 280px; width: 100%;">
+                            <canvas id="finRevenueProfitChart_s4"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card chart-card-accent border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-bottom border-light pt-3 pb-2 text-start">
+                        <h6 class="fw-bold mb-0 text-dark text-uppercase text-start" style="font-size: 0.75rem;">
+                            <i class="ph-duotone ph-chart-pie text-success me-2"></i>Komposisi Status Invoice
+                        </h6>
+                    </div>
+                    <div class="card-body d-flex align-items-center justify-content-center p-3">
+                        <div style="height: 250px; width: 100%;">
+                            <canvas id="finInvoiceStatusChart_s4"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Finance Charts Row 2: Margin Rate & Top Revenue Clients -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-6">
+                <div class="card chart-card-accent border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-bottom border-light pt-3 pb-2 text-start">
+                        <h6 class="fw-bold mb-0 text-dark text-uppercase text-start" style="font-size: 0.75rem;">
+                            <i class="ph-duotone ph-percent text-success me-2"></i>Fluktuasi Persentase Margin Profit Bulanan
+                        </h6>
+                    </div>
+                    <div class="card-body p-3">
+                        <div style="height: 260px; width: 100%;">
+                            <canvas id="finMarginTrendChart_s4"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card chart-card-accent border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-bottom border-light pt-3 pb-2 text-start">
+                        <h6 class="fw-bold mb-0 text-dark text-uppercase text-start" style="font-size: 0.75rem;">
+                            <i class="ph-duotone ph-crown text-warning me-2"></i>Top 5 Klien dengan Kontribusi Omset Tertinggi
+                        </h6>
+                    </div>
+                    <div class="card-body p-3">
+                        <div style="height: 260px; width: 100%;">
+                            <canvas id="finTopCustomersChart_s4"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    {% endif %}
+
+
+    <!-- ══════════════════════════════════════════════════════════════
+         SLIDE 5: HRGA (HUMAN RESOURCE & GENERAL AFFAIRS)
+         ══════════════════════════════════════════════════════════════ -->
+    {% if is_superuser or has_hr %}
+    <div class="dashboard-slide-panel" id="panelSlide-5" role="tabpanel">
+        
+        <!-- HR KPI Metrics Row -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="card premium-metric-card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="metric-icon bg-primary-subtle text-primary"><i class="ph-fill ph-users-three"></i></div>
+                        </div>
+                        <h6 class="text-muted fw-bold mb-1 text-uppercase text-start" style="font-size: 0.75rem;">Total Karyawan (HR)</h6>
+                        <h2 class="mb-0 fw-bold text-dark text-start">{{ hr_employees|default:0 }} <span class="fs-6 text-muted fw-normal">Orang</span></h2>
+                        <div class="small text-muted mt-2 text-start">Seluruh cabang operasional</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card premium-metric-card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="metric-icon bg-success-subtle text-success"><i class="ph-fill ph-calendar-check"></i></div>
+                        </div>
+                        <h6 class="text-muted fw-bold mb-1 text-uppercase text-start" style="font-size: 0.75rem;">Hadir Hari Ini</h6>
+                        <h2 class="mb-0 fw-bold text-dark text-start">{{ hr_present|default:0 }} <span class="fs-6 text-muted fw-normal">Karyawan</span></h2>
+                        <div class="small text-muted mt-2 text-start">Tercatat pada presensi hari ini</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card premium-metric-card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="metric-icon bg-danger-subtle text-danger"><i class="ph-fill ph-user-minus"></i></div>
+                        </div>
+                        <h6 class="text-muted fw-bold mb-1 text-uppercase text-start" style="font-size: 0.75rem;">Belum / Tidak Hadir</h6>
+                        <h2 class="mb-0 fw-bold text-dark text-start">{{ hr_absent|default:0 }} <span class="fs-6 text-muted fw-normal">Karyawan</span></h2>
+                        <div class="small text-muted mt-2 text-start">Izin, cuti, sakit, atau belum check-in</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card premium-metric-card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="metric-icon bg-info-subtle text-info"><i class="ph-fill ph-chart-donut"></i></div>
+                        </div>
+                        <h6 class="text-muted fw-bold mb-1 text-uppercase text-start" style="font-size: 0.75rem;">Tingkat Kehadiran</h6>
+                        <h2 class="mb-0 fw-bold text-dark text-start">{{ hr_attendance_rate }}%</h2>
+                        <div class="small text-muted mt-2 text-start">Persentase kehadiran staff hari ini</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HR Charts Row: Attendance Breakdown & Branch Headcount -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-6">
+                <div class="card chart-card-accent border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-bottom border-light pt-3 pb-2 text-start">
+                        <h6 class="fw-bold mb-0 text-dark text-uppercase text-start" style="font-size: 0.75rem;">
+                            <i class="ph-duotone ph-user-check text-success me-2"></i>Komposisi Status Presensi Hari Ini
+                        </h6>
+                    </div>
+                    <div class="card-body d-flex align-items-center justify-content-center p-3">
+                        <div style="height: 250px; width: 100%;">
+                            <canvas id="hrAttendanceChart_s5"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card chart-card-accent border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-bottom border-light pt-3 pb-2 text-start">
+                        <h6 class="fw-bold mb-0 text-dark text-uppercase text-start" style="font-size: 0.75rem;">
+                            <i class="ph-duotone ph-buildings text-primary me-2"></i>Distribusi Karyawan per Cabang Operasional
+                        </h6>
+                    </div>
+                    <div class="card-body p-3">
+                        <div style="height: 280px; width: 100%;">
+                            <canvas id="hrDeptChart_s5"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    {% endif %}
+
+
+    <!-- ══════════════════════════════════════════════════════════════
+         SLIDE 6: VENDOR MANAGEMENT (VM) (MANAJEMEN REKANAN & BIAYA)
+         ══════════════════════════════════════════════════════════════ -->
+    {% if is_superuser or has_vm %}
+    <div class="dashboard-slide-panel" id="panelSlide-6" role="tabpanel">
+        
+        <!-- VM KPI Metrics Row -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="card premium-metric-card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="metric-icon bg-danger-subtle text-danger"><i class="ph-fill ph-storefront"></i></div>
+                        </div>
+                        <h6 class="text-muted fw-bold mb-1 text-uppercase text-start" style="font-size: 0.75rem;">Total Rekanan Vendor</h6>
+                        <h2 class="mb-0 fw-bold text-dark text-start">{{ vm_total_vendors|default:0 }} <span class="fs-6 text-muted fw-normal">Vendor</span></h2>
+                        <div class="small text-muted mt-2 text-start"><span class="text-success fw-bold">{{ vm_active_vendors }} Aktif</span> · <span class="text-muted fw-bold">{{ vm_inactive_vendors }} Non-Aktif</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card premium-metric-card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="metric-icon bg-success-subtle text-success"><i class="ph-fill ph-check-circle"></i></div>
+                        </div>
+                        <h6 class="text-muted fw-bold mb-1 text-uppercase text-start" style="font-size: 0.75rem;">Vendor Aktif Kerjasama</h6>
+                        <h2 class="mb-0 fw-bold text-dark text-start">{{ vm_active_vendors|default:0 }} <span class="fs-6 text-muted fw-normal">Rekanan</span></h2>
+                        <div class="small text-muted mt-2 text-start">Siap untuk penugasan pengiriman</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card premium-metric-card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="metric-icon bg-warning-subtle text-warning"><i class="ph-fill ph-clock-countdown"></i></div>
+                        </div>
+                        <h6 class="text-muted fw-bold mb-1 text-uppercase text-start" style="font-size: 0.75rem;">Rata-rata TOP Pembayaran</h6>
+                        <h2 class="mb-0 fw-bold text-dark text-start">{{ vm_avg_top }} <span class="fs-6 text-muted fw-normal">Hari</span></h2>
+                        <div class="small text-muted mt-2 text-start">Terms of Payment invoice vendor</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card premium-metric-card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="metric-icon bg-info-subtle text-info"><i class="ph-fill ph-receipt"></i></div>
+                        </div>
+                        <h6 class="text-muted fw-bold mb-1 text-uppercase text-start" style="font-size: 0.75rem;">Total Biaya Vendor</h6>
+                        <h3 class="mb-0 fw-bold text-dark text-start">Rp {{ vm_total_vendor_cost|floatformat:0|intcomma|default:"0" }}</h3>
+                        <div class="small text-muted mt-2 text-start">Akumulasi pengeluaran vendor logistik</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VM Charts Row 1: Transport Mode & Delivery Type -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-6">
+                <div class="card chart-card-accent border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-bottom border-light pt-3 pb-2 text-start">
+                        <h6 class="fw-bold mb-0 text-dark text-uppercase text-start" style="font-size: 0.75rem;">
+                            <i class="ph-duotone ph-airplane-tilt text-danger me-2"></i>Distribusi Moda Transportasi Rekanan Vendor
+                        </h6>
+                    </div>
+                    <div class="card-body d-flex align-items-center justify-content-center p-3">
+                        <div style="height: 250px; width: 100%;">
+                            <canvas id="vmTransportChart_s6"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card chart-card-accent border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-bottom border-light pt-3 pb-2 text-start">
+                        <h6 class="fw-bold mb-0 text-dark text-uppercase text-start" style="font-size: 0.75rem;">
+                            <i class="ph-duotone ph-arrows-left-right text-warning me-2"></i>Tipe Pengiriman Layanan Vendor
+                        </h6>
+                    </div>
+                    <div class="card-body d-flex align-items-center justify-content-center p-3">
+                        <div style="height: 250px; width: 100%;">
+                            <canvas id="vmDeliveryChart_s6"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VM Charts Row 2: Top Vendors by Cost & Top Vendor Cities -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-6">
+                <div class="card chart-card-accent border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-bottom border-light pt-3 pb-2 text-start">
+                        <h6 class="fw-bold mb-0 text-dark text-uppercase text-start" style="font-size: 0.75rem;">
+                            <i class="ph-duotone ph-chart-bar text-primary me-2"></i>Top 5 Vendor dengan Akumulasi Biaya Tertinggi
+                        </h6>
+                    </div>
+                    <div class="card-body p-3">
+                        <div style="height: 260px; width: 100%;">
+                            <canvas id="vmTopCostChart_s6"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card chart-card-accent border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-bottom border-light pt-3 pb-2 text-start">
+                        <h6 class="fw-bold mb-0 text-dark text-uppercase text-start" style="font-size: 0.75rem;">
+                            <i class="ph-duotone ph-map-pin text-success me-2"></i>Top 5 Kota Domisili Rekanan Vendor
+                        </h6>
+                    </div>
+                    <div class="card-body p-3">
+                        <div style="height: 260px; width: 100%;">
+                            <canvas id="vmCityChart_s6"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    {% endif %}
+    <!-- End dashboard-content-wrapper -->
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        
+        // ══════════════════════════════════════════════════════════════
+        // 1. SLIDE PAGINATION CONTROLLER (6 MODULAR SLIDES)
+        // ══════════════════════════════════════════════════════════════
+        const TOTAL_SLIDES = 6;
+        const slideTitles = [
+            "Home — Peta Distribusi",
+            "Sales & CRM",
+            "Operasional & Logistik",
+            "Finance & Penagihan",
+            "HRGA",
+            "Vendor Management"
+        ];
+
+        let currentSlide = 1;
+        let isInitialLoad = true;
+        const slideBtns = document.querySelectorAll('.chrome-tab-btn, .slide-module-btn');
+        const slidePanels = document.querySelectorAll('.dashboard-slide-panel');
+        const indicatorText = document.getElementById('slideIndicatorTitle');
+        const btnPrev = document.getElementById('btnSlidePrev');
+        const btnNext = document.getElementById('btnSlideNext');
+        const glider = document.getElementById('chromeTabGlider');
+        const navTabs = document.getElementById('slideNavPills');
+
+        function updateTabGlider(activeBtn) {
+            if (!glider || !activeBtn || !navTabs) return;
+            const navRect = navTabs.getBoundingClientRect();
+            const btnRect = activeBtn.getBoundingClientRect();
+            const offsetLeft = btnRect.left - navRect.left;
+            const width = btnRect.width;
+
+            glider.style.transform = `translateX(${offsetLeft}px)`;
+            glider.style.width = `${width}px`;
+            glider.style.opacity = '1';
+        }
+
+        function switchSlide(targetIndex) {
+            if (targetIndex < 1) targetIndex = 1;
+            if (targetIndex > TOTAL_SLIDES) targetIndex = TOTAL_SLIDES;
+            
+            // Check if panel actually exists in DOM for this user
+            const activePanel = document.getElementById(`panelSlide-${targetIndex}`);
+            if (!activePanel) {
+                // Find first available panel
+                const firstAvailable = document.querySelector('.dashboard-slide-panel');
+                if (firstAvailable && firstAvailable.id) {
+                    targetIndex = parseInt(firstAvailable.id.replace('panelSlide-', ''), 10);
+                }
+            }
+
+            const direction = isInitialLoad ? 'initial' : (targetIndex > currentSlide ? 'right' : (targetIndex < currentSlide ? 'left' : 'initial'));
+            currentSlide = targetIndex;
+            localStorage.setItem('paketin_active_slide', currentSlide);
+
+            // Update Panels with Directional Slide Motion
+            slidePanels.forEach(panel => {
+                panel.classList.remove('active-panel', 'slide-from-right', 'slide-from-left', 'slide-initial');
+            });
+            const targetPanel = document.getElementById(`panelSlide-${currentSlide}`);
+            if (targetPanel) {
+                targetPanel.classList.add('active-panel');
+                if (direction === 'right') {
+                    targetPanel.classList.add('slide-from-right');
+                } else if (direction === 'left') {
+                    targetPanel.classList.add('slide-from-left');
+                } else {
+                    targetPanel.classList.add('slide-initial');
+                }
+            }
+
+            // Update Buttons & Active Glider Position
+            let activeChromeBtn = null;
+            slideBtns.forEach(btn => {
+                const target = parseInt(btn.dataset.slide, 10);
+                if (target === currentSlide) {
+                    btn.classList.add('active');
+                    btn.setAttribute('aria-selected', 'true');
+                    if (btn.classList.contains('chrome-tab-btn')) {
+                        activeChromeBtn = btn;
+                    }
+                } else {
+                    btn.classList.remove('active');
+                    btn.setAttribute('aria-selected', 'false');
+                }
+            });
+
+            if (activeChromeBtn) {
+                updateTabGlider(activeChromeBtn);
+            }
+
+            // Update Header Text
+            if (indicatorText) {
+                indicatorText.textContent = `Slide ${currentSlide} dari ${TOTAL_SLIDES} — ${slideTitles[currentSlide - 1]}`;
+            }
+
+            // Update Prev/Next Buttons State
+            if (btnPrev) btnPrev.disabled = (currentSlide === 1);
+            if (btnNext) btnNext.disabled = (currentSlide === TOTAL_SLIDES);
+
+            isInitialLoad = false;
+
+            // Trigger Canvas and Map Redraws on Switch
+            setTimeout(() => {
+                window.dispatchEvent(new Event('resize'));
+                if (window.Chart && Chart.instances) {
+                    Object.values(Chart.instances).forEach(chart => chart.resize());
+                }
+                if (currentSlide === 1 && window.paketinMap) {
+                    window.paketinMap.invalidateSize();
+                }
+            }, 60);
+        }
+
+        // Module Button Clicks
+        slideBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const target = parseInt(this.dataset.slide, 10);
+                switchSlide(target);
+            });
+        });
+
+        // Prev & Next Button Clicks
+        if (btnPrev) btnPrev.addEventListener('click', () => switchSlide(currentSlide - 1));
+        if (btnNext) btnNext.addEventListener('click', () => switchSlide(currentSlide + 1));
+
+        // Keyboard Arrow Shortcuts (Left / Right)
+        document.addEventListener('keydown', function(e) {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+            if (e.key === 'ArrowLeft') switchSlide(currentSlide - 1);
+            if (e.key === 'ArrowRight') switchSlide(currentSlide + 1);
+        });
+
+        window.addEventListener('resize', () => {
+            const activeBtn = document.querySelector('.chrome-tab-btn.active');
+            if (activeBtn) updateTabGlider(activeBtn);
+        });
+
+        // Initialize with remembered slide or first accessible tab
+        const firstTabBtn = document.querySelector('.chrome-tab-btn');
+        const defaultSlide = firstTabBtn ? parseInt(firstTabBtn.dataset.slide, 10) : 1;
+        const saved = parseInt(localStorage.getItem('paketin_active_slide'), 10);
+        const targetSlide = (saved && document.getElementById(`panelSlide-${saved}`)) ? saved : defaultSlide;
+        switchSlide(targetSlide);
+
+
+        // ══════════════════════════════════════════════════════════════
+        // 2. COMMON CHART DEFAULTS & TOOLTIPS
+        // ══════════════════════════════════════════════════════════════
+        const commonTooltip = {
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            titleColor: '#ffffff',
+            bodyColor: '#e2e8f0',
+            padding: 10,
+            cornerRadius: 8,
+            boxPadding: 4,
+            borderColor: 'rgba(255, 255, 255, 0.1)',
+            borderWidth: 1
+        };
+
+        function renderDoughnut(canvasId, labels, data, colors) {
+            const ctx = document.getElementById(canvasId);
+            if (!ctx) return null;
+            const total = data.reduce((a, b) => a + b, 0);
+            return new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: total > 0 ? labels : ['Belum Ada Data'],
+                    datasets: [{
+                        data: total > 0 ? data : [1],
+                        backgroundColor: total > 0 ? colors : ['#e2e8f0'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '72%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { padding: 12, usePointStyle: true, boxWidth: 8, font: { size: 11 } } },
+                        tooltip: commonTooltip
+                    }
+                }
+            });
+        }
+
+
+        // ══════════════════════════════════════════════════════════════
+        // 3. SLIDE 1: OVERVIEW CHARTS & VECTOR MAP
+        // ══════════════════════════════════════════════════════════════
+        // S1: Finance Trend
+        const s1FinCtx = document.getElementById('financeChart_s1');
+        if (s1FinCtx) {
+            new Chart(s1FinCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
+                    datasets: [
+                        { label: 'Revenue', data: {{ chart_revenue|default:"[]"|safe }}, borderColor: '#0ea5e9', backgroundColor: 'rgba(14,165,233,.12)', fill: true, tension: .35, pointRadius: 3, pointHoverRadius: 5 },
+                        { label: 'Net Profit', data: {{ chart_profit|default:"[]"|safe }}, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,.10)', fill: true, tension: .35, pointRadius: 3, pointHoverRadius: 5 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { padding: 12, usePointStyle: true, boxWidth: 8 } },
+                        tooltip: commonTooltip
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#f1f5f9' },
+                            border: { display: false },
+                            ticks: { callback: v => (v >= 1e6 ? 'Rp ' + (v/1e6).toFixed(0) + 'M' : 'Rp ' + v) }
+                        },
+                        x: { grid: { display: false }, border: { display: false } }
+                    }
+                }
+            });
+        }
+
+        // S1: Ops Status Donut
+        renderDoughnut('opsChart_s1',
+            ['Menunggu', 'Dalam Pengiriman', 'Terkirim (POD)', 'Retur'],
+            [{{ ops_pending|default:0 }}, {{ ops_in_transit|default:0 }}, {{ ops_delivered|default:0 }}, {{ ops_returned|default:0 }}],
+            ['#f59e0b', '#3b82f6', '#10b981', '#ef4444']
+        );
+
+        // ══════════════════════════════════════════════════════════════
+        // 3. ENHANCED CARTODB DARK LOGISTICS MAP & CURVED ARC TRACING
+        // ══════════════════════════════════════════════════════════════
+        const mapEl = document.getElementById('indoMap');
+        if (mapEl) {
+            try {
+                const map = L.map('indoMap', {
+                    center: [-1.8, 118.0],
+                    zoom: 5,
+                    minZoom: 4,
+                    maxZoom: 13,
+                    zoomControl: false,
+                    attributionControl: false
+                });
+
+                L.control.zoom({ position: 'bottomright' }).addTo(map);
+                window.paketinMap = map;
+
+                // 100% Watermark-Free & Unrestricted Dark Canvas Tiles (Colorized to Sidebar Midnight Navy)
+                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+                    maxZoom: 16,
+                    attribution: ''
+                }).addTo(map);
+
+                // Province & City Labels Overlay
+                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+                    maxZoom: 16,
+                    opacity: 0.9,
+                    attribution: ''
+                }).addTo(map);
+
+                const activeRoutesData = JSON.parse('{{ active_routes_json|escapejs }}' || '[]');
+                const routeLayerGroup = L.layerGroup().addTo(map);
+                const markerLayerGroup = L.layerGroup().addTo(map);
+
+                const routeColors = {
+                    PENDING: '#f59e0b', PICKUP: '#06b6d4', INBOUND: '#3b82f6',
+                    OUTGOING: '#2563eb', TRANSFER: '#6366f1', TRANSIT: '#8b5cf6',
+                    INCOMING_DESTINATION: '#0d9488', DELIVERY: '#f97316', POD: '#10b981'
+                };
+
+                // Exact Geodesic Arc Interpolation with Normal Vector & Corridor Offset
+                function getArcPoints(start, end, numPoints = 30, curveOffset = 0) {
+                    const lat1 = start[0], lng1 = start[1];
+                    const lat2 = end[0], lng2 = end[1];
+                    const dLat = lat2 - lat1;
+                    const dLng = lng2 - lng1;
+                    const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+                    if (dist === 0) return [start, end];
+
+                    // Perpendicular normal vector (-dLng, dLat) for clean geometric bulging
+                    const normLat = -dLng / dist;
+                    const normLng = dLat / dist;
+
+                    // Base arch height proportional to distance + corridor track offset
+                    const baseHeight = Math.min(dist * 0.12, 1.8);
+                    const totalHeight = baseHeight + (curveOffset * 0.4);
+
+                    const points = [];
+                    for (let i = 0; i <= numPoints; i++) {
+                        const t = i / numPoints;
+                        // Natural sine curve: exactly zero offset at t=0 and t=1
+                        const offset = Math.sin(t * Math.PI) * totalHeight;
+                        const lat = lat1 + dLat * t + normLat * offset;
+                        const lng = lng1 + dLng * t + normLng * offset;
+                        points.push([lat, lng]);
+                    }
+                    return points;
+                }
+
+                // City & Hub Statistics & Resis
+                const cityStats = {};
+                const cityCoords = {};
+                const cityResis = {};
+
+                activeRoutesData.forEach(r => {
+                    if (r.origin && r.destination) {
+                        cityStats[r.origin] = (cityStats[r.origin] || 0) + (r.count || 1);
+                        if (r.origin_coords) cityCoords[r.origin] = r.origin_coords;
+                        if (r.dest_coords) cityCoords[r.destination] = r.dest_coords;
+                        if (r.resis && r.resis.length > 0) {
+                            cityResis[r.origin] = (cityResis[r.origin] || []).concat(r.resis);
+                            cityResis[r.destination] = (cityResis[r.destination] || []).concat(r.resis);
+                        }
+                    }
+                });
+
+                // Populate Datalist for Fly-To Search
+                const dataListEl = document.getElementById('mapCityList');
+                if (dataListEl) {
+                    dataListEl.innerHTML = Object.keys(cityCoords).map(c => `<option value="${c}">`).join('');
+                }
+
+                // Render Routes & Markers
+                function renderRoutes(filterStatus = 'ALL') {
+                    routeLayerGroup.clearLayers();
+                    markerLayerGroup.clearLayers();
+
+                    const filteredRoutes = filterStatus === 'ALL' 
+                        ? activeRoutesData 
+                        : activeRoutesData.filter(r => r.status === filterStatus);
+
+                    // Update badge text
+                    const countText = document.getElementById('mapRouteCountText');
+                    if (countText) countText.textContent = filteredRoutes.length;
+
+                    // Calculate corridor counts to prevent overlapping route lines from color-mixing
+                    const corridorCount = {};
+                    filteredRoutes.forEach(r => {
+                        const key = `${r.origin}->${r.destination}`;
+                        corridorCount[key] = (corridorCount[key] || 0) + 1;
+                    });
+
+                    const corridorTrack = {};
+                    const renderedCities = new Set();
+
+                    filteredRoutes.forEach(r => {
+                        if (r.origin_coords && r.dest_coords) {
+                            const key = `${r.origin}->${r.destination}`;
+                            const totalOnCorridor = corridorCount[key] || 1;
+                            const currentIdx = corridorTrack[key] || 0;
+                            corridorTrack[key] = currentIdx + 1;
+
+                            // Calculate offset so different statuses on the same corridor arc in parallel
+                            let curveOffset = 0;
+                            if (totalOnCorridor > 1) {
+                                curveOffset = (currentIdx - (totalOnCorridor - 1) / 2) * 0.85;
+                            }
+
+                            const lineColor = routeColors[r.status] || '#38bdf8';
+                            const arcPoints = getArcPoints(r.origin_coords, r.dest_coords, 30, curveOffset);
+
+                            // 1. Background Route Glow
+                            L.polyline(arcPoints, {
+                                color: lineColor,
+                                weight: 4,
+                                opacity: 0.4,
+                                className: 'route-glow-path'
+                            }).addTo(routeLayerGroup);
+
+                            // 2. Foreground Animated Moving Pulse Route
+                            const animPoly = L.polyline(arcPoints, {
+                                color: lineColor,
+                                weight: 2.5,
+                                opacity: 0.95,
+                                className: 'animated-route-flow'
+                            }).addTo(routeLayerGroup);
+
+                            const resiListHtml = (r.resis && r.resis.length > 0) ? `
+                                <div style="margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 6px;">
+                                    <div style="font-size: 0.7rem; text-transform: uppercase; color: #94a3b8; font-weight: 700; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;">
+                                        <span><i class="ph-bold ph-barcode me-1 text-info"></i>Daftar Resi (${r.resis.length})</span>
+                                        <span style="color: #64748b; font-size: 0.65rem;">Klik untuk detail</span>
+                                    </div>
+                                    <div style="max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding-right: 2px;">
+                                        ${r.resis.map(resi => `
+                                            <div style="background: rgba(255,255,255,0.06); padding: 4px 6px; border-radius: 6px; border-left: 3px solid ${lineColor};">
+                                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                                                    <a href="/operations/shipments/${resi.pk}/" target="_blank" style="color: #38bdf8; font-weight: 700; font-size: 0.78rem; text-decoration: none;" title="Buka detail resi">
+                                                        ${resi.resi_number} <i class="ph-bold ph-arrow-square-out" style="font-size: 0.65rem;"></i>
+                                                    </a>
+                                                    <span class="badge" style="background: rgba(255,255,255,0.12); color: #e2e8f0; font-size: 0.62rem; padding: 1px 4px;">${resi.service}</span>
+                                                </div>
+                                                <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #cbd5e1;">
+                                                    <span class="text-truncate" style="max-width: 140px;">${resi.sender} ➔ ${resi.receiver}</span>
+                                                    <span style="color: #94a3b8; font-size: 0.68rem;">${resi.colly} Koli (${resi.weight} kg)</span>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                        ${r.count > r.resis.length ? `<div style="font-size: 0.68rem; color: #94a3b8; text-align: center; margin-top: 2px;">+ ${r.count - r.resis.length} resi lainnya</div>` : ''}
+                                    </div>
+                                </div>
+                            ` : '';
+
+                            const routePopup = `
+                                <div style="font-family: inherit; min-width: 240px; max-width: 300px; padding: 4px 2px;">
+                                    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; color: #38bdf8; font-weight: 700; margin-bottom: 4px;">
+                                        <i class="ph-bold ph-airplane-tilt me-1"></i> Rute Logistik Nasional
+                                    </div>
+                                    <div style="font-size: 0.95rem; font-weight: 700; color: #ffffff; margin-bottom: 6px;">
+                                        ${r.origin} <span style="color: ${lineColor}">➔</span> ${r.destination}
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: #94a3b8; margin-bottom: 4px;">
+                                        <span>Status Operasional:</span>
+                                        <span class="badge" style="background-color: ${lineColor}22; color: ${lineColor}; border: 1px solid ${lineColor}55;">${r.status_display || r.status}</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: #94a3b8;">
+                                        <span>Muatan Berjalan:</span>
+                                        <strong style="color: #ffffff;">${r.count} Resi Aktif</strong>
+                                    </div>
+                                    ${resiListHtml}
+                                </div>
+                            `;
+                            animPoly.bindPopup(routePopup);
+
+                            // 3. Origin Point Circle Marker (In markerPane at higher z-index to sit on top of polylines)
+                            if (!renderedCities.has(`orig-${r.origin}`)) {
+                                renderedCities.add(`orig-${r.origin}`);
+                                const origMarker = L.circleMarker(r.origin_coords, {
+                                    pane: 'markerPane',
+                                    radius: 7,
+                                    fillColor: '#38bdf8',
+                                    fillOpacity: 1,
+                                    color: '#ffffff',
+                                    weight: 2.5
+                                }).addTo(markerLayerGroup);
+                                
+                                const origResis = (cityResis[r.origin] || []).slice(0, 5);
+                                const origResiHtml = origResis.length > 0 ? `
+                                    <div style="margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 4px;">
+                                        <div style="font-size: 0.68rem; color: #94a3b8; font-weight: 600; margin-bottom: 3px;">RESI DARI ASAL:</div>
+                                        <div style="display: flex; flex-direction: column; gap: 3px;">
+                                            ${origResis.map(x => `
+                                                <a href="/operations/shipments/${x.pk}/" target="_blank" style="color: #38bdf8; font-weight: 600; font-size: 0.74rem; text-decoration: none;">
+                                                    • ${x.resi_number} (${x.service})
+                                                </a>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                ` : '';
+
+                                origMarker.bindPopup(`
+                                    <div style="font-family: inherit; min-width: 180px; padding: 4px 2px;">
+                                        <div style="font-size: 0.7rem; text-transform: uppercase; color: #38bdf8; font-weight: 700; margin-bottom: 2px;">
+                                            <i class="ph-bold ph-map-pin me-1"></i> Hub Asal Pengiriman
+                                        </div>
+                                        <div style="font-size: 0.92rem; font-weight: 700; color: #ffffff; margin-bottom: 3px;">
+                                            ${r.origin_label || r.origin}
+                                        </div>
+                                        <div style="font-size: 0.76rem; color: #cbd5e1;">
+                                            Total Muatan: <strong style="color: #38bdf8;">${cityStats[r.origin] || r.count} Resi</strong>
+                                        </div>
+                                        ${origResiHtml}
+                                    </div>
+                                `);
+                                origMarker.bindTooltip(`${r.origin} (Asal)`, { direction: 'top', className: 'paketin-map-tooltip' });
+                            }
+
+                            // 4. Destination Point Circle Marker (In markerPane at higher z-index to sit on top of polylines)
+                            if (!renderedCities.has(`dest-${r.destination}`)) {
+                                renderedCities.add(`dest-${r.destination}`);
+                                const destMarker = L.circleMarker(r.dest_coords, {
+                                    pane: 'markerPane',
+                                    radius: 7,
+                                    fillColor: '#f43f5e',
+                                    fillOpacity: 1,
+                                    color: '#ffffff',
+                                    weight: 2.5
+                                }).addTo(markerLayerGroup);
+
+                                const destResis = (cityResis[r.destination] || []).slice(0, 5);
+                                const destResiHtml = destResis.length > 0 ? `
+                                    <div style="margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 4px;">
+                                        <div style="font-size: 0.68rem; color: #94a3b8; font-weight: 600; margin-bottom: 3px;">RESI MENUJU TUJUAN:</div>
+                                        <div style="display: flex; flex-direction: column; gap: 3px;">
+                                            ${destResis.map(x => `
+                                                <a href="/operations/shipments/${x.pk}/" target="_blank" style="color: #f43f5e; font-weight: 600; font-size: 0.74rem; text-decoration: none;">
+                                                    • ${x.resi_number} (${x.service})
+                                                </a>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                ` : '';
+
+                                destMarker.bindPopup(`
+                                    <div style="font-family: inherit; min-width: 180px; padding: 4px 2px;">
+                                        <div style="font-size: 0.7rem; text-transform: uppercase; color: #f43f5e; font-weight: 700; margin-bottom: 2px;">
+                                            <i class="ph-bold ph-flag me-1"></i> Titik Destinasi
+                                        </div>
+                                        <div style="font-size: 0.92rem; font-weight: 700; color: #ffffff; margin-bottom: 3px;">
+                                            ${r.destination_label || r.destination}
+                                        </div>
+                                        <div style="font-size: 0.76rem; color: #cbd5e1;">
+                                            Tujuan Pengiriman
+                                        </div>
+                                        ${destResiHtml}
+                                    </div>
+                                `);
+                                destMarker.bindTooltip(`${r.destination} (Tujuan)`, { direction: 'top', className: 'paketin-map-tooltip' });
+                            }
+                        }
+                    });
+                }
+
+                renderRoutes('ALL');
+
+                // Quick Filter Click Handler
+                const filterBtns = document.querySelectorAll('.map-nav-tabs .nav-link, .map-filter-pills .btn');
+                filterBtns.forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        filterBtns.forEach(b => b.classList.remove('active'));
+                        this.classList.add('active');
+                        renderRoutes(this.dataset.mapFilter);
+                    });
+                });
+
+                // Map Filter Collapse Events for smooth layout update
+                const filterCollapseEl = document.getElementById('mapUniversalFilterCollapse');
+                if (filterCollapseEl) {
+                    filterCollapseEl.addEventListener('shown.bs.collapse', function () {
+                        if (window.paketinMap) window.paketinMap.invalidateSize();
+                    });
+                    filterCollapseEl.addEventListener('hidden.bs.collapse', function () {
+                        if (window.paketinMap) window.paketinMap.invalidateSize();
+                    });
+                }
+
+                // Omit empty fields from GET submission
+                const mapFilterForm = document.getElementById('mapFilterForm');
+                if (mapFilterForm) {
+                    mapFilterForm.addEventListener('submit', function() {
+                        const elements = this.querySelectorAll('input, select');
+                        elements.forEach(el => {
+                            if (!el.value || el.value.trim() === '') {
+                                el.disabled = true;
+                            }
+                        });
+                    });
+                }
+
+            } catch(e) { console.error("Map initialization error", e); }
+        }
+
+
+        // ══════════════════════════════════════════════════════════════
+        // 4. SLIDE 2: CRM & SALES CHARTS
+        // ══════════════════════════════════════════════════════════════
+        const s2FunnelCtx = document.getElementById('crmFunnelChart_s2');
+        if (s2FunnelCtx) {
+            new Chart(s2FunnelCtx, {
+                type: 'bar',
+                data: {
+                    labels: {{ crm_lead_pipeline_labels|safe|default:"[]" }},
+                    datasets: [{
+                        label: 'Jumlah Peluang',
+                        data: {{ crm_lead_pipeline_data|safe|default:"[]" }},
+                        backgroundColor: ['#64748b', '#3b82f6', '#06b6d4', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444'],
+                        borderRadius: 6,
+                        barThickness: 22
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: commonTooltip },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, border: { display: false } },
+                        x: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        const s2PicCtx = document.getElementById('crmPicChart_s2');
+        if (s2PicCtx) {
+            new Chart(s2PicCtx, {
+                type: 'bar',
+                data: {
+                    labels: {{ crm_activity_labels|safe|default:"[]" }}.length > 0 ? {{ crm_activity_labels|safe }} : ['Belum Ada Sales'],
+                    datasets: [{
+                        label: 'Total Aktivitas',
+                        data: {{ crm_activity_data|safe|default:"[]" }}.length > 0 ? {{ crm_activity_data|safe }} : [0],
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 6,
+                        barThickness: 16
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: commonTooltip },
+                    scales: {
+                        x: { beginAtZero: true, grid: { color: '#f1f5f9' }, border: { display: false } },
+                        y: { grid: { display: false }, border: { display: false } }
+                    }
+                }
+            });
+        }
+
+        renderDoughnut('crmActTypeChart_s2',
+            {{ crm_act_type_labels|safe|default:"[]" }},
+            {{ crm_act_type_data|safe|default:"[]" }},
+            ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899']
+        );
+
+        renderDoughnut('crmQuotChart_s2',
+            {{ crm_quotation_status_labels|safe|default:"[]" }},
+            {{ crm_quotation_status_data|safe|default:"[]" }},
+            ['#94a3b8', '#3b82f6', '#10b981', '#ef4444']
+        );
+
+
+        // ══════════════════════════════════════════════════════════════
+        // 5. SLIDE 3: OPERASIONAL & LOGISTIK CHARTS
+        // ══════════════════════════════════════════════════════════════
+        const s3StatusCtx = document.getElementById('opsStatusAllChart_s3');
+        if (s3StatusCtx) {
+            new Chart(s3StatusCtx, {
+                type: 'bar',
+                data: {
+                    labels: {{ ops_detailed_status_labels|safe|default:"[]" }},
+                    datasets: [{
+                        label: 'Total Resi',
+                        data: {{ ops_detailed_status_data|safe|default:"[]" }},
+                        backgroundColor: ['#f59e0b', '#06b6d4', '#3b82f6', '#2563eb', '#6366f1', '#8b5cf6', '#0d9488', '#f97316', '#10b981', '#ef4444'],
+                        borderRadius: 6,
+                        barThickness: 18
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: commonTooltip },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, border: { display: false } },
+                        x: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 9 }, maxRotation: 45 } }
+                    }
+                }
+            });
+        }
+
+        const s3DestCtx = document.getElementById('opsTopDestChart_s3');
+        if (s3DestCtx) {
+            new Chart(s3DestCtx, {
+                type: 'bar',
+                data: {
+                    labels: {{ deliveries_region_labels|safe|default:"[]" }}.length > 0 ? {{ deliveries_region_labels|safe }} : ['Belum Ada Destinasi'],
+                    datasets: [{
+                        label: 'Volume Pengiriman',
+                        data: {{ deliveries_region_data|safe|default:"[]" }}.length > 0 ? {{ deliveries_region_data|safe }} : [0],
+                        backgroundColor: '#ef4444',
+                        borderRadius: 6,
+                        barThickness: 16
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: commonTooltip },
+                    scales: {
+                        x: { beginAtZero: true, grid: { color: '#f1f5f9' }, border: { display: false } },
+                        y: { grid: { display: false }, border: { display: false } }
+                    }
+                }
+            });
+        }
+
+        renderDoughnut('opsServiceChart_s3',
+            {{ ops_service_labels|safe|default:"[]" }},
+            {{ ops_service_data|safe|default:"[]" }},
+            ['#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#8b5cf6']
+        );
+
+        renderDoughnut('opsManifestChart_s3',
+            {{ ops_manifest_labels|safe|default:"[]" }},
+            {{ ops_manifest_data|safe|default:"[]" }},
+            ['#2563eb', '#6366f1', '#f97316']
+        );
+
+
+        // ══════════════════════════════════════════════════════════════
+        // 6. SLIDE 4: FINANCE & BILLING CHARTS
+        // ══════════════════════════════════════════════════════════════
+        const s4RevProfCtx = document.getElementById('finRevenueProfitChart_s4');
+        if (s4RevProfCtx) {
+            new Chart(s4RevProfCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
+                    datasets: [
+                        { label: 'Revenue', data: {{ chart_revenue|default:"[]"|safe }}, backgroundColor: '#0ea5e9', borderRadius: 6, barPercentage: 0.6 },
+                        { label: 'Net Profit', data: {{ chart_profit|default:"[]"|safe }}, backgroundColor: '#10b981', borderRadius: 6, barPercentage: 0.6 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top', labels: { padding: 12, usePointStyle: true, boxWidth: 8 } }, tooltip: commonTooltip },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, border: { display: false }, ticks: { callback: v => (v >= 1e6 ? 'Rp ' + (v/1e6).toFixed(0) + 'M' : 'Rp ' + v) } },
+                        x: { grid: { display: false }, border: { display: false } }
+                    }
+                }
+            });
+        }
+
+        renderDoughnut('finInvoiceStatusChart_s4',
+            ['Lunas (Paid)', 'Terkirim (Sent)', 'Draft', 'Dibayar Sebagian (Partial)'],
+            [{{ fin_invoices_paid|default:0 }}, {{ fin_invoices_sent|default:0 }}, {{ fin_invoices_draft|default:0 }}, {{ fin_invoices_partial|default:0 }}],
+            ['#10b981', '#f59e0b', '#94a3b8', '#06b6d4']
+        );
+
+        const s4MarginCtx = document.getElementById('finMarginTrendChart_s4');
+        if (s4MarginCtx) {
+            new Chart(s4MarginCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
+                    datasets: [{
+                        label: 'Margin Profit (%)',
+                        data: {{ fin_margin_monthly|safe|default:"[]" }},
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#10b981'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: commonTooltip },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, border: { display: false }, ticks: { callback: v => v + '%' } },
+                        x: { grid: { display: false }, border: { display: false } }
+                    }
+                }
+            });
+        }
+
+        const s4TopCustCtx = document.getElementById('finTopCustomersChart_s4');
+        if (s4TopCustCtx) {
+            new Chart(s4TopCustCtx, {
+                type: 'bar',
+                data: {
+                    labels: {{ fin_top_clients_labels|safe|default:"[]" }}.length > 0 ? {{ fin_top_clients_labels|safe }} : ['Belum Ada Transaksi'],
+                    datasets: [{
+                        label: 'Omset Kontribusi (Rp)',
+                        data: {{ fin_top_clients_data|safe|default:"[]" }}.length > 0 ? {{ fin_top_clients_data|safe }} : [0],
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 6,
+                        barThickness: 16
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: commonTooltip },
+                    scales: {
+                        x: { beginAtZero: true, grid: { color: '#f1f5f9' }, border: { display: false }, ticks: { callback: v => (v >= 1e6 ? 'Rp ' + (v/1e6).toFixed(0) + 'M' : 'Rp ' + v) } },
+                        y: { grid: { display: false }, border: { display: false } }
+                    }
+                }
+            });
+        }
+
+
+        // ══════════════════════════════════════════════════════════════
+        // 7. SLIDE 5: HR & GA CHARTS
+        // ══════════════════════════════════════════════════════════════
+        renderDoughnut('hrAttendanceChart_s5',
+            {{ hr_status_labels|safe|default:"['Hadir', 'Terlambat', 'Izin / Cuti', 'Alpa']" }},
+            {{ hr_status_data|safe|default:"[0, 0, 0, 0]" }},
+            ['#10b981', '#f59e0b', '#06b6d4', '#ef4444']
+        );
+
+        const s5DeptCtx = document.getElementById('hrDeptChart_s5');
+        if (s5DeptCtx) {
+            new Chart(s5DeptCtx, {
+                type: 'bar',
+                data: {
+                    labels: {{ hr_dept_labels|safe|default:"[]" }}.length > 0 ? {{ hr_dept_labels|safe }} : ['Pusat'],
+                    datasets: [{
+                        label: 'Jumlah Karyawan',
+                        data: {{ hr_dept_data|safe|default:"[]" }}.length > 0 ? {{ hr_dept_data|safe }} : [{{ hr_employees|default:0 }}],
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 6,
+                        barThickness: 20
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: commonTooltip },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, border: { display: false }, ticks: { stepSize: 1, precision: 0 } },
+                        x: { grid: { display: false }, border: { display: false } }
+                    }
+                }
+            });
+        }
+
+
+        // ══════════════════════════════════════════════════════════════
+        // 8. SLIDE 6: VENDOR MANAGEMENT (VM) CHARTS
+        // ══════════════════════════════════════════════════════════════
+        renderDoughnut('vmTransportChart_s6',
+            {{ vm_transport_labels|safe|default:"['Darat', 'Laut', 'Udara', 'Kereta']" }},
+            {{ vm_transport_data|safe|default:"[0, 0, 0, 0]" }},
+            ['#3b82f6', '#06b6d4', '#8b5cf6', '#f59e0b']
+        );
+
+        renderDoughnut('vmDeliveryChart_s6',
+            {{ vm_delivery_labels|safe|default:"[]" }}.length > 0 ? {{ vm_delivery_labels|safe }} : ['Door to Door', 'Port to Port', 'Door to Port', 'Port to Door'],
+            {{ vm_delivery_data|safe|default:"[]" }}.length > 0 ? {{ vm_delivery_data|safe }} : [0, 0, 0, 0],
+            ['#10b981', '#f59e0b', '#6366f1', '#ec4899']
+        );
+
+        const s6TopCostCtx = document.getElementById('vmTopCostChart_s6');
+        if (s6TopCostCtx) {
+            new Chart(s6TopCostCtx, {
+                type: 'bar',
+                data: {
+                    labels: {{ vm_top_cost_labels|safe|default:"[]" }}.length > 0 ? {{ vm_top_cost_labels|safe }} : ['Belum Ada Biaya Vendor'],
+                    datasets: [{
+                        label: 'Total Biaya (Rp)',
+                        data: {{ vm_top_cost_data|safe|default:"[]" }}.length > 0 ? {{ vm_top_cost_data|safe }} : [0],
+                        backgroundColor: '#ef4444',
+                        borderRadius: 6,
+                        barThickness: 16
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: commonTooltip },
+                    scales: {
+                        x: { beginAtZero: true, grid: { color: '#f1f5f9' }, border: { display: false }, ticks: { callback: v => (v >= 1e6 ? 'Rp ' + (v/1e6).toFixed(0) + 'M' : 'Rp ' + v) } },
+                        y: { grid: { display: false }, border: { display: false } }
+                    }
+                }
+            });
+        }
+
+        const s6CityCtx = document.getElementById('vmCityChart_s6');
+        if (s6CityCtx) {
+            new Chart(s6CityCtx, {
+                type: 'bar',
+                data: {
+                    labels: {{ vm_city_labels|safe|default:"[]" }}.length > 0 ? {{ vm_city_labels|safe }} : ['Belum Ada Data Kota'],
+                    datasets: [{
+                        label: 'Jumlah Vendor',
+                        data: {{ vm_city_data|safe|default:"[]" }}.length > 0 ? {{ vm_city_data|safe }} : [0],
+                        backgroundColor: '#10b981',
+                        borderRadius: 6,
+                        barThickness: 20
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: commonTooltip },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, border: { display: false }, ticks: { stepSize: 1, precision: 0 } },
+                        x: { grid: { display: false }, border: { display: false } }
+                    }
+                }
+            });
+        }
+
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if form.instance.pk %}Edit{% else %}Tambah{% endif %} Kontrak{% endblock %}
+{% block page_title %}{% if form.instance.pk %}Edit Kontrak{% else %}Buat Kontrak Baru{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="mb-3">
+        <a href="{% if form.lead.value %}{% url 'crm:lead-detail' form.lead.value %}{% elif form.client.value %}{% url 'crm:client-detail' form.client.value %}{% else %}{% url 'crm:contract-list' %}{% endif %}" class="btn btn-outline-secondary bg-white px-3 shadow-sm btn-sm">
+            <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            
+            <div class="card bg-white border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                <h5 class="fw-bold text-dark border-bottom pb-3 mb-4">{% if form.instance.pk %}Edit Kontrak{% else %}Buat Kontrak Baru{% endif %}</h5>
+
+                    <form method="post" enctype="multipart/form-data" novalidate>
+                        {% csrf_token %}
+
+                        {% if form.errors %}
+                        <div class="alert alert-danger rounded-3">
+                            <i class="ph-duotone ph-warning me-2"></i>
+                            Mohon perbaiki kesalahan di bawah ini.
+                        </div>
+                        {% endif %}
+
+                        <!-- 1. Informasi Kontrak & Klien -->
+                        <div class="mb-3">
+                            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">Informasi Kontrak &amp; Klien</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="{{ form.client.id_for_label }}" class="form-label text-muted small fw-semibold">Client <span class="text-danger">*</span></label>
+                                    {{ form.client }}
+                                    {% if form.client.errors %}<div class="invalid-feedback d-block">{{ form.client.errors.0 }}</div>{% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="{{ form.lead.id_for_label }}" class="form-label text-muted small fw-semibold">Terkait Lead</label>
+                                    {{ form.lead }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="{{ form.title.id_for_label }}" class="form-label text-muted small fw-semibold">Judul Kontrak <span class="text-danger">*</span></label>
+                                    {{ form.title }}
+                                    {% if form.title.errors %}<div class="invalid-feedback d-block">{{ form.title.errors.0 }}</div>{% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="{{ form.contract_number.id_for_label }}" class="form-label text-muted small fw-semibold">Nomor Kontrak</label>
+                                    {{ form.contract_number }}
+                                    {% if form.contract_number.errors %}<div class="invalid-feedback d-block">{{ form.contract_number.errors.0 }}</div>{% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="{{ form.penerima.id_for_label }}" class="form-label text-muted small fw-semibold">Nama Penerima (Consignee)</label>
+                                    {{ form.penerima }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="{{ form.status.id_for_label }}" class="form-label text-muted small fw-semibold">Status <span class="text-danger">*</span></label>
+                                    {{ form.status }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Periode & Nilai Kontrak -->
+                        <div class="mb-3">
+                            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">Periode &amp; Nilai Kontrak</h6>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label for="{{ form.value.id_for_label }}" class="form-label text-muted small fw-semibold">Nilai Kontrak (Rp)</label>
+                                    {{ form.value }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="{{ form.start_date.id_for_label }}" class="form-label text-muted small fw-semibold">Tanggal Mulai <span class="text-danger">*</span></label>
+                                    {{ form.start_date }}
+                                    {% if form.start_date.errors %}<div class="invalid-feedback d-block">{{ form.start_date.errors.0 }}</div>{% endif %}
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="{{ form.end_date.id_for_label }}" class="form-label text-muted small fw-semibold">Tanggal Berakhir <span class="text-danger">*</span></label>
+                                    {{ form.end_date }}
+                                    {% if form.end_date.errors %}<div class="invalid-feedback d-block">{{ form.end_date.errors.0 }}</div>{% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="{{ form.renewal_reminder_days.id_for_label }}" class="form-label text-muted small fw-semibold">Pengingat (Hari Sebelum Habis)</label>
+                                    {{ form.renewal_reminder_days }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="{{ form.document.id_for_label }}" class="form-label text-muted small fw-semibold">Dokumen Kontrak (Lampiran File)</label>
+                                    {{ form.document }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Deskripsi & Ketentuan Tambahan -->
+                        <div class="mb-3">
+                            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">Deskripsi &amp; Ketentuan</h6>
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label for="{{ form.description.id_for_label }}" class="form-label text-muted small fw-semibold">Deskripsi Kontrak</label>
+                                    {{ form.description }}
+                                </div>
+                                <div class="col-12">
+                                    <label for="{{ form.terms.id_for_label }}" class="form-label text-muted small fw-semibold">Syarat &amp; Ketentuan</label>
+                                    {{ form.terms }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a href="{% url 'crm:contract-list' %}" class="btn btn-outline-secondary px-4 fw-semibold">Batal</a>
+                            <button type="submit" class="btn btn-danger px-4 fw-bold shadow-sm">
+                                <i class="ph-bold ph-floppy-disk me-1"></i> Simpan Kontrak
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

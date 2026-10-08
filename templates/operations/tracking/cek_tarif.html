@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block page_title %}Cek Tarif Pengiriman{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="row">
+        <div class="col-12">
+            
+            
+            <div class="card bg-white border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-4">
+                <h5 class="fw-bold text-dark border-bottom pb-3 mb-4">Kalkulator Tarif (Cek Ongkir)</h5>
+
+                    <form id="cekTarifForm">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold text-secondary">Kota/Kecamatan Asal</label>
+                                <select name="origin" id="origin" class="form-select select2" required>
+                                    <option value="">Pilih Asal Pengiriman...</option>
+                                    {% for c in coverages %}
+                                    <option value="{{ c.id }}">{{ c.city }} - {{ c.district }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold text-secondary">Kota/Kecamatan Tujuan</label>
+                                <select name="destination" id="destination" class="form-select select2" required>
+                                    <option value="">Pilih Tujuan Pengiriman...</option>
+                                    {% for c in coverages %}
+                                    <option value="{{ c.id }}">{{ c.city }} - {{ c.district }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold text-secondary">Berat (Kg)</label>
+                                <input type="number" name="weight" id="weight" class="form-control" value="1" min="0.1" step="0.1" required>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-primary w-100 rounded-3">
+                                    <i class="ph-bold ph-magnifying-glass me-1"></i> Cek Harga
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Hasil Pencarian -->
+            <div id="resultContainer" class="d-none">
+                <h6 class="fw-bold text-dark mb-3">Hasil Pencarian Tarif</h6>
+                <div class="row" id="resultCards">
+                    <!-- Cards will be injected here via JS -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Select2 CSS/JS for searchable dropdowns -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<style>
+    /* Styling select2 to match bootstrap 5 */
+    .select2-container .select2-selection--single {
+        height: calc(1.5em + .75rem + 2px);
+        border: 1px solid #dee2e6;
+        border-radius: .375rem;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: calc(1.5em + .75rem);
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: calc(1.5em + .75rem);
+    }
+</style>
+
+<script>
+    $(document).ready(function() {
+        $('.select2').select2({
+            width: '100%'
+        });
+
+        $('#cekTarifForm').on('submit', function(e) {
+            e.preventDefault();
+            const form = $(this);
+            const btn = form.find('button[type="submit"]');
+            const resultContainer = $('#resultContainer');
+            const resultCards = $('#resultCards');
+            
+            // Format number to Rupiah
+            const formatRupiah = (number) => {
+                return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+            };
+            
+            btn.prop('disabled', true).html('<i class="ph-duotone ph-spinner ph-spin me-1"></i> Mencari...');
+            
+            $.ajax({
+                url: window.location.pathname,
+                type: 'GET',
+                data: form.serialize(),
+                success: function(response) {
+                    resultCards.empty();
+                    
+                    if (response.results && response.results.length > 0) {
+                        response.results.forEach(function(item) {
+                            const card = `
+                                <div class="col-md-6 mb-3">
+                                    <div class="card border-0 shadow-sm rounded-4 h-100 border-start border-4 border-primary">
+                                        <div class="card-body p-4">
+                                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                                <h5 class="fw-bold text-dark mb-0">${item.service}</h5>
+                                                <span class="badge bg-light text-dark border"><i class="ph-duotone ph-clock me-1"></i>${item.estimated_days || '-'} Hari</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <span class="text-secondary">Harga Dasar</span>
+                                                <span class="fw-medium">${formatRupiah(item.price_per_kg)} / Kg</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between mb-3 pb-3 border-bottom">
+                                                <span class="text-secondary">Berat Terhitung</span>
+                                                <span class="fw-medium">${item.chargeable_weight} Kg</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center mt-2">
+                                                <span class="text-secondary">Total Biaya</span>
+                                                <h4 class="fw-bold text-primary mb-0">${formatRupiah(item.total_price)}</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            resultCards.append(card);
+                        });
+                    } else {
+                        resultCards.html('<div class="col-12"><div class="alert alert-warning border-0 shadow-sm"><i class="ph-duotone ph-warning-circle me-2"></i>Tarif tidak ditemukan untuk rute ini.</div></div>');
+                    }
+                    
+                    resultContainer.removeClass('d-none');
+                },
+                error: function() {
+                    alert('Terjadi kesalahan saat mengambil tarif.');
+                },
+                complete: function() {
+                    btn.prop('disabled', false).html('<i class="ph-bold ph-magnifying-glass me-1"></i> Cek Harga');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

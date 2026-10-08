@@ -1,0 +1,98 @@
+/* SPREADSHEET TOOLBAR STYLES */
+
+.spreadsheet-toolbar {
+    display: flex;
+    align-items: center;
+    background: transparent;
+    padding: 2px 4px;
+    gap: 4px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.toolbar-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--border-color);
+    margin: 0 2px;
+}
+
+.btn-toolbar {
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.8rem;
+}
+
+.btn-toolbar:hover {
+    background: var(--red-light);
+    border-color: var(--red);
+}
+
+.btn-toolbar.active {
+    background: var(--red-light);
+    color: var(--red);
+    border-color: var(--red);
+}
+
+.toolbar-color-picker {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    cursor: pointer;
+    background: none;
+}
+
+/* Floating Editor Styles */
+.cell-floating-editor {
+    position: fixed;
+    display: none;
+    z-index: 9999;
+    background: var(--bg-primary);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    border: 2.5px solid var(--red);
+    border-radius: 0;
+    overflow: visible;
+    min-width: 80px;
+}
+
+.cell-editor-input {
+    width: 100%;
+    /* Fill the whole cell */
+    height: 100%;
+    border: none;
+    padding: 0 4px;
+    font-family: inherit;
+    font-size: 0.78rem;
+    background: transparent;
+    color: var(--text-primary);
+    outline: none;
+}
+
+.btn-confirm-edit {
+    display: none;
+    /* Hide the confirm button as requested for clean look */
+}
+
+/* Status Bar Info */
+#cellInfo {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}

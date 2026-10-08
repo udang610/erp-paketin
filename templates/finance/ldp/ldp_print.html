@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LDP - {{ ldp.ldp_number }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            font-size: 11px;
+            color: #1e293b;
+            background: #f8fafc;
+            padding: 20px;
+        }
+        .print-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .header-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: #dc2626;
+            letter-spacing: 0.5px;
+        }
+        .meta-label {
+            color: #64748b;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .table-ldp th {
+            background-color: #f1f5f9 !important;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            border-bottom: 2px solid #cbd5e1;
+            padding: 6px 8px;
+        }
+        .table-ldp td {
+            padding: 6px 8px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 10.5px;
+        }
+        .signature-box {
+            border-top: 1px dashed #94a3b8;
+            margin-top: 50px;
+            padding-top: 5px;
+            text-align: center;
+            font-weight: 600;
+        }
+        @media print {
+            body {
+                background: #fff;
+                padding: 0;
+            }
+            .print-container {
+                box-shadow: none;
+                padding: 0;
+                max-width: 100%;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print text-center mb-4">
+        <button onclick="window.print()" class="btn btn-danger px-4 fw-bold shadow-sm me-2">
+            <i class="bi bi-printer"></i> Cetak Dokumen LDP
+        </button>
+        <button onclick="window.close()" class="btn btn-light border px-4">
+            Tutup
+        </button>
+    </div>
+
+    <div class="print-container">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-start border-bottom pb-3 mb-3">
+            <div>
+                <div class="header-title">PAKETIN CARGO</div>
+                <div class="text-muted" style="font-size: 10px;">PT AMANAH CARGO JAYA MANDIRI</div>
+                <div class="text-muted" style="font-size: 9.5px; max-width: 350px;">
+                    Jl. Raya Logistik No. 88, Jakarta • Telp: (021) 555-0199 • support@paketin.co.id
+                </div>
+            </div>
+            <div class="text-end">
+                <h5 class="fw-bold mb-1 text-dark">LEMBAR DAFTAR PENGIRIMAN</h5>
+                <div class="fw-bold text-danger fs-6">{{ ldp.ldp_number }}</div>
+                <div class="text-muted" style="font-size: 10px;">Tanggal: {{ ldp.ldp_date|date:"d F Y" }}</div>
+            </div>
+        </div>
+
+        <!-- Meta Information -->
+        <div class="row g-2 mb-3 p-2 bg-light rounded">
+            <div class="col-6">
+                <div class="meta-label">Kepada Klien / Perusahaan:</div>
+                <div class="fw-bold fs-6 text-dark">{{ ldp.client_name }}</div>
+                <div class="text-muted">{{ ldp.client.address|default:"Alamat sesuai data master pelanggan" }}</div>
+                {% if ldp.client.pic_account %}
+                <div class="text-muted">Attn: {{ ldp.client.pic_account }} ({{ ldp.client.pic_phone|default:"-" }})</div>
+                {% endif %}
+            </div>
+            <div class="col-6 text-end">
+                <div class="meta-label">Informasi Pengiriman:</div>
+                <div>Cabang Asal: <strong>{{ ldp.branch.name|default:"Pusat" }}</strong></div>
+                <div>Periode: <strong>{{ ldp.periode_awal|date:"d/m/Y"|default:"-" }} s/d {{ ldp.periode_akhir|date:"d/m/Y"|default:"-" }}</strong></div>
+                <div>Status LDP: <span class="badge bg-secondary">{{ ldp.get_status_display }}</span></div>
+            </div>
+        </div>
+
+        <!-- Items Table -->
+        <table class="table table-ldp w-100 mb-3">
+            <thead>
+                <tr>
+                    <th style="width: 30px;">No</th>
+                    <th>No. Resi (AWB)</th>
+                    <th>Tgl Kirim</th>
+                    <th>Pengirim</th>
+                    <th>Penerima</th>
+                    <th>Tujuan</th>
+                    <th class="text-center">Layanan</th>
+                    <th class="text-center">Koli</th>
+                    <th class="text-end">Berat (Kg)</th>
+                    <th class="text-end">Subtotal (Rp)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td class="fw-bold">{{ item.awb_number }}</td>
+                    <td>{{ item.shipment_date|date:"d/m/Y"|default:"-" }}</td>
+                    <td>{{ item.sender_name }}</td>
+                    <td>{{ item.receiver_name }}</td>
+                    <td>{{ item.destination }}</td>
+                    <td class="text-center">{{ item.service_type }}</td>
+                    <td class="text-center">{{ item.koli }}</td>
+                    <td class="text-end">{{ item.chargeable_weight|floatformat:1 }}</td>
+                    <td class="text-end fw-semibold">Rp {{ item.subtotal|floatformat:0 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="10" class="text-center py-3 text-muted">Tidak ada rincian resi.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="fw-bold" style="background-color: #f8fafc; border-top: 2px solid #cbd5e1;">
+                    <td colspan="7" class="text-end">TOTAL KESELURUHAN:</td>
+                    <td class="text-center">{{ ldp.total_koli }} Koli</td>
+                    <td class="text-end">{{ ldp.total_weight|floatformat:1 }} Kg</td>
+                    <td class="text-end text-danger">Rp {{ ldp.total_amount|floatformat:0 }}</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <!-- Signatures Section -->
+        <div class="row mt-4 pt-3">
+            <div class="col-4 text-center">
+                <div class="meta-label mb-1">Dibuat Oleh (Finance),</div>
+                <div class="signature-box">{{ ldp.created_by.get_full_name|default:ldp.created_by.username|default:"Petugas Finance" }}</div>
+            </div>
+            <div class="col-4 text-center">
+                <div class="meta-label mb-1">Diserahkan Oleh (Ekspedisi),</div>
+                <div class="signature-box">( Kurir / Operasional )</div>
+            </div>
+            <div class="col-4 text-center">
+                <div class="meta-label mb-1">Diterima & Disetujui Oleh (Klien),</div>
+                <div class="signature-box">( PIC / Finance Klien )</div>
+            </div>
+        </div>
+
+        <div class="text-center text-muted mt-4 pt-3 border-top" style="font-size: 9px;">
+            Dokumen ini merupakan lampiran resmi dari sistem ERP Paketin Cargo. Dicetak pada {{ "now"|date:"d/m/Y H:i:s" }}.
+        </div>
+    </div>
+</body>
+</html>

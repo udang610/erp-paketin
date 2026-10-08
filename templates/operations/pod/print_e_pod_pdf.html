@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>E-POD - {{ shipment.resi_number }}</title>
+    <style>
+        @page {
+            size: 215mm 110mm;
+            margin: 0;
+            @frame content_frame {
+                left: 3mm;
+                width: 209mm;
+                top: 2mm;
+                height: 101mm;
+            }
+            @frame footer_frame {
+                -pdf-frame-content: footerContent;
+                left: 3mm;
+                width: 209mm;
+                top: 104.5mm;
+                height: 4.5mm;
+            }
+        }
+
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 9.5px;
+            color: #000;
+            line-height: 1.15;
+            margin: 0;
+            padding: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        td {
+            vertical-align: top;
+            padding: 0;
+        }
+
+        .header-logo-text {
+            font-size: 8px;
+            color: #000;
+            line-height: 1.15;
+        }
+
+        .company-title {
+            font-size: 9.5px;
+            font-weight: bold;
+            color: #000;
+        }
+
+        .dashed-line {
+            border-top: 1px dashed #666;
+            margin: 2px 0 3px 0;
+        }
+
+        .label-col {
+            width: 95px;
+            font-size: 9px;
+            color: #000;
+            padding: 1.8px 0;
+        }
+
+        .separator-col {
+            width: 10px;
+            font-size: 9px;
+            font-weight: bold;
+            text-align: center;
+            padding: 1.8px 0;
+        }
+
+        .value-col {
+            font-size: 9px;
+            font-weight: bold;
+            color: #000;
+            padding: 1.8px 0;
+        }
+
+        .value-normal {
+            font-size: 9px;
+            font-weight: normal;
+            color: #000;
+            padding: 1.8px 0;
+        }
+
+        .photo-img {
+            height: 64mm;
+            border: 1px solid #ccc;
+        }
+
+        .footer-text {
+            font-size: 7.5px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <!-- TOP HEADER: Logo, Company Info & Barcode -->
+        <table style="width: 100%; margin-bottom: 2px;">
+            <tr>
+                <!-- Logo & Company Info -->
+                <td style="width: 58%; vertical-align: middle;">
+                    <table style="width: 100%;">
+                        <tr>
+                            <td style="width: 95px; vertical-align: middle;">
+                                <img src="{{ logo_path }}" width="90" />
+                            </td>
+                            <td style="vertical-align: middle; padding-left: 4px;">
+                                <div class="company-title">E POD PT. Amanah Cargo Jaya Mandiri</div>
+                                <div class="header-logo-text">
+                                    Kantor Pusat : Jl. Arteri Jorr Jatiwarna No.55, RT.001/RW.002, Jatimelati, Kec. Pd. Melati, Kota Bks, Jawa Barat 17415, Telp. No : 0811 151 7716<br/>
+                                    <strong>www.paketincargo.com</strong>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+
+                <!-- Resi Barcode -->
+                <td style="width: 42%; vertical-align: middle; padding-right: 2mm;">
+                    <table align="right" style="width: auto; margin-left: auto;">
+                        <tr>
+                            <td style="text-align: center;">
+                                <div style="font-size: 9.5px; font-weight: bold; margin-bottom: 2px; text-align: center;">Resi No : {{ shipment.resi_number }}</div>
+                                <pdf:barcode value="{{ shipment.resi_number }}" type="code128" barWidth="0.7" barHeight="16" />
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <!-- Dashed Divider -->
+        <div class="dashed-line"></div>
+
+        <!-- MAIN BODY: Left Info & Right Photo -->
+        <table style="width: 100%;">
+            <tr>
+                <!-- Left Details -->
+                <td style="width: 56%; vertical-align: top; padding-right: 4px;">
+                    <table style="width: 100%;">
+                        <tr>
+                            <td class="label-col" style="font-weight: bold;">No Reff</td>
+                            <td class="separator-col">:</td>
+                            <td class="value-col">{{ shipment.reference_no|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="label-col">Kode Pelanggan</td>
+                            <td class="separator-col">:</td>
+                            <td class="value-col">{{ shipment.client.customer_code|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="label-col">No. DRS</td>
+                            <td class="separator-col">:</td>
+                            <td class="value-col">{{ delivery_manifest.manifest_number|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="label-col">Nama Kurir</td>
+                            <td class="separator-col">:</td>
+                            <td class="value-col">
+                                {% if delivery_manifest and delivery_manifest.driver %}
+                                    {{ delivery_manifest.driver.username }} - {{ delivery_manifest.driver.get_full_name|default:delivery_manifest.driver.username }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" style="height: 3px;"></td>
+                        </tr>
+                        <tr>
+                            <td class="label-col">Nama Penerima</td>
+                            <td class="separator-col">:</td>
+                            <td class="value-col">{{ shipment.receiver_name }}</td>
+                        </tr>
+                        <tr>
+                            <td class="label-col">Alamat</td>
+                            <td class="separator-col">:</td>
+                            <td class="value-normal">
+                                {{ shipment.receiver_address|default:"-" }}
+                                {% if shipment.receiver_city %}, {{ shipment.receiver_city }}{% endif %}
+                                {% if shipment.receiver_postal_code %} - {{ shipment.receiver_postal_code }}{% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label-col"></td>
+                            <td class="separator-col"></td>
+                            <td class="value-normal">{{ shipment.receiver_phone|default:"" }}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" style="height: 3px;"></td>
+                        </tr>
+                        <tr>
+                            <td class="label-col">POD No.</td>
+                            <td class="separator-col">:</td>
+                            <td class="value-col">POD{{ shipment.resi_number }}</td>
+                        </tr>
+                        <tr>
+                            <td class="label-col">Diterima Oleh</td>
+                            <td class="separator-col">:</td>
+                            <td class="value-col">{{ shipment.pod_receiver_name|default:shipment.receiver_name|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="label-col">Hubungan</td>
+                            <td class="separator-col">:</td>
+                            <td class="value-col">PENERIMA LANGSUNG</td>
+                        </tr>
+                        <tr>
+                            <td class="label-col">Tanggal/Jam POD</td>
+                            <td class="separator-col">:</td>
+                            <td class="value-normal">
+                                {% if effective_pod_date %}
+                                    {{ effective_pod_date|date:"d-m-Y H:i" }}
+                                {% elif shipment.pod_date %}
+                                    {{ shipment.pod_date|date:"d-m-Y H:i" }}
+                                {% elif pod_tracking.occurred_at %}
+                                    {{ pod_tracking.occurred_at|date:"d-m-Y H:i" }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label-col">Status POD</td>
+                            <td class="separator-col">:</td>
+                            <td class="value-col">DELIVERED</td>
+                        </tr>
+                        <tr>
+                            <td class="label-col">Keterangan</td>
+                            <td class="separator-col">:</td>
+                            <td class="value-normal">{{ pod_tracking.description|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="label-col">Titik Kordinat</td>
+                            <td class="separator-col">:</td>
+                            <td class="value-normal">,</td>
+                        </tr>
+                    </table>
+                </td>
+
+                <!-- Right Photos & Signatures (Hanya Foto, Video Dikecualikan) -->
+                <td style="width: 44%; vertical-align: top; padding-left: 2px;">
+                    <div style="font-size: 9px; font-weight: bold; margin-bottom: 2px;">Photo & Signature :</div>
+                    <table style="width: 100%;">
+                        <tr>
+                            {% if photo_paths %}
+                                {% for p_path in photo_paths %}
+                                <td style="text-align: center; vertical-align: top; padding: 0 1px;">
+                                    <img src="{{ p_path }}" class="photo-img" style="height: 64mm; width: auto;" alt="Foto POD" />
+                                </td>
+                                {% endfor %}
+                            {% elif shipment.pod_image %}
+                            <td style="text-align: center; vertical-align: top;">
+                                <img src="{{ shipment.pod_image.path }}" class="photo-img" style="height: 64mm; width: auto;" alt="Foto POD" />
+                            </td>
+                            {% else %}
+                            <td style="text-align: center; vertical-align: middle; height: 60mm; border: 1px dashed #ccc;">
+                                <div style="font-size: 8px; color: #999;">[ Foto Bukti POD Tidak Tersedia ]</div>
+                            </td>
+                            {% endif %}
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- FOOTER DI PALING BAWAH HALAMAN -->
+    <div id="footerContent">
+        <div class="dashed-line" style="margin: 0 0 2px 0;"></div>
+        <table style="width: 100%;">
+            <tr>
+                <td style="width: 38%; text-align: left;" class="footer-text">
+                    <span style="color: #0d6efd; text-decoration: underline;">Copyright {% now "Y" %}</span> www.paketincargo.com All rights reserved
+                </td>
+                <td style="width: 32%; text-align: center;" class="footer-text">
+                    Tanggal Input : {{ shipment.created_at|date:"d-m-Y" }}, diinput oleh : {% if shipment.created_by %}{{ shipment.created_by.get_full_name|default:shipment.created_by.username|upper }}{% else %}CS{% endif %}
+                </td>
+                <td style="width: 30%; text-align: right;" class="footer-text">
+                    Cetak Tanggal : {{ print_time|date:"d-m-Y" }} Oleh {% if request.user %}{{ request.user.get_full_name|default:request.user.username|upper }}{% else %}ADMIN{% endif %}
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

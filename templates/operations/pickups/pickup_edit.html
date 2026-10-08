@@ -1,0 +1,292 @@
+{% extends 'base.html' %}
+
+{% block title %}Buat Pickup Order{% endblock %}
+{% block page_title %}Tambah Pickup Order Baru{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="mb-3">
+        <a href="{% url 'operations:pickup-list' %}" class="btn btn-secondary btn-sm shadow-sm">
+            <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+        </a>
+    </div>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="row g-4">
+            
+            <!-- Left Column: Pickup Requests -->
+            <div class="col-lg-3">
+                <div class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+                        <h6 class="fw-bold text-dark mb-0">Permintaan Pickup</h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-semibold">Tanggal Pickup <span class="text-danger">*</span></label>
+                            {{ form.pickup_date }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-semibold">Waktu Pickup <span class="text-danger">*</span></label>
+                            {{ form.pickup_time }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-semibold">Req. Kendaraan</label>
+                            {{ form.vehicle }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-semibold">No. Dokumen Ref (PR)</label>
+                            {{ form.reff_doc_no }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-semibold">Catatan</label>
+                            {{ form.note }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-semibold">Req. Packing ?</label>
+                            {{ form.req_packing }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-semibold">Asuransi ?</label>
+                            {{ form.insurance }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column: Customer & Package -->
+            <div class="col-lg-9">
+                <div class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+                        <h6 class="fw-bold text-dark mb-0">Kustomer & Paket</h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <!-- Row 1 -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small fw-semibold">Kustomer <span class="text-danger">*</span></label>
+                                <select name="client" id="id_client" class="form-select" required>
+                                    <option value="">-- Pilih Kustomer --</option>
+                                    {% for c in clients %}
+                                    <option value="{{ c.id }}" 
+                                        data-city="{{ c.city|default:'' }}"
+                                        data-district="{{ c.district|default:'' }}"
+                                        data-pic_name="{{ c.pic_account|default:'' }}"
+                                        data-pic_phone="{{ c.pic_phone|default:'' }}"
+                                        data-address="{{ c.office_address|default:'' }}"
+                                        {% if form.client.value|stringformat:"s" == c.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ c.customer_code }} - {{ c.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small fw-semibold">Kota <span class="text-danger">*</span></label>
+                                {{ form.city }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small fw-semibold">Kecamatan <span class="text-danger">*</span></label>
+                                {{ form.district }}
+                            </div>
+                        </div>
+                        
+                        <!-- Row 2 -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small fw-semibold">Nama PIC <span class="text-danger">*</span></label>
+                                {{ form.pic_name }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small fw-semibold">No. HP PIC <span class="text-danger">*</span></label>
+                                {{ form.pic_phone }}
+                            </div>
+                        </div>
+                        
+                        <!-- Row 3 -->
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-semibold">Alamat Pickup <span class="text-danger">*</span></label>
+                            {{ form.pickup_address }}
+                        </div>
+                        
+                        <!-- Row 4 -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small fw-semibold">Berat (kg) <span class="text-danger">*</span></label>
+                                {{ form.weight }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small fw-semibold">Koli <span class="text-danger">*</span></label>
+                                {{ form.colly }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small fw-semibold">Tipe Kiriman <span class="text-danger">*</span></label>
+                                {{ form.shipment_type }}
+                            </div>
+                        </div>
+                        
+                        <!-- Row 5 -->
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-semibold">Deskripsi Barang</label>
+                            {{ form.description_item }}
+                        </div>
+                        
+                        <!-- Row 6 -->
+                        <div class="mb-4">
+                            <label class="form-label text-muted small fw-semibold">Upload File:</label>
+                            {{ form.file_upload }}
+                        </div>
+                        
+                        <!-- Status and Driver (Hidden in original design, but kept for logic) -->
+                        <div class="row g-3 d-none">
+                            <div class="col-md-6">{{ form.status }}</div>
+                            <div class="col-md-6">{{ form.driver }}</div>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <div class="d-flex justify-content-end gap-2 pt-3 border-top mt-4">
+                            <a href="{% url 'operations:pickup-list' %}" class="btn btn-light px-4">Batal</a>
+                            <button type="submit" class="btn btn-primary px-4 shadow-sm">
+                                <i class="ph-bold ph-floppy-disk me-2"></i>Simpan Pickup Order
+                            </button>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </form>
+</div>
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    const $clientSelect = $('#id_client');
+    if ($clientSelect.length) {
+        $clientSelect.on('change', function() {
+            const $opt = $(this).find('option:selected');
+            if ($opt.val()) {
+                const city = $opt.data('city') || '';
+                const district = $opt.data('district') || '';
+                const pic_name = $opt.data('pic_name') || '';
+                const pic_phone = $opt.data('pic_phone') || '';
+                const address = $opt.data('address') || '';
+                
+                const $districtField = $('[name="district"]');
+                $districtField.attr('data-current-val', district);
+                $districtField.data('current-val', district); 
+                
+                const $cityField = $('[name="city"]');
+                if ($cityField.find("option[value='" + city + "']").length) {
+                    $cityField.val(city).trigger('change');
+                } else {
+                    const newCityOption = new Option(city, city, true, true);
+                    $cityField.append(newCityOption).trigger('change');
+                }
+                
+                if ($districtField.find("option[value='" + district + "']").length) {
+                    $districtField.val(district).trigger('change');
+                } else {
+                    const newDistrictOption = new Option(district, district, true, true);
+                    $districtField.append(newDistrictOption).trigger('change');
+                }
+                
+                $('[name="pic_name"]').val(pic_name);
+                $('[name="pic_phone"]').val(pic_phone);
+                $('[name="pickup_address"]').val(address);
+            }
+        });
+    }
+    
+    // Set field date default to today
+    const $dateInput = $('[name="pickup_date"]');
+    if ($dateInput.length && !$dateInput.val()) {
+        const today = new Date().toISOString().split('T')[0];
+        $dateInput.val(today);
+    }
+    
+    // Set field time default to current time (HH:mm)
+    const $timeInput = $('[name="pickup_time"]');
+    if ($timeInput.length && !$timeInput.val()) {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        $timeInput.val(`${hours}:${minutes}`);
+    }
+    
+    // Dynamic district handling
+    function updateDistrictList(isUserChange = true) {
+        var citySelect = $('select[name="city"]');
+        var districtSelect = $('select[name="district"]');
+        var selectedCity = citySelect.val();
+        
+        if (!selectedCity) {
+            districtSelect.empty().append('<option value="">Pilih Kota Terlebih Dahulu...</option>');
+            districtSelect.trigger('change');
+            return;
+        }
+        
+        districtSelect.prop('disabled', false);
+        districtSelect.empty().append('<option value="">Memuat...</option>');
+        
+        var dataCurrentVal = districtSelect.data('current-val');
+        var currentVal = districtSelect.attr('data-current-val') || dataCurrentVal;
+        
+        if (isUserChange) {
+            currentVal = "";
+            districtSelect.attr('data-current-val', "");
+            districtSelect.data('current-val', "");
+        }
+
+        if (districtSelect.hasClass('select2-hidden-accessible')) {
+            districtSelect.trigger('change.select2');
+        }
+        
+        $.ajax({
+            url: '/operations/api/get-districts/',
+            data: {
+                'city': selectedCity
+            },
+            success: function(data) {
+                districtSelect.empty().append('<option value="">Pilih Kecamatan...</option>');
+                if (data && data.districts) {
+                    $.each(data.districts, function(index, item) {
+                        var option = $('<option>', {
+                            value: item.value,
+                            text: item.label
+                        });
+                        if (currentVal === item.value) {
+                            option.prop('selected', true);
+                        }
+                        districtSelect.append(option);
+                    });
+                }
+                districtSelect.trigger('change');
+            }
+        });
+    }
+
+    $('select[name="city"]').on('change', function() {
+        updateDistrictList(true);
+    });
+    
+    // Preserve current value on load if editing
+    var initialDistrict = $('select[name="district"]').val();
+    if (initialDistrict) {
+        $('select[name="district"]').attr('data-current-val', initialDistrict);
+        $('select[name="district"]').data('current-val', initialDistrict);
+        updateDistrictList(false);
+    }
+    
+    // On client change, wait a bit for city change to trigger and populate district
+    $('#id_client').on('change', function() {
+        var districtVal = $(this).find('option:selected').data('district');
+        if (districtVal) {
+            setTimeout(function() {
+                $('select[name="district"]').val(districtVal).trigger('change');
+            }, 500);
+        }
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

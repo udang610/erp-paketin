@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Scan Barcode - ERP Paketin{% endblock %}
+{% block page_title %}Update Tracking (Barcode){% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+            <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
+                <h5 class="mb-0 fw-bold text-dark">
+                    <i class="ph-duotone ph-barcode me-2 text-primary"></i> 
+                    Scan Barcode Resi
+                </h5>
+                <p class="text-muted small mt-1">Arahkan scanner ke barcode resi untuk mengupdate status secara otomatis.</p>
+            </div>
+            
+            <div class="card-body p-4">
+                <form method="post" id="barcodeForm">
+                    {% csrf_token %}
+                    
+                    <div class="row g-3 mb-4 p-3 rounded" style="background-color: #f8f9fa;">
+                        <h6 class="fw-bold mb-2">Konfigurasi Status Saat Ini:</h6>
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-semibold">Status Pengiriman</label>
+                            <select name="status" class="form-select" required>
+                                <option value="PICKUP">Menunggu Pickup</option>
+                                <option value="TRANSFER" selected>Transfer Location</option>
+                                <option value="TRANSIT">Transit</option>
+                                <option value="POD">Terkirim (POD)</option>
+                                <option value="RETURNED">Retur</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-semibold">Lokasi Terkini</label>
+                            <input type="text" name="location" class="form-control" placeholder="Contoh: Gudang Transit Jakarta" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-semibold">Keterangan Tambahan</label>
+                            <input type="text" name="description" class="form-control" placeholder="Contoh: Barang tiba di sortir">
+                        </div>
+                    </div>
+
+                    <div class="text-center py-5">
+                        <i class="ph-duotone ph-scan text-muted mb-3" style="font-size: 5rem; opacity: 0.5;"></i>
+                        <h4 class="fw-bold mb-4">Siap Memindai...</h4>
+                        
+                        <input type="text" name="resi_number" id="barcodeInput" class="form-control form-control-lg mx-auto text-center fw-bold" placeholder="Scan Barcode atau Ketik Resi di sini" style="max-width: 400px; border-radius: 8px; font-size: 1.2rem;" required autofocus autocomplete="off">
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary px-5 py-2">
+                                <i class="ph-bold ph-paper-plane-right me-2"></i> Update Manual
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const barcodeInput = document.getElementById('barcodeInput');
+        
+        // Memastikan input barcode selalu fokus ketika halaman dimuat
+        barcodeInput.focus();
+
+        // Ketika kita click dimana saja, fokus kembali ke input jika kita tidak sedang mengisi setting
+        document.body.addEventListener('click', function(e) {
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'BUTTON') {
+                barcodeInput.focus();
+            }
+        });
+    });
+</script>
+{% endblock %}

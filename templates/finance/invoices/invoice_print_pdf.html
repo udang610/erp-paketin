@@ -1,0 +1,301 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Invoice {{ invoice.invoice_number }}</title>
+<style>
+    @page {
+        size: a4 portrait;
+        margin: 8mm 15mm 6mm 15mm;
+    }
+    body {
+        font-family: Helvetica, Arial, sans-serif;
+        font-size: 8.5pt;
+        color: #222222;
+        line-height: 1.25;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    /* Header */
+    .company-legal {
+        font-size: 8.5pt;
+        font-weight: bold;
+        margin-top: 2px;
+        margin-bottom: 2px;
+    }
+    .company-addr {
+        font-size: 6.5pt;
+        color: #333333;
+        line-height: 1.25;
+    }
+    .invoice-title {
+        text-align: center;
+        font-size: 16pt;
+        font-weight: bold;
+        letter-spacing: 0.5px;
+    }
+    .info-box {
+        border: 0.5px solid #555555;
+        font-size: 7.5pt;
+    }
+    .info-box td {
+        padding: 2px 4px;
+        border-bottom: 0.5px solid #cccccc;
+        vertical-align: top;
+    }
+    .info-box tr:last-child td {
+        border-bottom: none;
+    }
+
+    /* Items Table */
+    .items-table {
+        margin-top: 6px;
+        font-size: 7.5pt;
+        border: 0.5px solid #aaaaaa;
+    }
+    .items-table thead td {
+        background-color: #707070;
+        color: #ffffff;
+        font-weight: bold;
+        padding: 3px 6px;
+        font-size: 7.5pt;
+        letter-spacing: 0.3px;
+    }
+    .items-table tbody td {
+        padding: 2px 5px;
+    }
+    .amount {
+        text-align: right;
+        white-space: nowrap;
+    }
+    .line-top {
+        border-top: 0.5px solid #aaaaaa;
+    }
+    .grand-total td {
+        border-top: 0.5px solid #aaaaaa;
+        font-weight: bold;
+        font-size: 8.8pt;
+        padding-top: 3px;
+        padding-bottom: 3px;
+    }
+
+    /* Terbilang Box */
+    .terbilang-box {
+        border: 0.5px solid #aaaaaa;
+        border-top: none;
+        margin-top: 0px;
+        font-size: 8.5pt;
+    }
+    .terbilang-box td {
+        padding: 5px 8px;
+        border: 0.5px solid #aaaaaa;
+        border-top: none;
+        border-bottom: none;
+    }
+
+    /* Bank Table */
+    .bank-table {
+        border-collapse: collapse;
+        border: 0.5px solid #cccccc;
+        font-size: 7.5pt;
+        margin-top: 4px;
+        width: 100%;
+    }
+    .bank-table th {
+        background-color: #f5f5f5;
+        color: #333333;
+        text-align: left;
+        padding: 3px 6px;
+        border: 0.5px solid #cccccc;
+        font-size: 7pt;
+        font-weight: bold;
+    }
+    .bank-table td {
+        padding: 4px 6px;
+        border: 0.5px solid #cccccc;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+</style>
+</head>
+<body>
+
+    <!-- Header Table: Logo/Company (Left), INVOICE (Center), Info Box (Right) -->
+    <table cellpadding="0" cellspacing="0" style="border: none;">
+        <tr>
+            <!-- Left: Logo & Company -->
+            <td style="width: 38%; vertical-align: top; padding-right: 5px;">
+                {% if logo_path %}
+                <img src="{{ logo_path }}" width="145" style="margin-bottom: 4px;" />
+                {% else %}
+                <div style="color: #d92b2b; font-weight: bold; font-size: 15pt; margin-bottom: 4px;">Paketin Cargo</div>
+                {% endif %}
+                <div class="company-legal">{{ company.legal_name }}</div>
+                <div class="company-addr">
+                    {{ company.address }}{% if company.phone %}, Telp. No : {{ company.phone }}{% endif %}
+                </div>
+            </td>
+
+            <!-- Center: INVOICE Title -->
+            <td style="width: 24%; vertical-align: top; text-align: center; padding-top: 30px;">
+                {% if invoice.status == 'DRAFT' %}
+                <div style="text-align: center; font-size: 10pt; font-weight: bold; color: #888888; letter-spacing: 1px; margin-bottom: 2px;">DRAFT</div>
+                {% endif %}
+                <div class="invoice-title">INVOICE</div>
+            </td>
+
+            <!-- Right: Info Box -->
+            <td style="width: 38%; vertical-align: middle;">
+                <table class="info-box" cellpadding="0" cellspacing="0">
+                    <tr><td style="width: 34%;">No Invoice</td><td style="width: 4%; text-align: center;">:</td><td style="width: 62%;"><b>{{ invoice.invoice_number }}</b></td></tr>
+                    <tr><td>Kode Pelanggan</td><td style="text-align: center;">:</td><td>{{ invoice.kode_pelanggan|default:"-" }}</td></tr>
+                    <tr><td>Nama Pelanggan</td><td style="text-align: center;">:</td><td><b>{{ invoice.client_name }}</b></td></tr>
+                    <tr><td>Pic Invoice</td><td style="text-align: center;">:</td><td>{{ invoice.pic_invoice|default:"" }}</td></tr>
+                    <tr><td>Alamat</td><td style="text-align: center;">:</td><td>{{ invoice.alamat_pelanggan|default:"-" }}</td></tr>
+                    <tr><td>N.P.W.P</td><td style="text-align: center;">:</td><td>{{ invoice.npwp|default:"0" }}</td></tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Meta Info Row -->
+    <table cellpadding="0" cellspacing="0" style="font-size: 8pt; margin-top: 4px; margin-bottom: 2px; border: none;">
+        <tr>
+            <td style="width: 50%; text-align: left; vertical-align: top; line-height: 1.35;">
+                Tgl. Invoice : {{ invoice.date_issued|date:"d M Y" }}<br>
+                Tgl. Jatuh Tempo : {{ invoice.due_date|date:"d M Y"|default:invoice.date_issued|date:"d M Y" }}
+            </td>
+            <td style="width: 50%; text-align: right; vertical-align: top;">
+                Sales (AE) : {{ invoice.sales_ae|default:"BUDI BDJ" }}
+            </td>
+        </tr>
+    </table>
+
+    <!-- Items Table -->
+    <table class="items-table" cellpadding="0" cellspacing="0">
+        <thead>
+            <tr>
+                <td style="width: 72%;">KETERANGAN / DETAILS</td>
+                <td style="width: 28%;" class="amount">JUMLAH / TOTAL</td>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td colspan="2" style="padding-top: 6px; padding-bottom: 4px; line-height: 1.35;">
+                    Biaya Pengiriman {{ invoice.client_name }} periode {{ invoice.periode_awal|date:"d M Y"|default:invoice.created_at|date:"d M Y" }} - {{ invoice.periode_akhir|date:"d M Y"|default:invoice.created_at|date:"d M Y" }}<br>
+                    <b>Freight cost {{ invoice.client_name }} for periode {{ invoice.periode_awal|date:"d M Y"|default:invoice.created_at|date:"d M Y" }} - {{ invoice.periode_akhir|date:"d M Y"|default:invoice.created_at|date:"d M Y" }}</b>
+                </td>
+            </tr>
+
+            <tr>
+                <td style="padding-left: 20px;">Biaya Kirim / <b>Freight Cost</b></td>
+                <td class="amount">{{ invoice.biaya_kirim|floatformat:0|intcomma }}</td>
+            </tr>
+            <tr>
+                <td style="padding-left: 20px;">Diskon / <b>Discount</b></td>
+                <td class="amount">{% if invoice.diskon > 0 %}- {{ invoice.diskon|floatformat:0|intcomma }}{% else %}- 0{% endif %}</td>
+            </tr>
+            <tr>
+                <td style="padding-left: 20px;">Biaya Tambahan / <b>Surcharge dan Handling</b></td>
+                <td class="amount">{{ invoice.biaya_tambahan|default:0|floatformat:0|intcomma }}</td>
+            </tr>
+            <tr>
+                <td style="padding-left: 20px;">Sub Total Biaya Kirim / <b>Sub Total for Freight Cost</b></td>
+                <td class="amount line-top">{{ invoice.sub_total_biaya_kirim|default:invoice.biaya_kirim|floatformat:0|intcomma }}</td>
+            </tr>
+
+            <tr>
+                <td style="padding-left: 20px; padding-top: 6px;">Biaya Kemasan / <b>Packing Cost</b></td>
+                <td class="amount" style="padding-top: 6px;">{{ invoice.biaya_kemasan|default:0|floatformat:0|intcomma }}</td>
+            </tr>
+            <tr>
+                <td style="padding-left: 20px;">Biaya Lain / <b>Others Charges</b></td>
+                <td class="amount">{{ invoice.biaya_lain|default:0|floatformat:0|intcomma }}</td>
+            </tr>
+            <tr>
+                <td style="padding-left: 20px;">Sub Total Biaya Lain / <b>Sub Total for Other Charges</b></td>
+                <td class="amount line-top">{{ invoice.sub_total_biaya_lain|default:0|floatformat:0|intcomma }}</td>
+            </tr>
+
+            <tr>
+                <td style="padding-left: 20px; padding-top: 6px; border-top: 0.5px solid #aaaaaa;">Total Biaya Kirim Dan Biaya Lain / <b>Total Shipment Cost</b></td>
+                <td class="amount line-top" style="padding-top: 6px;">{{ invoice.subtotal|default:invoice.biaya_kirim|floatformat:0|intcomma }}</td>
+            </tr>
+
+            <tr>
+                <td style="padding-left: 20px; padding-top: 6px;">PPN / <b>VAT({% if invoice.tax > 0 %}1.1 %{% else %}0 %{% endif %})</b></td>
+                <td class="amount" style="padding-top: 6px;">{{ invoice.tax|default:0|floatformat:0|intcomma }}</td>
+            </tr>
+
+            <tr>
+                <td style="padding-left: 20px; padding-top: 6px;">Premi Asuransi / <b>Insurance Premium</b></td>
+                <td class="amount" style="padding-top: 6px;">{{ invoice.premi_asuransi|default:0|floatformat:0|intcomma }}</td>
+            </tr>
+            <tr>
+                <td style="padding-left: 20px;">Biaya Materai / <b>Stamp Charges</b></td>
+                <td class="amount">{{ invoice.materai|default:0|floatformat:0|intcomma }}</td>
+            </tr>
+
+            <tr class="grand-total">
+                <td style="padding-left: 20px; padding-top: 4px; padding-bottom: 4px;">Total Biaya</td>
+                <td class="amount">{{ invoice.total_amount|floatformat:0|intcomma }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Terbilang Box -->
+    <table class="terbilang-box" cellpadding="0" cellspacing="0">
+        <tr>
+            <td style="width: 25%; vertical-align: middle; font-weight: bold;">Terbilang</td>
+            <td style="width: 75%; vertical-align: middle; text-align: right; font-weight: bold;">{{ invoice.terbilang }}</td>
+        </tr>
+    </table>
+
+    <!-- Payment Note & Bank Accounts (Left) + Signature (Right) -->
+    <table cellpadding="0" cellspacing="0" style="margin-top: 10px; border: none;">
+        <tr>
+            <td style="width: 62%; vertical-align: top; padding-right: 10px;">
+                <div style="font-size: 7pt; color: #333333; line-height: 1.3; margin-bottom: 3px;">
+                    Pembayaran 14 hari setelah invoice diterima / <i>Payment 14 calendar days after invoice received.</i><br>
+                    <b>Pembayaran dapat ditransfer ke rekening / <i>Payment can be made to:</i></b>
+                </div>
+
+                <table class="bank-table" cellpadding="0" cellspacing="0">
+                    <thead>
+                        <tr><th style="width: 68%;">BANK</th><th style="width: 32%;">NOMOR REKENING</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for acc in company.bank_accounts %}
+                        <tr><td style="color: #0052cc; font-weight: bold;">{{ acc.bank }}</td><td style="color: #222222;">{{ acc.no_rek }}</td></tr>
+                        {% empty %}
+                        <tr><td style="color: #0052cc; font-weight: bold;">BANK BCA PT AMANAH CARGO JAYA MANDIRI</td><td style="color: #222222;">5510766999</td></tr>
+                        <tr><td style="color: #0052cc; font-weight: bold;">BANK BNI PT AMANAH CARGO JAYA MANDIRI</td><td style="color: #222222;">1147244331</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </td>
+            <td style="width: 38%; vertical-align: top; text-align: right; font-size: 7.8pt; line-height: 1.4; padding-top: 20px;">
+                Yours faithfully,<br>
+                <span style="font-weight: bold;">{{ invoice.date_issued|date:"d M Y" }}</span><br><br><br><br><br>
+                <u><b style="font-size: 9pt;">(DPT. KEUANGAN)</b></u>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Footer Reference & Remittance Note -->
+    <div style="margin-top: 50px; font-size: 9.5pt; line-height: 1.4; color: #222222;">
+        <b>Referensi / <i>Reference</i> :</b> {{ invoice.referensi|default:invoice.invoice_number }}<br>
+        Bukti pembayaran dikirimkan melalui email ke / <i>Remittance advice sent by email to:</i>
+    </div>
+
+    <!-- Copyright Footer - pushed to bottom -->
+    <div style="border-top: 0.5px solid #d0d5dd; margin-top: 180px; padding-top: 4px; font-size: 6.5pt;">
+        <span style="color: #0052cc; font-weight: bold;">Copyright</span> <span style="color: #666666;">{{ company.website|default:"www.paketincargo.com" }} All rights reserved.</span>
+    </div>
+
+</body>
+</html>

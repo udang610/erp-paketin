@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Resi {{ shipment.resi_number }}</title>
+    <style>
+        @page {
+            size: 100mm 150mm;
+            margin: 1.5mm 2mm;
+        }
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 7.5px;
+            color: #000;
+            line-height: 1.05;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        td {
+            vertical-align: top;
+        }
+        .small-label {
+            font-size: 6.5px;
+            margin-bottom: 1px;
+        }
+        .fw-bold {
+            font-weight: bold;
+        }
+        .table-custom th, .table-custom td {
+            border: 0.5pt solid #000;
+            padding: 1px 2px;
+            text-align: left;
+            font-size: 6.5px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Box (Outer 1.5pt Border) -->
+    <table style="width: 100%; border: 1.5pt solid #000; border-collapse: collapse;">
+        <tr>
+            <td style="padding: 0;">
+                <!-- Header Info Row -->
+                <table style="width: 100%; border-bottom: 0.5pt solid #000;">
+                    <tr>
+                        <td style="width: 26%; text-align: center; vertical-align: middle; padding: 4px 2px 1px 2px; border-right: 0.5pt solid #000;">
+                            <img src="{% if logo_path %}{{ logo_path }}{% else %}{{ request.scheme }}://{{ request.get_host }}/static/img/logo-surat.png{% endif %}" width="65" />
+                        </td>
+                        <td style="width: 16.5%; padding: 4px 6px 1px 6px; border-right: 0.5pt solid #000;">
+                            <div class="small-label">Asal</div>
+                            <div class="fw-bold" style="font-size: 7.5px;">{{ shipment.get_tlc_origin }} - {{ shipment.get_city_origin }}</div>
+                        </td>
+                        <td style="width: 16.5%; padding: 4px 6px 1px 6px; border-right: 0.5pt solid #000;">
+                            <div class="small-label">Tujuan</div>
+                            <div class="fw-bold" style="font-size: 7.5px;">{{ shipment.get_tlc_dest }} - {{ shipment.get_city_dest }}</div>
+                        </td>
+                        <td style="width: 20%; padding: 4px 6px 1px 6px; border-right: 0.5pt solid #000;">
+                            <div class="small-label">Pembayaran</div>
+                            <div class="fw-bold" style="font-size: 7.5px;">KREDIT</div>
+                        </td>
+                        <td style="width: 21%; padding: 4px 6px 1px 6px;">
+                            <div class="small-label">Handling</div>
+                            <div class="fw-bold" style="font-size: 7.5px;">GENERAL CARGO</div>
+                        </td>
+                    </tr>
+                </table>
+
+                {% if shipment.is_do_balik %}
+                <table style="width: 100%; border-collapse: collapse; background-color: #000; border-bottom: 0.5pt solid #000;">
+                    <tr>
+                        <td style="color: #fff; text-align: center; font-weight: bold; font-size: 7.5px; padding: 1.5px 0; letter-spacing: 0.5px;">
+                            AWB &amp; DO BALIK (WAJIB KEMBALIKAN SURAT JALAN)
+                        </td>
+                    </tr>
+                </table>
+                {% endif %}
+
+                <!-- Barcode Row -->
+                <table style="width: 100%; border-bottom: 0.5pt solid #000;">
+                    <tr>
+                        <td style="text-align: center; padding: 1px 0;">
+                            <pdf:barcode value="{{ shipment.resi_number }}" type="code128" barWidth="0.72" barHeight="14" />
+                            <table style="width: 100%; margin-top: 1px;">
+                                <tr>
+                                    <td style="width: 50%; text-align: left; padding-left: 4px; font-size: 6.5px;">Reff No : {{ shipment.reference_no|default:"-" }}</td>
+                                    <td style="width: 50%; text-align: right; padding-right: 4px; font-size: 6.5px;">Resi No : {{ shipment.resi_number }}</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Middle Content Row (Sender / Receiver & Type / Service) -->
+                <table style="width: 100%; border-bottom: 0.5pt solid #000;">
+                    <tr>
+                        <td style="width: 65%; border-right: 0.5pt solid #000; padding: 2px 3px 0 3px;">
+                            <div class="small-label">Pengirim :</div>
+                            <div class="fw-bold" style="margin-bottom: 2px;">{{ shipment.client.company_name|default:shipment.sender_name|default:"-"|slice:":8" }}*********</div>
+                            
+                            <div class="small-label">NAMA DAN ALAMAT PENERIMA :</div>
+                            <div class="fw-bold">{{ shipment.receiver_name|default:"-"|upper }}</div>
+                            <div class="fw-bold">{{ shipment.receiver_city|default:""|upper }}</div>
+                            <div style="font-size: 7px; margin-bottom: 6px; line-height: 1.1;">
+                                Kota : {{ shipment.receiver_city|default:"-" }}, Kec : {{ shipment.receiver_district|default:"-" }}, Kel : {{ shipment.receiver_subdistrict|default:"" }}<br />
+                                Phone : {{ shipment.receiver_phone|default:"-" }}<br />
+                                <span class="fw-bold">PIC : {{ shipment.attention|default:shipment.receiver_name|default:"" }}</span>
+                            </div>
+
+                            <table class="table-custom" style="width: 100%; margin-top: 10px; margin-bottom: 8px;">
+                                <tr>
+                                    <th>Berat</th>
+                                    <th>Berat Aktual</th>
+                                    <th>Berat Volumetrik</th>
+                                    <th>Dimensi</th>
+                                </tr>
+                                {% if shipment.items.exists %}
+                                    {% for item in shipment.items.all|slice:":2" %}
+                                    <tr>
+                                        <td>{{ item.actual_weight|default:0|floatformat:0 }} Kg</td>
+                                        <td>{{ item.actual_weight|default:0|floatformat:0 }} Kg</td>
+                                        <td>{{ item.get_volume_weight|default:0|floatformat:2 }} Kg</td>
+                                        <td>{{ item.panjang|default:1|floatformat:0 }}x{{ item.lebar|default:1|floatformat:0 }}x{{ item.tinggi|default:1|floatformat:0 }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                    {% if shipment.items.count > 2 %}
+                                    <tr>
+                                        <td>...</td>
+                                        <td>...</td>
+                                        <td>...</td>
+                                        <td>+{{ shipment.items.count|add:"-2" }} Koli</td>
+                                    </tr>
+                                    {% endif %}
+                                {% else %}
+                                    {% for c in colly_range|slice:":2" %}
+                                    <tr>
+                                        <td>{% if forloop.first %}{{ shipment.chargeable_weight|default:shipment.weight|default:0|floatformat:0 }} Kg{% else %}... Kg{% endif %}</td>
+                                        <td>{% if forloop.first %}{{ shipment.weight|default:0|floatformat:0 }} Kg{% else %}... Kg{% endif %}</td>
+                                        <td>{% if forloop.first %}{{ shipment.volume_weight|default:"0.00"|floatformat:2 }} Kg{% else %}0.20 Kg{% endif %}</td>
+                                        <td>{% if forloop.first and shipment.length %}{{ shipment.length|default:1|floatformat:0 }}x{{ shipment.width|default:1|floatformat:0 }}x{{ shipment.height|default:1|floatformat:0 }}{% else %}---{% endif %}</td>
+                                    </tr>
+                                    {% endfor %}
+                                    {% if shipment.total_colly > 2 %}
+                                    <tr>
+                                        <td>...</td>
+                                        <td>...</td>
+                                        <td>...</td>
+                                        <td>+{{ shipment.total_colly|add:"-2" }} Koli</td>
+                                    </tr>
+                                    {% endif %}
+                                {% endif %}
+                            </table>
+                            <div style="height: 60px; font-size: 1px; line-height: 60px;">&nbsp;</div>
+                        </td>
+                        <td style="width: 35%; padding: 2px 3px 0 3px;">
+                            <div class="small-label">Tipe Kiriman :</div>
+                            <div class="fw-bold" style="margin-bottom: 3px;">{{ shipment.shipment_type_detail|upper|default:"PAKET" }}</div>
+                            
+                            <div class="small-label">Servis :</div>
+                            <div class="fw-bold" style="margin-bottom: 3px;">{{ shipment.get_service_type_display|upper|default:"REGULER" }}</div>
+                            
+                            <div class="small-label">Non / COD :</div>
+                            <div class="fw-bold" style="margin-bottom: 3px;">{% if shipment.is_cod %}COD<br />{{ shipment.cod_amount|default:"0" }}{% else %}NON COD<br />0{% endif %}</div>
+                            
+                            <div class="small-label">Instruksi Khusus :</div>
+                            <div class="fw-bold" style="font-size: 6.5px;">{{ shipment.special_instruction|default:"AWB DAN DO KEMBALI" }}</div>
+                            <div style="height: 60px; font-size: 1px; line-height: 60px;">&nbsp;</div>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Keterangan Item & Quantities Row -->
+                <table style="width: 100%;">
+                    <tr>
+                        <td style="width: 65%; border-right: 0.5pt solid #000; padding: 2px 3px;">
+                            <div class="small-label">Keterangan Item :</div>
+                            <div style="font-size: 6.5px;">{{ shipment.item_description|default:shipment.description_item|default:"-" }}</div>
+                            <div style="height: 2px; font-size: 1px; line-height: 2px;">&nbsp;</div>
+                        </td>
+                        <td style="width: 17.5%; border-right: 0.5pt solid #000; text-align: center; padding: 2px;">
+                            <div class="small-label">Jumlah</div>
+                            <div class="fw-bold" style="font-size: 9px;">{{ shipment.total_colly|default:"1" }}</div>
+                        </td>
+                        <td style="width: 17.5%; text-align: center; padding: 2px;">
+                            <div class="small-label">Berat (Kg)</div>
+                            <div class="fw-bold" style="font-size: 9px;">{{ shipment.chargeable_weight|default:shipment.weight|default:"0" }}</div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <table style="width: 100%; margin: 1.5px 0 0 0; overflow: hidden; white-space: nowrap;">
+        <tr>
+            <td style="font-size: 8px; vertical-align: bottom; padding: 0 0 2px 0; line-height: 8px; letter-spacing: 2px;">
+                ..........................................................................................................................................................................................................
+            </td>
+            <td style="width: 15px; font-size: 14px; text-align: right; vertical-align: bottom; padding: 0; line-height: 8px;">&#9986;</td>
+        </tr>
+    </table>
+
+    <!-- Bottom Section Box -->
+    <table style="width: 100%; border: 0.75pt solid #000; margin-bottom: 2px;">
+        <tr>
+            <td style="padding: 3px 4px 2px 4px;">
+                <table style="width: 100%;">
+                    <tr>
+                        <td style="width: 35%; vertical-align: top; padding: 0;">
+                            <table style="width: 100%; font-size: 6.5px; line-height: 1.5;">
+                                <tr><td style="width: 35%;" class="fw-bold">Packing</td><td style="width: 65%;">: {% if shipment.packing_fee or shipment.packing_cost %}ya{% else %}no{% endif %}</td></tr>
+                                <tr><td class="fw-bold">Berat</td><td>: {{ shipment.weight|default:"0" }} Kg</td></tr>
+                                <tr><td class="fw-bold">Penerima</td><td>: {{ shipment.receiver_name|default:"-"|slice:":15"|upper }}</td></tr>
+                            </table>
+                        </td>
+                        <td style="width: 40%; vertical-align: top; padding: 0;">
+                            <table style="width: 100%; font-size: 6.5px; line-height: 1.5;">
+                                <tr><td style="width: 35%;" class="fw-bold">Asuransi</td><td style="width: 65%;">: {% if shipment.insurance_type|upper == 'NO' %}Tidak, Asuransi{% else %}{{ shipment.insurance_type|default:"Tidak, Asuransi" }}{% endif %}</td></tr>
+                                <tr><td class="fw-bold">Koli</td><td>: {{ shipment.total_colly|default:"1" }}</td></tr>
+                                <tr><td class="fw-bold">Tujuan</td><td>: {{ shipment.destination|default:"-"|lower }}</td></tr>
+                            </table>
+                        </td>
+                        <td style="width: 25%; vertical-align: top; padding: 0;">
+                            <table style="width: 100%; font-size: 6.5px; line-height: 1.5;">
+                                <tr>
+                                    <td style="width: 12px; vertical-align: middle;">
+                                        <div style="width: 6px; height: 6px; border: 0.5pt solid #000; text-align: center; font-size: 5px; line-height: 6px; font-weight: bold;">{% if shipment.service_type == 'REG' or shipment.get_service_type_display|upper == 'REGULER' %}V{% else %}&nbsp;{% endif %}</div>
+                                    </td>
+                                    <td style="font-weight: bold; vertical-align: middle; padding-left: 2px;">Reguler</td>
+                                </tr>
+                                <tr>
+                                    <td style="width: 12px; vertical-align: middle;">
+                                        <div style="width: 6px; height: 6px; border: 0.5pt solid #000; text-align: center; font-size: 5px; line-height: 6px; font-weight: bold;">{% if shipment.service_type == 'ODS' or shipment.get_service_type_display|upper == 'ONE DAY SERVICE' %}V{% else %}&nbsp;{% endif %}</div>
+                                    </td>
+                                    <td style="font-weight: bold; vertical-align: middle; padding-left: 2px;">ODS</td>
+                                </tr>
+                                <tr>
+                                    <td style="width: 12px; vertical-align: middle;">
+                                        <div style="width: 6px; height: 6px; border: 0.5pt solid #000; text-align: center; font-size: 5px; line-height: 6px; font-weight: bold;">{% if shipment.service_type == 'SDS' or shipment.get_service_type_display|upper == 'SAME DAY SERVICE' %}V{% else %}&nbsp;{% endif %}</div>
+                                    </td>
+                                    <td style="font-weight: bold; vertical-align: middle; padding-left: 2px;">SameDay</td>
+                                </tr>
+                                <tr>
+                                    <td style="width: 12px; vertical-align: middle;">
+                                        <div style="width: 6px; height: 6px; border: 0.5pt solid #000; text-align: center; font-size: 5px; line-height: 6px;">&nbsp;</div>
+                                    </td>
+                                    <td style="font-weight: bold; vertical-align: middle; padding-left: 2px;">............</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+
+                <table style="width: 100%; margin-top: 4px;">
+                    <tr>
+                        <td style="width: 30%; text-align: left; vertical-align: middle; padding: 0;">
+                            <img src="{% if logo_path %}{{ logo_path }}{% else %}{{ request.scheme }}://{{ request.get_host }}/static/img/logo-surat.png{% endif %}" width="60" /><br />
+                            <div style="font-size: 5px; margin-top: 1px;">www.paketincargo.com</div>
+                        </td>
+                        <td style="width: 70%; text-align: right; vertical-align: middle; padding: 0;">
+                            <pdf:barcode value="{{ shipment.resi_number }}" type="code128" barWidth="0.72" barHeight="16" />
+                            <table style="width: 100%; margin-top: 1px;">
+                                <tr>
+                                    <td style="width: 70%; text-align: left; padding-left: 2px; font-size: 6.5px; font-weight: bold;">Resi No : {{ shipment.resi_number }}</td>
+                                    <td style="width: 30%; text-align: right; padding-right: 2px; font-size: 6.5px; font-weight: bold;">{% if shipment.is_cod %}COD{% else %}NON COD{% endif %}</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Cost Table -->
+    <table class="table-custom" style="width: 100%;">
+        <tr>
+            <td style="width: 25%;">Biaya Kirim</td>
+            <td style="width: 25%;" class="fw-bold">Rp {{ shipment.price|default:0|floatformat:2 }}</td>
+            <td style="width: 25%;">Biaya Lain Lain</td>
+            <td style="width: 25%;" class="fw-bold">Rp {{ shipment.other_fee|default:0|floatformat:2 }}</td>
+        </tr>
+        <tr>
+            <td>Asuransi</td>
+            <td class="fw-bold">Rp {{ shipment.insurance_fee|default:0|floatformat:2 }}</td>
+            <td>Biaya Packing</td>
+            <td class="fw-bold">Rp {{ shipment.packing_fee|default:0|floatformat:2 }}</td>
+        </tr>
+        <tr>
+            <td>Potongan</td>
+            <td class="fw-bold">Rp {{ shipment.discount|default:0|floatformat:2 }}</td>
+            <td>PPN 0</td>
+            <td class="fw-bold">Rp 0,00</td>
+        </tr>
+        <tr>
+            <td colspan="3" style="text-align: left;">Total Biaya</td>
+            <td class="fw-bold">Rp {{ shipment.total_price|default:0|floatformat:2 }}</td>
+        </tr>
+    </table>
+
+    <!-- Footer -->
+    <div style="font-size: 6px; padding: 0; margin-top: 4px;">
+        <table style="width: 100%;">
+            <tr>
+                <td style="text-align: left;">Copyright www.paketincargo.com All rights reserved</td>
+                <td style="text-align: right;">Entry Date : {{ shipment.created_at|date:"Y-m-d H:i:s" }} by {{ shipment.created_by.username|default:"Sistem"|upper }}</td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

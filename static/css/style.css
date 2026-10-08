@@ -1,0 +1,1003 @@
+/* ============================================================
+   CRM Paketin Cargo - Main Stylesheet
+   Brand Colors: Red (#dc3545), White (#fff), Light Gray (#f8f9fa)
+   ============================================================ */
+
+:root {
+    --pk-red: #e32020;
+    --pk-red-dark: #cc1818;
+    --pk-red-light: #fce8e8;
+    --pk-primary: #e32020;
+    --pk-primary-dark: #b91c1c;
+    --pk-blue: #2563eb;
+    --pk-green: #059669;
+    --pk-amber: #d97706;
+    --pk-white: #ffffff;
+    --pk-gray-50: #f8f9fa;
+    --pk-gray-100: #f1f3f5;
+    --pk-gray-200: #e9ecef;
+    --pk-gray-300: #dee2e6;
+    --pk-gray-500: #adb5bd;
+    --pk-gray-700: #495057;
+    --pk-gray-900: #212529;
+    --pk-sidebar-width: 260px;
+    --pk-navbar-height: 64px;
+    --pk-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --pk-radius-sm: 8px;
+    --pk-radius-md: 12px;
+    --pk-radius-lg: 16px;
+    --pk-border: #e7ecf3;
+    --pk-shadow-sm: 0 4px 14px rgba(15, 23, 42, .05);
+    --pk-shadow-md: 0 12px 28px rgba(15, 23, 42, .08);
+    --pk-status-pending: #d97706;
+    --pk-status-transit: #dc2626;
+    --pk-status-transfer: #475569;
+    --pk-status-success: #059669;
+    --bs-primary: #e32020;
+    --bs-primary-rgb: 227, 32, 32;
+    --bs-danger: #b91c1c;
+    --bs-danger-rgb: 185, 28, 28;
+    --bs-link-color: #c81e1e;
+    --bs-link-hover-color: #991b1b;
+}
+
+/* Shared ERP design primitives. Use these classes for new module screens so
+   cards, tables, actions, and status indicators remain visually consistent. */
+.pk-card { background: var(--pk-white); border: 1px solid var(--pk-border); border-radius: var(--pk-radius-md); box-shadow: var(--pk-shadow-sm); }
+.pk-card-header { padding: 16px 20px; border-bottom: 1px solid var(--pk-border); }
+.pk-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; border-radius: var(--pk-radius-sm); font-weight: 600; transition: var(--pk-transition); }
+.pk-btn:focus-visible, .pk-card a:focus-visible, .sidebar-link:focus-visible { outline: 3px solid rgba(227, 32, 32, .22); outline-offset: 2px; }
+.pk-table thead th { position: sticky; top: 0; z-index: 2; background: #f8fafc; color: #64748b; font-size: .72rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; border-bottom: 1px solid var(--pk-border); }
+.pk-table tbody tr { transition: background-color .16s ease; }
+.pk-table tbody tr:hover { background: #fff7f7; }
+.pk-status { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 999px; font-size: .7rem; font-weight: 800; line-height: 1.2; }
+.pk-status-pending { color: var(--pk-status-pending); background: #fffbeb; }
+.pk-status-transit { color: var(--pk-status-transit); background: #fef2f2; }
+.pk-status-transfer { color: var(--pk-status-transfer); background: #f1f5f9; }
+.pk-status-success { color: var(--pk-status-success); background: #ecfdf5; }
+.pk-empty-state { padding: 44px 20px; color: #64748b; text-align: center; }
+.pk-empty-state i { display: block; margin-bottom: 10px; color: #cbd5e1; font-size: 2.5rem; }
+
+/* Shared visual language for legacy and newer module templates. */
+.btn {
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+    font-size: 0.82rem !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 14px !important;
+    transition: all 0.15s ease-in-out !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+.btn[style*="display: none"],
+.btn[style*="display:none"],
+.btn.d-none,
+.d-none {
+    display: none !important;
+}
+.btn-sm {
+    padding: 4px 10px !important;
+    font-size: 0.76rem !important;
+    border-radius: 5px !important;
+}
+.btn-lg {
+    padding: 9px 18px !important;
+    font-size: 0.90rem !important;
+    border-radius: 8px !important;
+}
+
+/* 🔴 1. Red Button - KHUSUS UNTUK BUAT BARU, PROCESS / SUBMIT FORM, HAPUS, & AKSI */
+.btn-danger, 
+.btn-create, 
+.btn-process,
+.btn-submit,
+#btnDelScan,
+button.btn-del,
+form button[type="submit"]:not(.btn-secondary):not(.btn-light):not(.btn-outline-secondary),
+form input[type="submit"]:not(.btn-secondary):not(.btn-light) {
+    background-color: #ed1c2e !important;
+    border-color: #ed1c2e !important;
+    color: #ffffff !important;
+}
+.btn-danger i,
+.btn-create i,
+.btn-process i,
+.btn-submit i,
+#btnDelScan i,
+form button[type="submit"]:not(.btn-secondary):not(.btn-light):not(.btn-outline-secondary) i {
+    color: #ffffff !important;
+}
+.btn-danger:hover, .btn-danger:focus, .btn-danger:active,
+.btn-create:hover, .btn-create:focus, .btn-create:active,
+.btn-process:hover, .btn-process:focus, .btn-process:active,
+.btn-submit:hover, .btn-submit:focus, .btn-submit:active,
+#btnDelScan:hover, #btnDelScan:focus, #btnDelScan:active,
+form button[type="submit"]:not(.btn-secondary):not(.btn-light):not(.btn-outline-secondary):hover {
+    background-color: #cb1323 !important;
+    border-color: #cb1323 !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(237, 28, 46, 0.3) !important;
+}
+
+/* 🔴 2. Table Action Hamburger Button - TETAP WARNA MERAH */
+.btn-action-table {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 8px !important;
+    background-color: #ed1c2e !important;
+    border-color: #ed1c2e !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 4px rgba(237, 28, 46, 0.25) !important;
+    transition: all 0.15s ease-in-out !important;
+}
+.btn-action-table:hover, .btn-action-table:focus, .btn-action-table:active, .btn-action-table.show {
+    background-color: #cb1323 !important;
+    border-color: #cb1323 !important;
+    color: #ffffff !important;
+    transform: scale(1.05);
+}
+.btn-action-table::after {
+    display: none !important;
+}
+.btn-action-table i {
+    font-size: 16px !important;
+    line-height: 1 !important;
+    margin: 0 !important;
+    color: #ffffff !important;
+}
+
+/* 🟢 3. Button SCAN & TAMBAH - TETAP WARNA HIJAU */
+button.btn-success,
+a.btn.btn-success,
+.btn-scan,
+#btnAddScan {
+    background-color: #059669 !important;
+    border-color: #059669 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+button.btn-success i,
+a.btn.btn-success i,
+.btn-scan i,
+#btnAddScan i {
+    color: #ffffff !important;
+}
+button.btn-success:hover, button.btn-success:focus, button.btn-success:active,
+a.btn.btn-success:hover, a.btn.btn-success:focus, a.btn.btn-success:active,
+.btn-scan:hover, .btn-scan:focus, .btn-scan:active,
+#btnAddScan:hover, #btnAddScan:focus, #btnAddScan:active {
+    background-color: #047857 !important;
+    border-color: #047857 !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3) !important;
+}
+
+/* 🔘 4. Button Lainnya: Abu-abu Soft dengan Text Abu Gelap (#f1f5f9 / text #334155) */
+.btn-secondary,
+.btn-dark,
+.btn-slate,
+.btn-warning,
+.btn-info,
+.btn-outline-dark, 
+.btn-light, 
+.btn-outline-secondary,
+.btn-outline-warning,
+.btn-outline-primary,
+.dt-button {
+    background-color: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #334155 !important;
+    font-weight: 600 !important;
+}
+.btn-secondary i,
+.btn-dark i,
+.btn-slate i,
+.btn-warning i,
+.btn-info i,
+.btn-outline-dark i,
+.btn-light i,
+.btn-outline-secondary i,
+.dt-button i {
+    color: #334155 !important;
+}
+.btn-secondary:hover, .btn-secondary:focus, .btn-secondary:active,
+.btn-dark:hover, .btn-dark:focus, .btn-dark:active,
+.btn-slate:hover, .btn-slate:focus, .btn-slate:active,
+.btn-warning:hover, .btn-warning:focus, .btn-warning:active,
+.btn-info:hover, .btn-info:focus, .btn-info:active,
+.btn-outline-dark:hover, .btn-outline-dark:focus,
+.btn-light:hover, .btn-light:focus,
+.btn-outline-secondary:hover, .btn-outline-secondary:focus,
+.dt-button:hover, .dt-button:focus {
+    background-color: #e2e8f0 !important;
+    border-color: #94a3b8 !important;
+    color: #0f172a !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06) !important;
+}
+.btn-secondary:hover i,
+.btn-light:hover i,
+.btn-outline-secondary:hover i,
+.dt-button:hover i {
+    color: #0f172a !important;
+}
+
+.btn.rounded-pill, button.rounded-pill, a.btn.rounded-pill {
+    border-radius: 6px !important;
+}
+
+/* Topbar & Link buttons must remain clean and borderless */
+.btn-link, 
+.top-navbar .btn, 
+.top-navbar button,
+.user-dropdown,
+.btn-close {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+.top-navbar .dropdown > .btn-link {
+    padding: 6px !important;
+    color: #475569 !important;
+}
+.top-navbar .dropdown > .btn-link:hover {
+    background: rgba(0, 0, 0, 0.04) !important;
+    color: #0f172a !important;
+    border-radius: 8px !important;
+}
+.user-dropdown {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 6px 12px !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #1e293b !important;
+    border-radius: 8px !important;
+}
+.user-dropdown:hover, .user-dropdown:focus, .user-dropdown:active {
+    background: rgba(0, 0, 0, 0.05) !important;
+    border: none !important;
+    color: #0f172a !important;
+}
+
+.form-control, .form-select { border-color: var(--pk-border); border-radius: var(--pk-radius-sm); }
+.form-control:focus, .form-select:focus { border-color: rgba(227, 32, 32, .55); box-shadow: 0 0 0 .2rem rgba(227, 32, 32, .12); }
+.card { border-color: var(--pk-border); }
+.badge.bg-danger, .badge.bg-primary { background-color: var(--pk-primary) !important; }
+
+/* ─── Base ─────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #eef5f1 0%, #e2ece6 45%, #f1f6f3 100%) fixed !important;
+    background-color: #eef5f1;
+    color: var(--pk-gray-900);
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+}
+
+.page-content {
+    padding: 24px 28px;
+    min-height: calc(100vh - var(--pk-navbar-height));
+}
+
+/* ─── Sidebar ──────────────────────────────────── */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--pk-sidebar-width);
+    height: 100vh;
+    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    color: #fff;
+    z-index: 1040;
+    transition: var(--pk-transition);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 24px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.sidebar-brand i {
+    font-size: 1.5rem;
+    color: var(--pk-red);
+}
+
+.sidebar-nav {
+    padding: 12px 0;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Custom scrollbar for sidebar nav */
+.sidebar-nav::-webkit-scrollbar {
+    width: 4px;
+}
+.sidebar-nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+.sidebar-nav::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.15);
+    border-radius: 4px;
+}
+
+.sidebar-section-title {
+    padding: 20px 24px 8px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 24px;
+    color: rgba(255,255,255,0.65);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: var(--pk-transition);
+    border-left: 3px solid transparent;
+}
+
+.sidebar-link:hover {
+    color: #fff;
+    background: rgba(255,255,255,0.06);
+    border-left-color: rgba(220, 53, 69, 0.5);
+}
+
+.sidebar-link.active {
+    color: #fff;
+    background: rgba(220, 53, 69, 0.15);
+    border-left-color: var(--pk-red);
+}
+
+/* ─── Module Accent Colors for Sidebar (Removed as per user request to keep all red) ─── */
+
+.sidebar-link i {
+    font-size: 1.15rem;
+    width: 22px;
+    text-align: center;
+}
+
+/* ─── Main Wrapper ─────────────────────────────── */
+.main-wrapper {
+    margin-left: var(--pk-sidebar-width);
+    min-height: 100vh;
+    transition: var(--pk-transition);
+}
+
+/* ─── Top Navbar ───────────────────────────────── */
+.top-navbar {
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: var(--pk-navbar-height);
+    padding: 0 24px;
+    background: var(--pk-white);
+    border-bottom: 1px solid var(--pk-gray-200);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.page-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--pk-gray-900);
+    margin-left: 8px;
+}
+
+.sidebar-toggle {
+    color: var(--pk-gray-700);
+    text-decoration: none;
+    padding: 4px;
+}
+
+.navbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.user-dropdown {
+    color: var(--pk-gray-700);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.user-dropdown i {
+    font-size: 1.3rem;
+}
+
+/* ─── Page Content ─────────────────────────────── */
+.page-content {
+    padding: 24px 0;
+}
+
+/* ─── KPI Cards ────────────────────────────────── */
+.kpi-card {
+    background: var(--pk-white);
+    border-radius: 12px;
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid var(--pk-gray-200);
+    transition: var(--pk-transition);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.kpi-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+}
+
+.kpi-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.kpi-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--pk-gray-900);
+    line-height: 1.2;
+}
+
+.kpi-label {
+    font-size: 0.8rem;
+    color: var(--pk-gray-500);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Small KPI cards */
+.kpi-sm {
+    padding: 14px 20px;
+}
+
+.kpi-icon-sm {
+    font-size: 1.3rem;
+    margin-right: 4px;
+}
+
+.kpi-value-sm {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--pk-gray-900);
+}
+
+/* ─── Cards ────────────────────────────────────── */
+.card-custom {
+    border: 1px solid var(--pk-gray-200);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    overflow: hidden;
+}
+
+.card-header-custom {
+    background: var(--pk-white);
+    border-bottom: 1px solid var(--pk-gray-200);
+    padding: 16px 20px;
+    font-weight: 600;
+}
+
+/* ─── Tables ───────────────────────────────────── */
+.table-custom {
+    margin: 0;
+}
+
+.table-custom thead th {
+    background: var(--pk-gray-50);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--pk-gray-700);
+    padding: 14px 16px;
+    border-bottom: 2px solid var(--pk-gray-200);
+    white-space: nowrap;
+}
+
+.table-custom tbody td {
+    padding: 12px 16px;
+    vertical-align: middle;
+    font-size: 0.9rem;
+    border-bottom: 1px solid var(--pk-gray-100);
+}
+
+.table-custom tbody tr:hover {
+    background-color: rgba(220, 53, 69, 0.03);
+}
+
+/* ─── Status Badges ────────────────────────────── */
+.status-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+
+.status-new { background: #e9ecef; color: #495057; }
+.status-contacted { background: #cfe2ff; color: #0a58ca; }
+.status-qualified { background: #d1ecf1; color: #0c5460; }
+.status-proposal { background: #fff3cd; color: #856404; }
+.status-negotiation { background: #ffe5d0; color: #984c0c; }
+.status-won { background: #d1e7dd; color: #0f5132; }
+.status-lost { background: #f8d7da; color: #842029; }
+
+/* ─── Activity Badges ──────────────────────────── */
+.activity-badge {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.badge-call { background: #cfe2ff; color: #0d6efd; }
+.badge-whatsapp { background: #d1e7dd; color: #198754; }
+.badge-email { background: #fff3cd; color: #ffc107; }
+.badge-visit { background: #f8d7da; color: #dc3545; }
+.badge-meeting { background: #e2d9f3; color: #6f42c1; }
+.badge-info { background: #d1ecf1; color: #0dcaf0; }
+
+/* ─── Metric Cards ─────────────────────────────── */
+.metric-card {
+    background: var(--pk-gray-50);
+    border-radius: 10px;
+    padding: 12px 16px;
+    border: 1px solid var(--pk-gray-200);
+}
+
+.metric-label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--pk-gray-500);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 4px;
+}
+
+.metric-value {
+    font-size: 1rem;
+    font-weight: 700;
+    display: block;
+}
+
+.metric-Y { color: #198754; }
+.metric-T { color: #dc3545; }
+.metric-N { color: #6c757d; }
+
+/* ─── Widget Items ─────────────────────────────── */
+.widget-item {
+    padding: 14px 20px !important;
+    border-bottom: 1px solid var(--pk-gray-100) !important;
+    transition: background 0.2s;
+}
+
+.widget-item:hover {
+    background: var(--pk-gray-50);
+}
+
+.widget-item:last-child {
+    border-bottom: none !important;
+}
+
+/* ─── Login Page ───────────────────────────────── */
+.login-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    padding: 20px;
+}
+
+.login-card {
+    background: var(--pk-white);
+    border-radius: 16px;
+    padding: 48px 40px;
+    width: 100%;
+    max-width: 440px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.login-logo {
+    font-size: 3rem;
+    color: var(--pk-red);
+    display: block;
+    margin-bottom: 12px;
+}
+
+.login-header h2 {
+    font-weight: 800;
+    color: var(--pk-gray-900);
+    margin: 0;
+}
+
+.login-header p {
+    margin-top: 4px;
+}
+
+.btn-login {
+    padding: 12px;
+    font-weight: 600;
+    font-size: 1rem;
+    border-radius: 8px;
+    background-color: var(--pk-red) !important;
+    border-color: var(--pk-red) !important;
+    color: #fff !important;
+}
+
+.btn-login:hover {
+    background-color: var(--pk-red-dark) !important;
+    border-color: var(--pk-red-dark) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3) !important;
+}
+
+.login-footer {
+    text-align: center;
+    margin-top: 24px;
+}
+
+/* ─── Pagination ───────────────────────────────── */
+.page-link {
+    color: var(--pk-red);
+    border-color: var(--pk-gray-200);
+}
+
+.page-link:hover {
+    color: var(--pk-red-dark);
+    background: var(--pk-red-light);
+    border-color: var(--pk-red-light);
+}
+
+.page-item.active .page-link {
+    background-color: var(--pk-red);
+    border-color: var(--pk-red);
+    color: #fff;
+}
+
+/* ─── Alerts ───────────────────────────────────── */
+.alert {
+    border-radius: 10px;
+    border: none;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+/* ─── Responsive ───────────────────────────────── */
+.sidebar-collapsed .sidebar {
+    transform: translateX(-100%);
+}
+
+.sidebar-collapsed .main-wrapper {
+    margin-left: 0;
+}
+
+@media (max-width: 991.98px) {
+    .sidebar {
+        transform: translateX(-100%);
+    }
+
+    .sidebar.show {
+        transform: translateX(0);
+    }
+
+    .main-wrapper {
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .page-title {
+        font-size: 1rem;
+    }
+
+    .kpi-value {
+        font-size: 1.2rem;
+    }
+
+    .login-card {
+        padding: 32px 24px;
+    }
+}
+
+/* ─── Scrollbar ────────────────────────────────── */
+
+/* ─── Form Improvements ──────────────────────── */
+/* Removed red focus border highlight as requested */
+
+/* ─── Dropdown ─────────────────────────────────── */
+.dropdown-menu {
+    border-radius: 10px;
+    border: 1px solid var(--pk-gray-200);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    padding: 8px;
+}
+
+.dropdown-item {
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+}
+
+.dropdown-item:hover {
+    background: var(--pk-gray-50);
+}
+
+/* ─── Buttons ──────────────────────────────────── */
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: var(--pk-transition);
+}
+
+/* Override Bootstrap Primary with Red */
+.btn-primary, .btn-primary:focus {
+    background-color: var(--pk-red) !important;
+    border-color: var(--pk-red) !important;
+    color: white !important;
+}
+.btn-primary:hover {
+    background-color: var(--pk-red-dark) !important;
+    border-color: var(--pk-red-dark) !important;
+}
+.btn-outline-primary {
+    color: var(--pk-red) !important;
+    border-color: var(--pk-red) !important;
+}
+.btn-outline-primary:hover {
+    background-color: var(--pk-red) !important;
+    color: white !important;
+}
+.text-danger-brand {
+    color: var(--pk-red) !important;
+}
+.bg-danger-brand {
+    background-color: var(--pk-red) !important;
+}
+
+.btn-danger {
+    background: var(--pk-red);
+    border-color: var(--pk-red);
+}
+
+.btn-danger:hover {
+    background: var(--pk-red-dark);
+    border-color: var(--pk-red-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+.btn-outline-danger {
+    color: var(--pk-red);
+    border-color: var(--pk-red);
+}
+
+.btn-outline-danger:hover {
+    background: var(--pk-red);
+    border-color: var(--pk-red);
+    transform: translateY(-1px);
+}
+
+/* --- Enterprise Table (foto 2 patokan) ------------------- */
+.table-enterprise {
+    border-collapse: separate !important;
+    border-spacing: 0 10px !important;
+    margin-top: -10px;
+    width: 100%;
+}
+.table-enterprise thead th {
+    border: none !important;
+    background: transparent !important;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--pk-gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 0 20px 8px 20px;
+}
+.table-enterprise tbody tr {
+    background: var(--pk-white);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    border-radius: 8px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.table-enterprise tbody tr:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+.table-enterprise tbody td {
+    padding: 12px 20px;
+    vertical-align: middle;
+    border: 1px solid var(--pk-gray-200);
+    border-style: solid none;
+    font-size: 0.75rem;
+    color: var(--pk-gray-900);
+    font-weight: 500;
+}
+.table-enterprise tbody td:first-child {
+    border-left: 1px solid var(--pk-gray-200);
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
+}
+.table-enterprise tbody td:last-child {
+    border-right: 1px solid var(--pk-gray-200);
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+/* Rounded Action Buttons for Table */
+.btn-action-group {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+}
+.btn-action {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--pk-gray-300);
+    background: transparent;
+    color: var(--pk-gray-500);
+    transition: all 0.2s;
+    font-size: 1rem;
+}
+.btn-action:hover {
+    background: var(--pk-gray-50);
+}
+.btn-action-view { color: #6c757d; }
+.btn-action-view:hover { color: #0dcaf0; border-color: #0dcaf0; background: rgba(13,202,240,0.05); }
+.btn-action-edit { color: #0d6efd; border-color: rgba(13,110,253,0.3); }
+.btn-action-edit:hover { color: #0d6efd; border-color: #0d6efd; background: rgba(13,110,253,0.05); }
+.btn-action-delete { color: #dc3545; border-color: rgba(220,53,69,0.3); }
+.btn-action-delete:hover { color: #dc3545; border-color: #dc3545; background: rgba(220,53,69,0.05); }
+
+/* Table Subtext (like Client ID below name) */
+.table-subtext {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--pk-gray-500);
+    font-weight: 400;
+    margin-top: 4px;
+}
+
+/* Remove all system highlight borders on focus to prevent inconsistency */
+.form-control:focus, 
+.form-select:focus, 
+.select2-container--bootstrap-5.select2-container--focus .select2-selection,
+.select2-container--bootstrap-5 .select2-selection:focus,
+.btn:focus,
+.is-valid:focus,
+.is-invalid:focus {
+    box-shadow: none !important;
+    border-color: var(--pk-gray-300) !important;
+    outline: none !important;
+}
+
+/* Also neutralize the validation states if they cause green/red borders on normal inputs */
+.form-control.is-valid, .form-select.is-valid {
+    border-color: var(--pk-gray-300) !important;
+    box-shadow: none !important;
+    background-image: none !important;
+}
+
+/* Shared visual language for the Operations module. */
+.operations-module { color: #212529; font-size: .875rem; }
+.operations-module .btn { border-radius: 8px; font-size: .8rem; font-weight: 600; }
+.operations-module .badge { border-radius: 999px; font-size: .7rem; font-weight: 700; letter-spacing: .01em; }
+.operations-module .card-header h5, .operations-module .card-header h6 { color: #212529; }
+.operations-module .table-responsive { border-radius: 10px; }
+.operations-module .table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #f8fafc;
+    border-bottom: 1px solid #e5e7eb;
+    white-space: nowrap;
+}
+.operations-module .table tbody tr { transition: background-color .16s ease, transform .16s ease; }
+.operations-module .table tbody tr:hover { background-color: #fff8f8; }
+.operations-module .table td { vertical-align: middle; }
+.btn-loading { pointer-events: none; opacity: .72; }
+.btn-loading .ph-spinner { animation: pk-spin .8s linear infinite; }
+@keyframes pk-spin { to { transform: rotate(360deg); } }
+.operations-module .table thead th { color: #6c757d; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; }
+
+/* ─── Search & Pop-up Filter (CRM Style) ──────────────── */
+.search-box-clean {
+    border-radius: 8px !important;
+    border: 1px solid #cbd5e1 !important;
+    background-color: #ffffff;
+    transition: all 0.15s ease-in-out;
+}
+.search-box-clean:focus-within {
+    border-color: #94a3b8 !important;
+    box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.05) !important;
+}
+.filter-dropdown-menu {
+    border-radius: 12px !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
+    margin-top: 6px !important;
+}
+.active-filter-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    background-color: #ed1c2e !important;
+    border-radius: 50% !important;
+    vertical-align: middle;
+    margin-left: 4px;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 2px rgba(237, 28, 46, 0.2);
+}
+
+.page-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    line-height: 1;
+    white-space: nowrap;
+}

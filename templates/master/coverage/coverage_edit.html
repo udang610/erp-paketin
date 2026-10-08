@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - ERP Paketin{% endblock %}
+{% block page_title %}Data Master Coverage{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="mb-3">
+        <a href="{% url 'master:coverage' %}" class="btn btn-outline-secondary bg-white px-3 shadow-sm btn-sm">
+            <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+        </a>
+    </div>
+
+    
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card bg-white border-0 shadow-sm rounded-4 p-4">
+            <h5 class="fw-bold text-dark border-bottom pb-3 mb-4">{{ title }}</h5>
+
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row g-3">
+                        {% for field in form %}
+                        <div class="col-12">
+                            <label class="form-label text-muted small fw-semibold">
+                                {{ field.label }} {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                            </label>
+                            {{ field }}
+                            {% if field.help_text %}
+                                <div class="form-text small" style="font-size:0.75rem;">{{ field.help_text }}</div>
+                            {% endif %}
+                            {% if field.errors %}
+                                <div class="text-danger small mt-1">{{ field.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                        <a href="{% url 'master:coverage' %}" class="btn btn-light px-4 border fw-semibold">Batal</a>
+                        <button type="submit" class="btn btn-danger px-4 fw-bold shadow-sm">
+                            <i class="ph-bold ph-floppy-disk me-2"></i> Simpan Data
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Hide the original text inputs and replace them with <select>
+    const provInput = document.getElementById('id_province');
+    const cityInput = document.getElementById('id_city');
+    const distInput = document.getElementById('id_district');
+
+    if (!provInput || !cityInput || !distInput) return;
+
+    // Create select elements
+    const provSelect = document.createElement('select');
+    provSelect.className = 'form-select select2';
+    provSelect.id = 'sel_province';
+    
+    const citySelect = document.createElement('select');
+    citySelect.className = 'form-select select2';
+    citySelect.id = 'sel_city';
+    
+    const distSelect = document.createElement('select');
+    distSelect.className = 'form-select select2';
+    distSelect.id = 'sel_district';
+
+    // Hide inputs and insert selects
+    provInput.style.display = 'none';
+    provInput.parentNode.insertBefore(provSelect, provInput);
+    
+    cityInput.style.display = 'none';
+    cityInput.parentNode.insertBefore(citySelect, cityInput);
+    
+    distInput.style.display = 'none';
+    distInput.parentNode.insertBefore(distSelect, distInput);
+    
+    // Hide distSelect initially based on user request: "field kecamatan baru muncul"
+    distSelect.parentElement.style.display = 'none';
+    
+    // Load Provinces
+    fetch('/master/api/provinces/')
+        .then(response => response.json())
+        .then(data => {
+            provSelect.innerHTML = '<option value="">Pilih Provinsi...</option>';
+            data.results.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.name;
+                opt.textContent = p.name;
+                opt.dataset.id = p.id;
+                if (p.name === provInput.value) opt.selected = true;
+                provSelect.appendChild(opt);
+            });
+            if (typeof $ !== 'undefined') $(provSelect).trigger('change');
+            if (provInput.value) onProvChange(); // trigger to load cities if editing
+        });
+
+    function loadCities(provId, selectedCityName = '') {
+        citySelect.innerHTML = '<option value="">Loading...</option>';
+        fetch(`/master/api/regencies/${provId}/`)
+            .then(response => response.json())
+            .then(data => {
+                citySelect.innerHTML = '<option value="">Pilih Kota/Kabupaten...</option>';
+                data.results.forEach(r => {
+                    const opt = document.createElement('option');
+                    opt.value = r.name;
+                    opt.textContent = r.name;
+                    opt.dataset.id = r.id;
+                    if (r.name === selectedCityName || r.name === cityInput.value) opt.selected = true;
+                    citySelect.appendChild(opt);
+                });
+                if (typeof $ !== 'undefined') $(citySelect).trigger('change');
+                if (cityInput.value) onCityChange(); // trigger to load districts if editing
+            });
+    }
+
+    function loadDistricts(cityId, selectedDistName = '') {
+        distSelect.innerHTML = '<option value="">Loading...</option>';
+        fetch(`/master/api/districts/${cityId}/`)
+            .then(response => response.json())
+            .then(data => {
+                distSelect.innerHTML = '<option value="">Pilih Kecamatan...</option>';
+                data.results.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d.name;
+                    opt.textContent = d.name;
+                    opt.dataset.id = d.id;
+                    if (d.name === selectedDistName || d.name === distInput.value) opt.selected = true;
+                    distSelect.appendChild(opt);
+                });
+                if (typeof $ !== 'undefined') $(distSelect).trigger('change');
+            });
+    }
+
+    // Handle change events (both Vanilla JS and Select2)
+    function onProvChange(e) {
+        provInput.value = provSelect.value;
+        const selectedOpt = provSelect.options[provSelect.selectedIndex];
+        if (selectedOpt && selectedOpt.dataset.id) {
+            loadCities(selectedOpt.dataset.id);
+        } else {
+            citySelect.innerHTML = '<option value="">Pilih Kota/Kabupaten...</option>';
+            distSelect.innerHTML = '<option value="">Pilih Kecamatan...</option>';
+            distSelect.parentElement.style.display = 'none'; // hide district container
+        }
+    }
+
+    function onCityChange(e) {
+        cityInput.value = citySelect.value;
+        const selectedOpt = citySelect.options[citySelect.selectedIndex];
+        if (selectedOpt && selectedOpt.dataset.id) {
+            distSelect.parentElement.style.display = 'block'; 
+            loadDistricts(selectedOpt.dataset.id);
+        } else {
+            distSelect.innerHTML = '<option value="">Pilih Kecamatan...</option>';
+            distSelect.parentElement.style.display = 'none';
+        }
+    }
+
+    function onDistChange(e) {
+        distInput.value = distSelect.value;
+    }
+
+    if (typeof $ !== 'undefined') {
+        $(provSelect).on('change', onProvChange);
+        $(citySelect).on('change', onCityChange);
+        $(distSelect).on('change', onDistChange);
+    } else {
+        provSelect.addEventListener('change', onProvChange);
+        citySelect.addEventListener('change', onCityChange);
+        distSelect.addEventListener('change', onDistChange);
+    }
+});
+</script>
+{% endblock %}

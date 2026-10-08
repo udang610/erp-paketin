@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - ERP Paketin{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="mb-3">
+        <a href="javascript:history.back()" class="btn btn-outline-secondary bg-white px-3 shadow-sm btn-sm">
+            <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+        </a>
+    </div>
+
+    
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card bg-white border-0 shadow-sm rounded-4 p-4">
+            <h5 class="fw-bold text-dark border-bottom pb-3 mb-4">{{ title }}</h5>
+
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row g-3">
+                        {% for field in form %}
+                        <div class="col-md-6 {% if field.name == 'address' or field.name == 'description' or field.name == 'notes' %}col-md-12{% endif %}">
+                            <label class="form-label text-muted fw-semibold small">
+                                {{ field.label }} {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                            </label>
+                            {{ field }}
+                            {% if field.help_text %}
+                                <div class="form-text small" style="font-size:0.75rem;">{{ field.help_text }}</div>
+                            {% endif %}
+                            {% if field.errors %}
+                                <div class="text-danger small mt-1">{{ field.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                        <a href="javascript:history.back()" class="btn btn-light px-4 border fw-semibold">Batal</a>
+                        <button type="submit" class="btn btn-danger px-4 fw-bold shadow-sm">
+                            <i class="ph-bold ph-floppy-disk me-2"></i> Simpan Data
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

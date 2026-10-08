@@ -1,0 +1,387 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Data DO Balik (Surat Jalan Balik) - ERP Paketin{% endblock %}
+{% block page_title %}DO Balik{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Actions Bar (Search + Filter Pop-up + Actions) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <form class="d-flex align-items-center gap-2" method="get">
+            <input type="hidden" name="tab" value="{{ active_tab }}">
+            <!-- Search Input -->
+            <div class="search-box-clean d-flex align-items-center bg-white px-3" style="width: 280px; max-width: 320px; height: 38px;">
+                <i class="ph-bold ph-magnifying-glass me-2 text-muted" style="font-size: 1rem; color: #64748b;"></i>
+                <input type="text" name="q" class="border-0 shadow-none p-0 bg-transparent flex-grow-1" placeholder="Cari resi, klien..." value="{{ search_query|default:'' }}" style="outline: none !important; font-size: 0.88rem; color: #1e293b; height: 100%;">
+            </div>
+
+            <!-- Filter Button with Pop-up Dropdown -->
+            <div class="dropdown">
+                <button class="btn shadow-sm position-relative rounded-3 d-inline-flex align-items-center gap-2 px-3 border" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Filter DO Balik" style="height: 38px; font-size: 0.88rem; font-weight: 600; color: #1e293b; background-color: #ffffff !important; border-color: #cbd5e1 !important;">
+                    <i class="ph-bold ph-faders fs-5" style="color: #1e293b;"></i>
+                    <span>Filter</span>
+                    {% if has_active_filter %}
+                    <span class="active-filter-dot" title="Filter Aktif"></span>
+                    {% endif %}
+                </button>
+                <div class="dropdown-menu filter-dropdown-menu dropdown-menu-start p-3 shadow-lg border-0" style="width: 320px; z-index: 1050; border-radius: 12px; border: 1px solid #e2e8f0 !important;">
+                    <h6 class="dropdown-header px-0 text-dark mb-2"><i class="ph-bold ph-faders me-2 text-dark"></i>Filter Lanjutan</h6>
+                    
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Cabang Asal / Tujuan</label>
+                        <select name="branch" class="form-select form-select-sm">
+                            <option value="">Semua Cabang</option>
+                            {% for b in branches %}
+                            <option value="{{ b.name }}" {% if branch_filter == b.name %}selected{% endif %}>{{ b.name }} ({{ b.code }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Status</label>
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="">Semua Status</option>
+                            <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending</option>
+                            <option value="POD" {% if status_filter == 'POD' %}selected{% endif %}>Delivered (POD)</option>
+                            <option value="POD_BALIK" {% if status_filter == 'POD_BALIK' %}selected{% endif %}>POD Balik</option>
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary mb-1">Tanggal Mulai</label>
+                            <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date|default:'' }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary mb-1">Tanggal Akhir</label>
+                            <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date|default:'' }}">
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 pt-2 border-top">
+                        <button type="submit" class="btn btn-danger btn-sm w-100 fw-bold">Terapkan</button>
+                        <a href="{% url 'operations:do-balik-list' %}?tab={{ active_tab }}" class="btn btn-outline-secondary btn-sm w-100">Reset</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div>
+            <a href="{% url 'operations:do-balik-create-pouch' %}" class="btn btn-danger px-4 fw-bold shadow-sm d-inline-flex align-items-center" style="height: 38px;">
+                <i class="ph-bold ph-plus me-1"></i> Buat Baru
+            </a>
+        </div>
+    </div>
+
+    <style>
+        .table-premium {
+            border-collapse: separate;
+            border-spacing: 0;
+            border: none;
+        }
+        .table-premium thead th {
+            background-color: #f8fafc !important;
+            color: #475569;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+            border-bottom: 1px solid #eaedf1 !important;
+            padding: 14px 16px;
+            vertical-align: middle;
+        }
+        .table-premium tbody td {
+            padding: 12px 16px;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 13px;
+            color: #1e293b;
+            background-color: #ffffff;
+            transition: background-color 0.2s ease;
+        }
+        .table-premium tbody tr:hover td {
+            background-color: #f8fafc;
+        }
+        .table-premium tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .nav-tabs-custom {
+            background-color: transparent !important;
+            padding: 0 !important;
+            border-bottom: 1px solid #eaedf1 !important;
+            gap: 0 !important;
+            margin-bottom: 0 !important;
+            display: flex;
+            align-items: stretch;
+        }
+        .nav-tabs-custom .nav-item {
+            position: relative;
+            margin-bottom: -1px;
+            display: flex;
+            align-items: center;
+        }
+        .nav-tabs-custom .nav-item:first-child::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 1px;
+            height: 16px;
+            background-color: #94a3b8;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 1;
+        }
+        .nav-tabs-custom .nav-item:first-child:has(.active)::before,
+        .nav-tabs-custom .nav-item:first-child:has(.nav-link:hover)::before {
+            opacity: 0;
+        }
+        .nav-tabs-custom .nav-item::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 1px;
+            height: 16px;
+            background-color: #94a3b8;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 1;
+        }
+        .nav-tabs-custom .nav-item:has(.active)::after,
+        .nav-tabs-custom .nav-item:has(+ .nav-item .active)::after,
+        .nav-tabs-custom .nav-item:has(.nav-link:hover)::after,
+        .nav-tabs-custom .nav-item:has(+ .nav-item .nav-link:hover)::after {
+            opacity: 0;
+        }
+        .nav-tabs-custom .nav-link {
+            background-color: transparent !important;
+            border: 1px solid transparent !important;
+            border-bottom: 1px solid transparent !important;
+            color: #334155 !important;
+            font-weight: 600;
+            border-radius: 10px 10px 0 0 !important;
+            padding: 0 20px !important;
+            height: 42px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            transition: all 0.2s ease-in-out;
+            box-shadow: none !important;
+            position: relative;
+            white-space: nowrap;
+        }
+        .nav-tabs-custom .nav-link:hover {
+            background-color: rgba(241, 245, 249, 0.8) !important;
+            color: #0f172a !important;
+        }
+        .nav-tabs-custom .nav-link.active {
+            background-color: #f8fafc !important;
+            border: 1px solid #eaedf1 !important;
+            border-bottom: 1px solid #f8fafc !important;
+            color: #0f172a !important;
+            font-weight: 700;
+            box-shadow: none !important;
+            z-index: 2;
+        }
+    </style>
+
+    <!-- Nav Tabs (Directly on transparent page background) -->
+    <ul class="nav nav-tabs nav-tabs-custom" id="doBalikTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <a class="nav-link {% if active_tab == 'all' %}active{% endif %}" href="?tab=all{% if search_query %}&q={{ search_query }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}">
+                <i class="ph-duotone ph-files me-2 text-primary"></i> Semua DO Balik
+                <span class="badge bg-danger text-white ms-2 rounded-pill px-2 py-1 shadow-xs">{{ stats.total_do }}</span>
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link {% if active_tab == 'signed_dest' %}active{% endif %}" href="?tab=signed_dest{% if search_query %}&q={{ search_query }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}">
+                <i class="ph-duotone ph-clock me-2 text-warning"></i> Tertahan di Tujuan
+                <span class="badge bg-danger text-white ms-2 rounded-pill px-2 py-1 shadow-xs">{{ stats.count_signed }}</span>
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link {% if active_tab == 'in_pouch' %}active{% endif %}" href="?tab=in_pouch{% if search_query %}&q={{ search_query }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}">
+                <i class="ph-duotone ph-airplane me-2 text-info"></i> Dalam Pouch Dokumen
+                <span class="badge bg-danger text-white ms-2 rounded-pill px-2 py-1 shadow-xs">{{ stats.count_pouch }}</span>
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link {% if active_tab == 'received_origin' %}active{% endif %}" href="?tab=received_origin{% if search_query %}&q={{ search_query }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}">
+                <i class="ph-duotone ph-check-circle me-2 text-success"></i> Terverifikasi Hub Asal (POD Balik)
+                <span class="badge bg-danger text-white ms-2 rounded-pill px-2 py-1 shadow-xs">{{ stats.count_verified }}</span>
+            </a>
+        </li>
+    </ul>
+
+    <!-- Table Content -->
+    {% if active_tab == 'in_pouch' %}
+    <!-- Tab View: Daftar Pouch Dokumen -->
+    <div class="table-responsive shadow-sm mb-4" style="border: 1px solid #eaedf1; border-top: none; border-radius: 0 16px 16px 16px; background-color: #fff; overflow: hidden;">
+        <table class="table table-premium align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Nomor Pouch</th>
+                    <th>Dari (Hub Tujuan)</th>
+                    <th>Ke (Hub Asal)</th>
+                    <th>Ekspedisi &amp; No. Resi Pouch</th>
+                    <th>Jumlah Resi</th>
+                    <th class="text-center">Status Pouch</th>
+                    <th class="text-end pe-4">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in pouches %}
+                <tr>
+                    <td class="fw-bold text-dark">{{ p.pouch_number }}</td>
+                    <td>{{ p.origin_branch.name|default:"-" }}</td>
+                    <td>{{ p.dest_branch.name|default:"-" }}</td>
+                    <td>
+                        <div class="fw-semibold text-dark">{{ p.courier_service|default:"Internal" }}</div>
+                        <small class="text-muted">{{ p.airwaybill_no|default:"-" }}</small>
+                    </td>
+                    <td><span class="fw-semibold text-dark">{{ p.shipments.count }} AWB</span></td>
+                    <td class="text-center">
+                        {% if p.status == 'DISPATCHED' %}
+                            <span class="text-dark fw-semibold"><i class="ph-bold ph-truck text-warning me-1"></i> Dalam Pengiriman</span>
+                        {% elif p.status == 'RECEIVED' %}
+                            <span class="text-dark fw-semibold"><i class="ph-bold ph-check text-success me-1"></i> Diterima &amp; Diverifikasi</span>
+                        {% else %}
+                            <span class="text-muted">{{ p.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center pe-4">
+                        <div class="dropdown">
+                            <button class="btn btn-action-table dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Aksi">
+                                <i class="ph-bold ph-list"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 p-2" style="min-width: 180px; z-index: 9999;">
+                                {% if p.status == 'DISPATCHED' %}
+                                <li>
+                                    <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 text-success fw-semibold" href="{% url 'operations:do-balik-verify-pouch' p.pk %}">
+                                        <i class="ph-bold ph-checks"></i>
+                                        <span>Terima &amp; Verifikasi</span>
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li>
+                                    <span class="dropdown-item text-muted py-2 small d-flex align-items-center gap-2"><i class="ph-bold ph-check-circle text-success"></i> Selesai Diverifikasi</span>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-5 text-muted">
+                        <i class="ph-duotone ph-package display-6 mb-2 text-muted d-block"></i>
+                        Belum ada Pouch Dokumen yang sedang dalam perjalanan.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <!-- Tab View: Daftar Resi DO Balik -->
+    <div class="table-responsive shadow-sm mb-4" style="border: 1px solid #eaedf1; border-top: none; border-radius: 0 16px 16px 16px; background-color: #fff; overflow: hidden;">
+        <table class="table table-premium align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>No. Resi AWB</th>
+                    <th>Klien (Pengirim)</th>
+                    <th>Penerima &amp; Kota Tujuan</th>
+                    <th class="text-center">Status Operasional</th>
+                    <th class="text-center">Status DO Balik</th>
+                    <th>Tgl DO Balik</th>
+                    <th class="text-center pe-4">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in shipments %}
+                <tr>
+                    <td>
+                        <a href="{% url 'operations:shipment-detail' s.pk %}" class="fw-bold text-decoration-none text-dark">
+                            {{ s.resi_number }}
+                        </a>
+                        <div class="text-muted fw-semibold" style="font-size: 11px;">AWB &amp; DO Balik</div>
+                    </td>
+                    <td>
+                        <div class="fw-semibold text-dark">{{ s.client.company_name|default:s.sender_name }}</div>
+                        <small class="text-muted">{{ s.get_city_origin|title }} - {{ s.get_tlc_origin }}</small>
+                    </td>
+                    <td>
+                        <div class="fw-semibold text-dark">{{ s.receiver_name }}</div>
+                        <small class="text-muted">{{ s.get_city_dest|title }} - {{ s.get_tlc_dest }}</small>
+                    </td>
+                    <td class="text-center">
+                        <span class="text-dark fw-medium">{{ s.get_status_display }}</span>
+                    </td>
+                    <td class="text-center">
+                        {% if s.status == 'POD_BALIK' or s.do_balik_date %}
+                            <span class="text-dark fw-semibold"><i class="ph-bold ph-check-circle text-success me-1"></i> Fisik Diterima Asal</span>
+                        {% elif s.document_pouches.exists %}
+                            <span class="text-dark fw-semibold"><i class="ph-bold ph-airplane text-primary me-1"></i> Dalam Pouch</span>
+                        {% elif s.status == 'POD' %}
+                            <span class="text-dark fw-semibold"><i class="ph-bold ph-clock text-warning me-1"></i> Tertahan di Tujuan</span>
+                        {% else %}
+                            <span class="text-muted">Menunggu Antar</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if s.do_balik_date %}
+                            <span class="fw-semibold text-dark">{{ s.do_balik_date|date:"d M Y" }}</span>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center pe-4">
+                        <div class="dropdown">
+                            <button class="btn btn-action-table dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Aksi">
+                                <i class="ph-bold ph-list"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 p-2" style="min-width: 175px; z-index: 9999;">
+                                <li>
+                                    <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2" href="{% url 'operations:shipment-detail' s.pk %}">
+                                        <i class="ph-bold ph-eye text-primary"></i>
+                                        <span>Lihat Detail</span>
+                                    </a>
+                                </li>
+                                {% if not s.do_balik_date and s.status != 'POD_BALIK' %}
+                                <li>
+                                    <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 text-success" href="{% url 'operations:do-balik-quick-verify' s.pk %}" onclick="event.preventDefault(); const targetHref = this.href; PaketinModal.confirm({ title: 'Verifikasi DO Balik?', description: 'Konfirmasi bahwa fisik dokumen DO Balik resi {{ s.resi_number }} telah lengkap diterima di Hub Asal.', theme: 'success', confirmText: 'Verifikasi Diterima', cancelText: 'Batal', icon: 'ph-seal-check' }).then(ok => { if (ok) window.location.href = targetHref; });">
+                                        <i class="ph-bold ph-check"></i>
+                                        <span>Verifikasi Asal</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                                <li><hr class="dropdown-divider my-1"></li>
+                                <li>
+                                    <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2" href="{% url 'operations:print-awb-reguler' s.pk %}" target="_blank">
+                                        <i class="ph-bold ph-printer text-dark"></i>
+                                        <span>Cetak AWB</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-5 text-muted">
+                        <i class="ph-duotone ph-files display-6 mb-2 text-muted d-block"></i>
+                        Tidak ada data resi DO Balik yang sesuai filter.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Daftar Kontrak (CRM) - ERP Paketin{% endblock %}
+{% block page_title %}Kontrak{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Header Section -->
+    <!-- Actions Bar (Search + Filter Pop-up + Actions) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <form class="d-flex align-items-center gap-2" method="get">
+            <!-- Search Input (Clean & Seamless) -->
+            <div class="search-box-clean d-flex align-items-center bg-white px-3" style="width: 270px; max-width: 320px; height: 38px;">
+                <i class="ph-bold ph-magnifying-glass me-2 text-muted" style="font-size: 1rem; color: #64748b;"></i>
+                <input type="text" name="q" class="border-0 shadow-none p-0 bg-transparent flex-grow-1" placeholder="Cari kontrak..." value="{{ search_query|default:'' }}" style="outline: none !important; font-size: 0.88rem; color: #1e293b; height: 100%;">
+            </div>
+
+            <!-- Independent Filter Button with Pop-up Dropdown -->
+            <div class="dropdown">
+                <button class="btn shadow-sm position-relative rounded-3 d-inline-flex align-items-center gap-2 px-3 border" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Filter Kontrak" style="height: 38px; font-size: 0.88rem; font-weight: 600; color: #1e293b; background-color: #ffffff !important; border-color: #cbd5e1 !important;">
+                    <i class="ph-bold ph-faders fs-5" style="color: #1e293b;"></i>
+                    <span>Filter</span>
+                    {% if company_query or current_status or start_date or end_date or current_sales_filter %}
+                    <span class="active-filter-dot" title="Filter Aktif"></span>
+                    {% endif %}
+                </button>
+                <div class="dropdown-menu filter-dropdown-menu dropdown-menu-start p-3 shadow-lg border-0" style="width: 320px; z-index: 1050; border-radius: 12px; border: 1px solid #e2e8f0 !important;">
+                    <h6 class="dropdown-header px-0 text-dark mb-2"><i class="ph-bold ph-faders me-2 text-dark"></i>Filter Lanjutan</h6>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Nama Perusahaan</label>
+                        <input type="text" name="company" list="companyList" class="form-control form-control-sm" placeholder="Contoh: PT. ABC" value="{{ company_query|default:'' }}" autocomplete="off">
+                        <datalist id="companyList">
+                            {% for comp in available_companies %}
+                            <option value="{{ comp }}">
+                            {% endfor %}
+                        </datalist>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Status Kontrak</label>
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="">Semua Status</option>
+                            {% for value, label in status_choices %}
+                            <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-muted small mb-1">Tanggal Mulai</label>
+                            <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date|default:'' }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small mb-1">Tanggal Akhir</label>
+                            <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date|default:'' }}">
+                        </div>
+                    </div>
+                    {% if sales_filter_users %}
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Filter by Sales PIC</label>
+                        <select name="sales_id" class="form-select form-select-sm">
+                            <option value="">Semua Sales</option>
+                            {% for su in sales_filter_users %}
+                            <option value="{{ su.id }}" {% if current_sales_filter == su.id|stringformat:"s" %}selected{% endif %}>{{ su.first_name }} {{ su.last_name }} ({{ su.username }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-danger btn-sm w-100 fw-bold">Terapkan</button>
+                        <a href="{% url 'crm:contract-list' %}" class="btn btn-outline-secondary btn-sm w-100">Reset</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div class="d-flex gap-2">
+            <div class="dropdown d-inline-block">
+                <button type="button" class="btn btn-outline-secondary bg-white px-4 shadow-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" style="height: 38px;">
+                    <i class="ph-bold ph-download-simple me-1"></i> Export
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="min-width: 180px;">
+                    <li><a class="dropdown-item py-2 fw-medium" href="{% url 'crm:contract-export-excel' %}?q={{ search_query }}&status={{ current_status }}&company={{ company_query }}&start_date={{ start_date }}&end_date={{ end_date }}&sales_id={{ current_sales_filter }}"><i class="ph-duotone ph-file-xls me-2 text-success"></i> Excel (.xlsx)</a></li>
+                </ul>
+            </div>
+            <a href="{% url 'crm:contract-create' %}" class="btn btn-danger px-4 fw-bold shadow-sm d-inline-flex align-items-center" style="height: 38px;">
+                <i class="ph-bold ph-plus me-1"></i> Buat Baru
+            </a>
+        </div>
+    </div>
+
+    <!-- Table Container -->
+    <div class="table-responsive rounded-4 shadow-sm bg-white border" style="font-size: 0.85rem;">
+        <style>
+            .table-premium {
+                border-collapse: separate;
+                border-spacing: 0;
+                width: 100%;
+                font-size: 0.875rem;
+            }
+            .table-premium thead th {
+                background-color: #f8f9fa;
+                color: #6c757d;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                padding: 12px 16px;
+                border-bottom: 2px solid #e9ecef;
+                border-top: 1px solid #e9ecef;
+            }
+            .table-premium thead th:first-child {
+                border-top-left-radius: 8px;
+                border-left: 1px solid #e9ecef;
+            }
+            .table-premium thead th:last-child {
+                border-top-right-radius: 8px;
+                border-right: 1px solid #e9ecef;
+            }
+            .table-premium tbody td {
+                padding: 16px;
+                vertical-align: middle;
+                border-bottom: 1px solid #e9ecef;
+                color: #212529;
+                background-color: #fff;
+                transition: background-color 0.2s ease;
+            }
+            .table-premium tbody tr:hover td {
+                background-color: #f8f9fa;
+            }
+            .table-premium tbody tr:last-child td {
+                border-bottom: 1px solid #e9ecef;
+            }
+            .filter-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 999px; background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; font-size: .72rem; font-weight: 600; text-decoration: none; }
+            .filter-chip:hover { color: #9f1239; background: #ffe4e6; }
+        </style>
+
+        <table class="table table-premium mb-0">
+            <thead>
+                <tr>
+                    <th class="ps-3 text-nowrap text-secondary fw-semibold">NOMOR KONTRAK</th>
+                    <th class="text-nowrap text-secondary fw-semibold">KLIEN</th>
+                    <th class="text-nowrap text-secondary fw-semibold">JUDUL</th>
+                    <th class="text-nowrap text-secondary fw-semibold">NILAI KONTRAK</th>
+                    <th class="text-nowrap text-secondary fw-semibold">PERIODE BERLAKU</th>
+                    {% if is_admin or is_supervisor or is_kepala_cabang %}
+                    <th class="text-nowrap text-secondary fw-semibold">SALES PIC</th>
+                    {% endif %}
+                    <th class="text-nowrap text-secondary fw-semibold text-center">STATUS</th>
+                    <th class="text-center text-nowrap text-secondary fw-semibold">AKSI</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for contract in contracts %}
+                <tr>
+                    <td class="ps-3 fw-bold text-dark">
+                        <a href="{% url 'crm:contract-detail' contract.pk %}" class="text-decoration-none text-dark fw-bold">
+                            {{ contract.contract_number }}
+                        </a>
+                    </td>
+                    <td><div class="fw-semibold text-dark">{{ contract.client.company_name }}</div></td>
+                    <td><div class="text-dark">{{ contract.title }}</div></td>
+                    <td class="fw-bold text-dark">Rp {{ contract.value|intcomma }}</td>
+                    <td class="text-muted small text-nowrap">
+                        {{ contract.start_date|date:"d M Y" }} <br> s/d {{ contract.end_date|date:"d M Y" }}
+                    </td>
+                    {% if is_admin or is_supervisor or is_kepala_cabang %}
+                    <td>
+                        <span class="text-dark">{{ contract.owner.get_full_name|default:contract.owner.username|default:"-" }}</span>
+                    </td>
+                    {% endif %}
+                    <td class="text-center">
+                        {% if contract.status == 'ACTIVE' %}
+                        <span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold">ACTIVE</span>
+                        {% elif contract.status == 'EXPIRED' %}
+                        <span class="badge bg-danger text-white rounded-pill px-3 py-1 fw-bold">EXPIRED</span>
+                        {% elif contract.status == 'DRAFT' %}
+                        <span class="badge bg-secondary text-white rounded-pill px-3 py-1 fw-bold">DRAFT</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark rounded-pill px-3 py-1 fw-bold">{{ contract.get_status_display }}</span>
+                        {% endif %}
+                        {% if contract.is_expiring_soon %}
+                        <div class="text-muted fw-semibold small mt-1" style="font-size:0.7rem;"><i class="ph-bold ph-warning-circle"></i> Sisa {{ contract.days_remaining }} hari</div>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <div class="dropdown">
+                            <button class="btn btn-action-table dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Aksi">
+                                <i class="ph-bold ph-list"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                <li><a class="dropdown-item py-2" href="{% url 'crm:contract-detail' contract.pk %}"><i class="ph-duotone ph-eye me-2 text-info"></i>Lihat Detail</a></li>
+                                <li><a class="dropdown-item py-2" href="{% url 'crm:contract-update' contract.pk %}"><i class="ph-duotone ph-pencil-simple me-2 text-warning"></i>Ubah</a></li>
+                                {% if is_admin or request.user.is_superuser %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item py-2 text-danger" href="{% url 'crm:contract-delete' contract.pk %}"><i class="ph-duotone ph-trash me-2 text-danger"></i>Hapus</a></li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center py-5 text-muted">
+                        <div class="mb-3"><i class="ph-duotone ph-handshake text-secondary" style="font-size: 3rem;"></i></div>
+                        <h6 class="fw-semibold text-dark">Belum ada data kontrak</h6>
+                        <p class="small mb-3">Buat dokumen perjanjian kontrak pengiriman pertama Anda.</p>
+                        <a href="{% url 'crm:contract-create' %}" class="btn btn-danger btn-sm px-4">Buat Kontrak Pertama</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if is_paginated %}
+    <div class="mt-3">
+        {% include 'components/pagination.html' %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

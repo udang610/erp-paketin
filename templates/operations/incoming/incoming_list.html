@@ -1,0 +1,386 @@
+{% extends 'base.html' %}
+
+{% block title %}Incoming Destination - ERP Paketin{% endblock %}
+{% block page_title %}Incoming Destination{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Actions Bar (Search + Filter Pop-up + Actions) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <form class="d-flex align-items-center gap-2" method="get">
+            <!-- Search Input -->
+            <div class="search-box-clean d-flex align-items-center bg-white px-3" style="width: 280px; max-width: 320px; height: 38px;">
+                <i class="ph-bold ph-magnifying-glass me-2 text-muted" style="font-size: 1rem; color: #64748b;"></i>
+                <input type="text" name="q" class="border-0 shadow-none p-0 bg-transparent flex-grow-1" placeholder="Cari inbound, resi, pengirim..." value="{{ q_search|default:resi|default:'' }}" style="outline: none !important; font-size: 0.88rem; color: #1e293b; height: 100%;">
+            </div>
+
+            <!-- Filter Button with Pop-up Dropdown -->
+            <div class="dropdown">
+                <button class="btn shadow-sm position-relative rounded-3 d-inline-flex align-items-center gap-2 px-3 border" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Filter Incoming" style="height: 38px; font-size: 0.88rem; font-weight: 600; color: #1e293b; background-color: #ffffff !important; border-color: #cbd5e1 !important;">
+                    <i class="ph-bold ph-faders fs-5" style="color: #1e293b;"></i>
+                    <span>Filter</span>
+                    {% if has_active_filter %}
+                    <span class="active-filter-dot" title="Filter Aktif"></span>
+                    {% endif %}
+                </button>
+                <div class="dropdown-menu filter-dropdown-menu dropdown-menu-start p-3 shadow-lg border-0" style="width: 320px; z-index: 1050; border-radius: 12px; border: 1px solid #e2e8f0 !important;">
+                    <h6 class="dropdown-header px-0 text-dark mb-2"><i class="ph-bold ph-faders me-2 text-dark"></i>Filter Lanjutan</h6>
+                    
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Status</label>
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="">Semua Status</option>
+                            <option value="ENTRY" {% if status == 'ENTRY' %}selected{% endif %}>Entry / Menunggu Delivery</option>
+                            <option value="SELESAI" {% if status == 'SELESAI' %}selected{% endif %}>Selesai / Delivered</option>
+                            <option value="VOID" {% if status == 'VOID' %}selected{% endif %}>Void / Dibatalkan</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Lokasi / Cabang</label>
+                        <select name="location" class="form-select form-select-sm">
+                            <option value="">Semua Lokasi</option>
+                            {% for b in branches %}
+                            <option value="{{ b.name }}" {% if location == b.name %}selected{% endif %}>{{ b.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary mb-1">Tanggal Mulai</label>
+                            <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date|default:'' }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary mb-1">Tanggal Akhir</label>
+                            <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date|default:'' }}">
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 pt-2 border-top">
+                        <button type="submit" class="btn btn-danger btn-sm w-100 fw-bold">Terapkan</button>
+                        <a href="{% url 'operations:incoming-list' %}" class="btn btn-outline-secondary btn-sm w-100">Reset</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div class="d-flex align-items-center flex-wrap gap-2">
+            <!-- Batch Action Buttons -->
+            <button type="button" class="btn btn-secondary px-3 fw-bold shadow-sm" id="btnBatchIncomingDelivery" style="display: none; height: 38px;">
+                <i class="ph-bold ph-truck me-1"></i> <span id="batchIncomingDeliveryText">Buat Delivery (0)</span>
+            </button>
+            <button type="button" class="btn btn-secondary px-3 fw-bold shadow-sm" id="btnBatchIncomingPod" style="display: none; height: 38px;">
+                <i class="ph-bold ph-check-square-offset me-1"></i> <span id="batchIncomingPodText">Quick Bulk POD (0)</span>
+            </button>
+            <button type="button" class="btn btn-secondary px-3 shadow-sm" id="btnBatchIncomingPrint" style="display: none; height: 38px;">
+                <i class="ph-bold ph-printer me-1"></i> <span id="batchIncomingPrintText">Print Resi (0)</span>
+            </button>
+
+            <a href="{% url 'operations:incoming-create' %}" class="btn btn-danger px-4 fw-bold shadow-sm d-inline-flex align-items-center" style="height: 38px;">
+                <i class="ph-bold ph-plus me-1"></i> Buat Baru
+            </a>
+        </div>
+    </div>
+
+    <!-- Table Container ONLY -->
+    <style>
+        .table-premium {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            font-size: 0.875rem;
+        }
+        .table-premium thead th {
+            background-color: #f8fafc;
+            color: #64748b;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 12px 16px;
+            border-bottom: 1px solid #edf1f7;
+            border-top: none;
+        }
+        .table-premium tbody tr {
+            transition: all 0.2s ease;
+        }
+        .table-premium tbody tr:hover {
+            background-color: #f8fafc;
+        }
+        .table-premium tbody td {
+            padding: 14px 16px;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f5f9;
+            color: #1e293b;
+        }
+    </style>
+    <div class="table-responsive rounded-3 shadow-sm bg-white border" style="font-size: 0.85rem;">
+        <table class="table table-premium table-sm table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="ps-3" style="width: 40px;">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input" type="checkbox" id="selectAllIncoming">
+                                        </div>
+                                    </th>
+                                    <th class="text-nowrap text-secondary fw-semibold">NO. INCOMING</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">TIPE SCAN</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">ID PAKET</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">NO. RESI</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">BERAT (KG)</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">KOLI</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">USER INPUT</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">TANGGAL DIBUAT</th>
+                                    <th class="text-nowrap text-secondary fw-semibold text-center">STATUS</th>
+                                    <th class="text-center text-nowrap text-secondary fw-semibold">AKSI</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in inbounds %}
+                                {% with first_shipment=item.shipments.first %}
+                                <tr>
+                                    <td class="ps-3">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input incoming-checkbox" type="checkbox" value="{{ item.id }}" data-resi-ids="{% for s in item.shipments.all %}{{ s.id }}{% if not forloop.last %},{% endif %}{% endfor %}">
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="fw-semibold text-dark">{{ item.inbound_number }}</span>
+                                    </td>
+                                    <td><span class="text-muted">{% if first_shipment.manifests.exists %}By Manifest{% else %}By Resi{% endif %}</span></td>
+                                    <td>{{ first_shipment.collies.first.barcode|default:"-" }}</td>
+                                    <td>
+                                        {% if item.shipments.count > 1 %}
+                                            <span class="fw-medium text-dark">{{ item.shipments.count }} Resi</span>
+                                        {% else %}
+                                            {{ first_shipment.resi_number|default:"-" }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.shipments.count > 1 %}
+                                            {{ item.shipments.count }} Resi
+                                        {% else %}
+                                            {{ first_shipment.chargeable_weight|floatformat:0 }} Kg
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.shipments.count > 1 %}
+                                            -
+                                        {% else %}
+                                            {{ first_shipment.total_colly|default:"1" }} Koli
+                                        {% endif %}
+                                    </td>
+                                    <td><span class="fw-medium text-dark">Admin</span></td>
+                                    <td>{{ item.created_at|date:"d M Y" }}</td>
+                                    <td>
+                                        {% if item.is_void %}
+                                        <span class="badge bg-dark text-white rounded-pill px-3 py-1 fw-bold">VOID</span>
+                                        {% elif item.status_display == 'SELESAI' %}
+                                        <span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold">SELESAI</span>
+                                        {% else %}
+                                        <span class="badge bg-warning text-dark rounded-pill px-3 py-1 fw-bold">ENTRY</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="dropdown">
+                                            <button class="btn btn-action-table dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Aksi">
+                                                <i class="ph-bold ph-list"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                                <li><a class="dropdown-item py-2" href="{% url 'operations:incoming-detail' item.pk %}"><i class="ph-duotone ph-eye me-2 text-info"></i>Lihat (View Detail)</a></li>
+                                                {% if not item.is_void %}
+                                                <li><a class="dropdown-item py-2" href="{% url 'operations:incoming-update' item.pk %}"><i class="ph-duotone ph-pencil-simple me-2 text-warning"></i>Edit</a></li>
+                                                {% endif %}
+                                                {% if request.user.is_superuser or request.user.is_staff or request.user.user_type == 'ADMIN' %}
+                                                    {% if item.is_void %}
+                                                    <li><hr class="dropdown-divider my-1"></li>
+                                                    <li><a class="dropdown-item py-2 text-danger fw-semibold" href="#" onclick="event.preventDefault(); showHideModal('{% url 'operations:incoming-hide' item.pk %}', '{{ item.inbound_number|default:item.pk }}');"><i class="ph-duotone ph-trash me-2 text-danger"></i>Hapus</a></li>
+                                                    {% else %}
+                                                    <li><a class="dropdown-item py-2" href="#" onclick="event.preventDefault(); showVoidModal('{% url 'operations:incoming-delete' item.pk %}', '{{ item.inbound_number|default:item.pk }}');"><i class="ph-duotone ph-prohibit me-2 text-secondary"></i>Void</a></li>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endwith %}
+                                {% empty %}
+                                <tr>
+                                    <td colspan="11" class="text-center py-5 text-muted">
+                                        <i class="ph-duotone ph-package text-muted mb-3" style="font-size: 3rem; opacity: 0.5;"></i>
+                                        <p class="mb-0">Belum ada dokumen Inbound yang dibuat.</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if page_obj.has_other_pages %}
+                    <nav class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if inbound_number %}&inbound_number={{ inbound_number }}{% endif %}{% if resi %}&resi={{ resi }}{% endif %}{% if customer %}&customer={{ customer }}{% endif %}{% if selected_location %}&location={{ selected_location }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">‹</a></li>
+                            {% endif %}
+                            {% for num in page_obj.paginator.page_range %}
+                            <li class="page-item {% if page_obj.number == num %}active{% endif %}"><a class="page-link" href="?page={{ num }}{% if inbound_number %}&inbound_number={{ inbound_number }}{% endif %}{% if resi %}&resi={{ resi }}{% endif %}{% if customer %}&customer={{ customer }}{% endif %}{% if selected_location %}&location={{ selected_location }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">{{ num }}</a></li>
+                            {% endfor %}
+                            {% if page_obj.has_next %}
+                            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if inbound_number %}&inbound_number={{ inbound_number }}{% endif %}{% if resi %}&resi={{ resi }}{% endif %}{% if customer %}&customer={{ customer }}{% endif %}{% if selected_location %}&location={{ selected_location }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">›</a></li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+    </div>
+</div>
+
+<!-- Modal Quick Bulk POD from Incoming -->
+<div class="modal fade" id="incomingBulkPodModal" tabindex="-1" aria-labelledby="incomingBulkPodModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="post" action="{% url 'operations:pod-bulk-update' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="pod_status" value="POD">
+                <div id="incomingBulkPodResiContainer"></div>
+                <div class="modal-header bg-success bg-opacity-10 border-0">
+                    <h5 class="modal-title fw-bold text-dark" id="incomingBulkPodModalLabel">
+                        <i class="ph-bold ph-check-square-offset text-success me-2"></i>Quick Bulk POD (Delivered Massal)
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="mb-3 text-dark">Update seluruh resi pada <strong id="incomingBulkPodCount">0</strong> dokumen inbound terpilih menjadi <strong>DELIVERED (POD)</strong>.</p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Nama Penerima</label>
+                        <input type="text" name="pod_receiver_name" class="form-control" placeholder="Kosongkan jika sesuai penerima resi masing-masing">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Keterangan / Hubungan Penerima</label>
+                        <input type="text" name="description" class="form-control" placeholder="Contoh: Diterima oleh Yang Bersangkutan / Security">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Foto Bukti Bersama (Opsional)</label>
+                        <input type="file" name="pod_image" class="form-control" accept="image/*">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success px-4 fw-bold">Simpan POD Massal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('selectAllIncoming');
+    const itemCheckboxes = document.querySelectorAll('.incoming-checkbox');
+    const btnBatchIncomingDelivery = document.getElementById('btnBatchIncomingDelivery');
+    const batchIncomingDeliveryText = document.getElementById('batchIncomingDeliveryText');
+    const btnBatchIncomingPod = document.getElementById('btnBatchIncomingPod');
+    const batchIncomingPodText = document.getElementById('batchIncomingPodText');
+    const btnBatchIncomingPrint = document.getElementById('btnBatchIncomingPrint');
+    const batchIncomingPrintText = document.getElementById('batchIncomingPrintText');
+
+    function getSelectedResiIds() {
+        const checked = document.querySelectorAll('.incoming-checkbox:checked');
+        const resiSet = new Set();
+        checked.forEach(cb => {
+            const resiStr = cb.getAttribute('data-resi-ids') || '';
+            resiStr.split(',').forEach(id => {
+                const trimmed = id.trim();
+                if (trimmed) resiSet.add(trimmed);
+            });
+        });
+        return Array.from(resiSet);
+    }
+
+    function updateCheckboxState() {
+        const checkedCount = document.querySelectorAll('.incoming-checkbox:checked').length;
+        
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = (checkedCount === itemCheckboxes.length && itemCheckboxes.length > 0);
+            selectAllCheckbox.indeterminate = (checkedCount > 0 && checkedCount < itemCheckboxes.length);
+        }
+
+        const show = checkedCount > 0 ? 'inline-block' : 'none';
+
+        if (btnBatchIncomingDelivery) {
+            btnBatchIncomingDelivery.style.display = show;
+            if (batchIncomingDeliveryText) batchIncomingDeliveryText.textContent = `Buat Delivery (${checkedCount})`;
+        }
+
+        if (btnBatchIncomingPod) {
+            btnBatchIncomingPod.style.display = show;
+            if (batchIncomingPodText) batchIncomingPodText.textContent = `Quick Bulk POD (${checkedCount})`;
+        }
+
+        if (btnBatchIncomingPrint) {
+            btnBatchIncomingPrint.style.display = show;
+            const resiIds = getSelectedResiIds();
+            if (batchIncomingPrintText) batchIncomingPrintText.textContent = `Print Resi (${resiIds.length})`;
+        }
+    }
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            itemCheckboxes.forEach(cb => cb.checked = selectAllCheckbox.checked);
+            updateCheckboxState();
+        });
+    }
+
+    itemCheckboxes.forEach(cb => cb.addEventListener('change', updateCheckboxState));
+
+    // Handle "Buat Delivery Runsheet" (Incoming -> Delivery)
+    if (btnBatchIncomingDelivery) {
+        btnBatchIncomingDelivery.addEventListener('click', function() {
+            const resiIds = getSelectedResiIds();
+            if (resiIds.length === 0) {
+                alert('Pilih inbound yang memiliki resi.');
+                return;
+            }
+            const params = resiIds.map(id => 'resi_ids=' + encodeURIComponent(id)).join('&');
+            window.location.href = '{% url "operations:manifest-create" %}?type=DELIVERY&' + params;
+        });
+    }
+
+    // Handle "Quick Bulk POD"
+    if (btnBatchIncomingPod) {
+        btnBatchIncomingPod.addEventListener('click', function() {
+            const resiIds = getSelectedResiIds();
+            const container = document.getElementById('incomingBulkPodResiContainer');
+            container.innerHTML = '';
+            resiIds.forEach(id => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'shipment_ids';
+                input.value = id;
+                container.appendChild(input);
+            });
+            document.getElementById('incomingBulkPodCount').textContent = document.querySelectorAll('.incoming-checkbox:checked').length;
+            const modal = new bootstrap.Modal(document.getElementById('incomingBulkPodModal'));
+            modal.show();
+        });
+    }
+
+    // Handle "Print Resi Massal"
+    if (btnBatchIncomingPrint) {
+        btnBatchIncomingPrint.addEventListener('click', function() {
+            const resiIds = getSelectedResiIds();
+            if (resiIds.length === 0) {
+                alert('Tidak ada resi pada dokumen inbound terpilih.');
+                return;
+            }
+            const params = resiIds.map(id => 'resi_ids=' + encodeURIComponent(id)).join('&');
+            window.open('{% url "operations:print_bulky" %}?' + params, '_blank');
+        });
+    }
+});
+</script>
+{% endblock %}

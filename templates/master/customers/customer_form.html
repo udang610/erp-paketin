@@ -1,0 +1,269 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - ERP Paketin{% endblock %}
+{% block page_title %}Data Master Customer{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="mb-3">
+        <a href="{% url 'master:customer' %}" class="btn btn-outline-secondary bg-white px-3 shadow-sm btn-sm">
+            <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+        </a>
+    </div>
+
+    
+
+    <form method="post" id="customerForm">
+        {% csrf_token %}
+
+        {% if form.errors %}
+        <div class="alert alert-danger rounded-4">
+            <h6 class="fw-bold mb-2"><i class="ph-bold ph-warning-circle me-1"></i> Mohon periksa isian formulir:</h6>
+            <ul class="mb-0 small">
+                {% for field in form %}
+                    {% if field.errors %}
+                        <li><strong>{{ field.label }}</strong>: {{ field.errors|striptags }}</li>
+                    {% endif %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Single White Card -->
+        <div class="card bg-white border-0 shadow-sm rounded-4 p-4 mb-3">
+            <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4">
+                <h5 class="fw-bold text-dark mb-0">{{ title|default:"Customer" }}</h5>
+                {% if customer and customer.crm_client %}
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-2">
+                <i class="ph-bold ph-check-circle me-1"></i> Terkoneksi CRM: {{ customer.crm_client.client_id }}
+            </span>
+            <a href="{% url 'crm:client-detail' customer.crm_client.pk %}" class="btn btn-sm btn-outline-secondary bg-white px-3">
+                <i class="ph-bold ph-arrow-square-out me-1"></i> Buka di CRM
+            </a>
+        </div>
+        {% endif %}
+            </div>
+
+            <!-- Identitas Customer -->
+            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">Identitas Customer</h6>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">{{ form.account_type.label }}</label>
+                    {{ form.account_type }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">{{ form.name.label }}</label>
+                    {{ form.name }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">{{ form.branch.label }}</label>
+                    {{ form.branch }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">{{ form.divisi.label }}</label>
+                    {{ form.divisi }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">{{ form.type_industry.label }}</label>
+                    {{ form.type_industry }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">{{ form.sales.label }}</label>
+                    {{ form.sales }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">{{ form.pic_account.label }}</label>
+                    {{ form.pic_account }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">{{ form.pic_phone.label }}</label>
+                    {{ form.pic_phone }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">{{ form.email.label }}</label>
+                    {{ form.email }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">{{ form.website.label }}</label>
+                    {{ form.website }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">{{ form.effective_start_date.label }}</label>
+                    {{ form.effective_start_date }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">{{ form.effective_end_date.label }}</label>
+                    {{ form.effective_end_date }}
+                </div>
+                <div class="col-12 d-flex align-items-center gap-4">
+                    <div class="form-check form-switch mt-1">
+                        {{ form.api_integration }}
+                        <label class="form-check-label ms-2 small fw-semibold text-dark">Integrasi API Aktif</label>
+                    </div>
+                    <div class="form-check form-switch mt-1">
+                        {{ form.is_active }}
+                        <label class="form-check-label ms-2 small fw-semibold text-dark">Customer Aktif</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alamat Kantor -->
+            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3 mt-4">Alamat Kantor</h6>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">{{ form.city.label }}</label>
+                    {{ form.city }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">{{ form.district.label }}</label>
+                    {{ form.district }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">{{ form.postal_code.label }}</label>
+                    {{ form.postal_code }}
+                </div>
+                <div class="col-12">
+                    <label class="form-label text-muted small fw-semibold">{{ form.office_address.label }}</label>
+                    {{ form.office_address }}
+                </div>
+            </div>
+
+            <!-- Detail Penjemputan (Pickup) -->
+            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3 mt-4">Detail Penjemputan (Pickup)</h6>
+            <div class="row g-3">
+                <div class="col-12">
+                    <div class="form-check form-switch mt-1">
+                        {{ form.pickup_same_as_office }}
+                        <label class="form-check-label ms-2 small fw-semibold text-dark">Lokasi penjemputan sama dengan alamat kantor</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-semibold">{{ form.pic_pickup.label }}</label>
+                    {{ form.pic_pickup }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-semibold">{{ form.pic_pickup_phone.label }}</label>
+                    {{ form.pic_pickup_phone }}
+                </div>
+            </div>
+
+            <!-- Keuangan & Pembayaran -->
+            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3 mt-4">Keuangan &amp; Pembayaran</h6>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">{{ form.term_of_payment.label }}</label>
+                    {{ form.term_of_payment }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">{{ form.payment_type.label }}</label>
+                    {{ form.payment_type }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">{{ form.bank_transfer.label }}</label>
+                    {{ form.bank_transfer }}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">{{ form.ppn_percentage.label }} *</label>
+                    {{ form.ppn_percentage }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">{{ form.npwp.label }}</label>
+                    {{ form.npwp }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">{{ form.email_invoice.label }}</label>
+                    {{ form.email_invoice }}
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label text-muted small fw-semibold">{{ form.insurance_percentage.label }} *</label>
+                    {{ form.insurance_percentage }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label text-muted small fw-semibold">{{ form.min_premi_insurance.label }}</label>
+                    {{ form.min_premi_insurance }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label text-muted small fw-semibold">{{ form.status.label }}</label>
+                    {{ form.status }}
+                </div>
+                <div class="col-md-3 d-flex align-items-center">
+                    <div class="form-check form-switch mt-3">
+                        {{ form.with_pod_resi }}
+                        <label class="form-check-label ms-2 small fw-semibold text-dark">Lampirkan Resi POD</label>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-semibold">{{ form.handling_type_shipment.label }}</label>
+                    {{ form.handling_type_shipment }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-semibold">{{ form.take_photo_pod.label }}</label>
+                    {{ form.take_photo_pod }}
+                </div>
+            </div>
+
+            <!-- Action Bar -->
+            <div class="d-flex justify-content-end align-items-center gap-2 pt-3 mt-4 border-top">
+                <a href="{% url 'master:customer' %}" class="btn btn-light px-4 border fw-semibold">
+                    Batal
+                </a>
+                <button type="submit" name="save_only" value="1" class="btn btn-outline-dark bg-white px-4 shadow-sm fw-semibold">
+                    <i class="ph-bold ph-floppy-disk me-1"></i> Simpan Data
+                </button>
+                <button type="submit" name="save_and_sync_crm" value="1" class="btn btn-danger px-4 shadow-sm fw-bold">
+                    <i class="ph-bold ph-arrows-clockwise me-1"></i> Simpan &amp; Transfer ke CRM
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    $('.select2').select2({
+        theme: 'bootstrap-5',
+        width: '100%'
+    });
+
+    var $citySelect = $('#id_city');
+    var $distSelect = $('#id_district');
+
+    // Cascading saat Kota berubah
+    $citySelect.on('change', function() {
+        var city = $(this).val();
+
+        // Reset District
+        $distSelect.empty().append('<option value="">Pilih Kecamatan...</option>');
+        $distSelect.trigger('change.select2');
+
+        if (!city) return;
+
+        // Fetch Kecamatan berdasarkan Kota
+        fetch(`/master/api/districts-by-city/?city=${encodeURIComponent(city)}`)
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.results && data.results.length > 0) {
+                    data.results.forEach(function(item) {
+                        var newOption = new Option(item.label || item.name, item.name, false, false);
+                        $distSelect.append(newOption);
+                    });
+                }
+                $distSelect.trigger('change.select2');
+            })
+            .catch(function(err) {
+                console.error('Error fetching districts:', err);
+            });
+    });
+});
+</script>
+{% endblock %}

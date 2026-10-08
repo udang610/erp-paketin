@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>BagTag Outgoing - {{ manifest.manifest_number }}</title>
+    <style>
+        @page {
+            size: 100mm 100mm;
+            margin: 2mm 3mm;
+        }
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 8px;
+            color: #000;
+        }
+        table {
+            width: 100%;
+        }
+        td {
+            vertical-align: top;
+        }
+        .header-table {
+            margin-bottom: 2mm;
+        }
+        .header-logo {
+            width: 30mm;
+        }
+        .header-title {
+            text-align: center;
+        }
+        .header-title h1 {
+            font-size: 12px;
+            font-weight: bold;
+            margin: 0;
+            padding: 0;
+        }
+        .header-title p {
+            font-size: 8px;
+            margin: 0;
+            padding: 0;
+        }
+        .header-date {
+            text-align: right;
+            font-size: 7px;
+        }
+        .barcode-section {
+            text-align: center;
+            margin-bottom: 2mm;
+        }
+        .barcode-text {
+            font-size: 8px;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 2px;
+        }
+        
+        .info-table {
+            width: 100%;
+            border: 1px solid #000;
+            border-collapse: collapse;
+            margin-bottom: 2mm;
+        }
+        .info-table td {
+            border: 1px solid #000;
+            padding: 3px;
+            height: 35mm;
+        }
+        .col-asal {
+            width: 30%;
+        }
+        .col-tujuan {
+            width: 30%;
+        }
+        .col-details {
+            width: 40%;
+        }
+        
+        .box-label {
+            font-size: 7px;
+        }
+        .box-value {
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 5mm;
+        }
+        .box-sub {
+            font-size: 7px;
+            text-align: center;
+        }
+        
+        .detail-row {
+            font-size: 7px;
+            margin-bottom: 1px;
+        }
+        .detail-row-large {
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .detail-divider {
+            border-top: 1px solid #000;
+            margin: 2px -3px 2px -3px;
+        }
+        
+        .qr-section {
+            text-align: center;
+        }
+        .footer {
+            font-size: 6px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    {% for i in colly_range %}
+    <!-- Header -->
+    <table class="header-table">
+        <tr>
+            <td class="header-logo" style="vertical-align: middle;">
+                <img src="{{ request.scheme }}://{{ request.get_host }}/static/img/logo-surat.webp" style="max-height: 10mm;" />
+            </td>
+            <td class="header-title" style="vertical-align: middle;">
+                <h1>BAGTAG OUTGOING</h1>
+                <p>PT. Amanah Cargo Jaya Mandiri</p>
+            </td>
+            <td class="header-date" style="vertical-align: middle;">
+                Tgl Cetak:<br>
+                {% now "d M Y" %}
+            </td>
+        </tr>
+    </table>
+
+    <!-- Barcode -->
+    <div class="barcode-section">
+        <pdf:barcode value="{{ manifest.manifest_number }}" type="code128" barWidth="0.8" barHeight="20" />
+        <br/><br/>
+        <div class="barcode-text">Outgoing No : {{ manifest.manifest_number }}</div>
+    </div>
+
+    <!-- Info Grid -->
+    <table class="info-table">
+        <tr>
+            <td class="col-asal">
+                <div class="box-label">Asal</div>
+                <div class="box-value">{{ manifest.branch.tlc_code|default:"CGK" }}</div>
+            </td>
+            <td class="col-tujuan">
+                <div class="box-label">Tujuan</div>
+                <div class="box-value">{{ manifest.get_tlc_dest }}</div>
+                <br/>
+                <div class="box-sub">{{ manifest.get_city_dest|upper }}</div>
+            </td>
+            <td class="col-details">
+                <div class="detail-row">Tgl Buat : {{ manifest.date|date:"d M Y" }}</div>
+                <div class="detail-row">Koli : <span class="detail-row-large">{{ i }} / {{ manifest.colly_cmo|default:"1" }}</span></div>
+                <div class="detail-row">Note : {{ manifest.description|default:"-" }}</div>
+                <div class="detail-divider"></div>
+                <div class="detail-row">Tipe Outgoing :<br>{% if manifest.is_bypass %}By Pass Outgoing{% else %}Reguler Outgoing{% endif %}</div>
+                <div class="detail-row">Komoditas :<br><b>{{ manifest.commodity|default:"General Cargo" }}</b></div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- QR Code & Footer -->
+    <div class="qr-section">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data={{ manifest.manifest_number }}" width="60" height="60" />
+    </div>
+    <div class="footer">
+        <br/>
+        Copyright www.paketincargo.com All rights reserved
+    </div>
+    
+    {% if not forloop.last %}
+    <pdf:nextpage />
+    {% endif %}
+    {% endfor %}
+
+</body>
+</html>

@@ -1,0 +1,659 @@
+{% extends 'base.html' %}
+
+{% block title %}Detail POD - {{ shipment.resi_number }} - ERP Paketin{% endblock %}
+{% block page_title %}Detail Bukti Pengiriman (POD){% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Status Pipeline Stepper */
+    .status-stepper {
+        display: flex;
+        justify-content: space-between;
+        position: relative;
+        margin: 6px 0 12px 0;
+    }
+    .status-stepper::before {
+        content: '';
+        position: absolute;
+        top: 13px;
+        left: 8%;
+        width: 84%;
+        height: 2px;
+        background-color: #e2e8f0;
+        z-index: 0;
+    }
+    .status-stepper::after {
+        content: '';
+        position: absolute;
+        top: 13px;
+        left: 8%;
+        height: 2px;
+        background-color: #ed1c2e;
+        z-index: 0;
+        width: 84%;
+    }
+    .step-item {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+        width: 20%;
+    }
+    .step-item .icon-circle {
+        width: 26px;
+        height: 26px;
+        background-color: #f8fafc;
+        border-radius: 50%;
+        margin: 0 auto 4px auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #94a3b8;
+        border: 2px solid #fff;
+        font-size: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .step-item.passed .icon-circle {
+        background-color: #ed1c2e;
+        color: #fff;
+    }
+    .step-item.active .icon-circle {
+        background-color: #ed1c2e;
+        color: #fff;
+        box-shadow: 0 0 0 3px rgba(237, 28, 46, .25);
+    }
+    .step-label {
+        font-size: 0.62rem;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.2px;
+    }
+    .step-item.active .step-label, .step-item.passed .step-label {
+        color: #0f172a;
+    }
+
+    /* Vertical Timeline */
+    .vertical-timeline {
+        position: relative;
+        padding-left: 18px;
+    }
+    .vertical-timeline::before {
+        content: '';
+        position: absolute;
+        left: 5px;
+        top: 6px;
+        bottom: 6px;
+        width: 2px;
+        background: #f1f5f9;
+    }
+    .timeline-node {
+        position: relative;
+        padding-bottom: 14px;
+    }
+    .timeline-node:last-child {
+        padding-bottom: 0;
+    }
+    .timeline-marker {
+        position: absolute;
+        left: -18px;
+        top: 3px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #ed1c2e;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 1px #e2e8f0;
+    }
+    .timeline-node:first-child .timeline-marker {
+        box-shadow: 0 0 0 3px rgba(237, 28, 46, .2);
+    }
+
+    /* Media Showcase */
+    .pod-photo-card {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        overflow: hidden;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 220px;
+    }
+    .pod-photo-card img, .pod-photo-card video {
+        max-height: 280px;
+        width: 100%;
+        object-fit: contain;
+        background-color: #f8fafc;
+    }
+
+    /* Clean Key-Value Row */
+    .info-group-title {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 6px;
+    }
+    .info-label {
+        font-size: 0.72rem;
+        color: #64748b;
+        margin-bottom: 1px;
+    }
+    .info-val {
+        font-size: 0.84rem;
+        font-weight: 600;
+        color: #0f172a;
+    }
+
+    /* Metric Box */
+    .metric-pill {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 8px 4px;
+        text-align: center;
+    }
+    .metric-pill .val {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+    .metric-pill .lbl {
+        font-size: 0.62rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: #64748b;
+        margin-top: 1px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <!-- Top Action Toolbar -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'operations:pod_list' %}" class="btn btn-outline-secondary btn-sm px-3">
+                <i class="ph-bold ph-arrow-left me-1"></i> Kembali ke Daftar POD
+            </a>
+            <span class="text-muted small d-none d-md-inline">|</span>
+            <span class="text-muted small d-none d-md-inline">Detail Bukti Serah Terima</span>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'operations:pod-edit' shipment.pk %}" class="btn btn-outline-dark btn-sm px-3">
+                <i class="ph-bold ph-pencil-simple me-1"></i> Edit Data POD
+            </a>
+            <a href="{% url 'operations:print-e-pod' shipment.pk %}" target="_blank" class="btn btn-danger btn-sm px-3 shadow-sm">
+                <i class="ph-bold ph-printer me-1"></i> Print E-POD
+            </a>
+        </div>
+    </div>
+
+    <!-- Hero Header Summary Card -->
+    <div class="card border-0 shadow-sm rounded-4 bg-white mb-4">
+        <div class="card-body p-3 p-md-4">
+            <div class="row align-items-center g-3">
+                <!-- Left: Resi & Status -->
+                <div class="col-lg-7">
+                    <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                        <span class="text-muted small fw-bold text-uppercase">No. Resi</span>
+                        <h4 class="fw-bold text-dark font-monospace mb-0">{{ shipment.resi_number }}</h4>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1 fs-6 fw-semibold">
+                            <i class="ph-bold ph-check-circle me-1"></i> {{ shipment.get_status_display }}
+                        </span>
+                        <span class="badge bg-light text-dark border rounded-pill px-3 py-1 fs-6 fw-normal">
+                            {{ shipment.get_service_type_display }}
+                        </span>
+                    </div>
+                    <div class="d-flex align-items-center flex-wrap gap-2 text-secondary small mt-1">
+                        <span class="fw-semibold text-dark">
+                            <i class="ph-fill ph-map-pin text-danger me-1"></i>{{ shipment.get_tlc_origin }} ({{ shipment.get_city_origin }})
+                        </span>
+                        <i class="ph-bold ph-arrow-right text-muted mx-1"></i>
+                        <span class="fw-semibold text-dark">
+                            <i class="ph-fill ph-map-pin text-success me-1"></i>{{ shipment.get_tlc_dest }} ({{ shipment.get_city_dest }})
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Right: Waktu POD Summary -->
+                <div class="col-lg-5">
+                    <div class="bg-light rounded-3 p-3 border d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted small fw-bold text-uppercase d-block" style="font-size: 0.68rem;">
+                                <i class="ph-bold ph-calendar-check text-danger me-1"></i> WAKTU SERAH TERIMA (POD)
+                            </span>
+                            <div class="fw-bold text-dark fs-6 mt-1">
+                                {% if effective_pod_date %}
+                                    {{ effective_pod_date|date:"d F Y, H:i" }} WIB
+                                {% elif shipment.pod_date %}
+                                    {{ shipment.pod_date|date:"d F Y, H:i" }} WIB
+                                {% elif pod_tracking.occurred_at %}
+                                    {{ pod_tracking.occurred_at|date:"d F Y, H:i" }} WIB
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <span class="text-muted small d-block" style="font-size: 0.68rem;">PENERIMA</span>
+                            <strong class="text-dark small">{{ shipment.pod_receiver_name|default:shipment.receiver_name|default:"-" }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3-COLUMN COMPACT LAYOUT -->
+    <div class="row g-3">
+        <!-- ==================== KOLOM 1: PENGIRIM, PENERIMA & BUKTI FOTO POD ==================== -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white h-100">
+                <div class="card-header bg-white border-bottom py-3 px-3">
+                    <h6 class="fw-bold text-dark mb-0" style="font-size: 0.88rem;">
+                        <i class="ph-duotone ph-users-three me-2 text-danger"></i> Pengirim, Penerima &amp; Bukti Foto
+                    </h6>
+                </div>
+                <div class="card-body p-3">
+                    <!-- 1. Pengirim -->
+                    <div class="mb-3">
+                        <div class="info-group-title text-danger">
+                            <i class="ph-bold ph-paper-plane-tilt me-1"></i> Pengirim (Asal)
+                        </div>
+                        <div class="fw-bold text-dark" style="font-size: 0.85rem;">
+                            {% if shipment.client %}
+                                {{ shipment.client.name }}
+                            {% else %}
+                                {{ shipment.sender_name|default:"-" }}
+                            {% endif %}
+                        </div>
+                        {% if shipment.sender_attention or shipment.client %}
+                            <div class="text-muted small">
+                                <span class="fw-semibold">PIC:</span> {{ shipment.sender_attention|default:shipment.sender_name|default:"-" }}
+                            </div>
+                        {% endif %}
+                        <div class="text-muted small">
+                            <i class="ph-fill ph-phone text-danger me-1"></i>{{ shipment.sender_phone|default:"-" }}
+                        </div>
+                        <div class="text-secondary small">
+                            <i class="ph-fill ph-map-pin text-danger me-1"></i><strong>{{ shipment.get_city_origin }}</strong>{% if shipment.sender_district %}, Kec. {{ shipment.sender_district }}{% endif %}
+                        </div>
+                    </div>
+
+                    <hr class="text-muted opacity-25 my-2">
+
+                    <!-- 2. Penerima -->
+                    <div class="mb-3">
+                        <div class="info-group-title text-success">
+                            <i class="ph-bold ph-map-pin-line me-1"></i> Penerima (Tujuan)
+                        </div>
+                        <div class="fw-bold text-dark" style="font-size: 0.85rem;">{{ shipment.receiver_name }}</div>
+                        {% if shipment.receiver_attention %}
+                            <div class="text-muted small">
+                                <span class="fw-semibold">Attn/PIC:</span> {{ shipment.receiver_attention }}
+                            </div>
+                        {% endif %}
+                        <div class="text-muted small">
+                            <i class="ph-fill ph-phone text-success me-1"></i>{{ shipment.receiver_phone|default:"-" }}
+                        </div>
+                        <div class="text-secondary small">
+                            <i class="ph-fill ph-map-pin text-success me-1"></i><strong>{{ shipment.get_city_dest }}</strong>{% if shipment.receiver_district %}, Kec. {{ shipment.receiver_district }}{% endif %}
+                            {% if shipment.receiver_postal_code %}<span class="text-muted">({{ shipment.receiver_postal_code }})</span>{% endif %}
+                        </div>
+                        {% if shipment.receiver_address %}
+                            <div class="text-muted small mt-1 pt-1 border-top" style="font-size: 0.72rem; line-height: 1.3;">
+                                {{ shipment.receiver_address }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <hr class="text-muted opacity-25 my-2">
+
+                    <!-- 3. Bukti Foto Serah Terima (Minimized Thumbnail) -->
+                    <div>
+                        <div class="info-group-title text-primary d-flex justify-content-between align-items-center">
+                            <span><i class="ph-bold ph-camera me-1"></i> Bukti Serah Terima (POD)</span>
+                            {% if pod_attachments or shipment.pod_image %}
+                                <span class="badge bg-light text-dark border" style="font-size: 0.65rem;">
+                                    {{ pod_attachments|length|default:"1" }} Foto
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Thumbnail Mini Galeri -->
+                        <div class="mb-2">
+                            {% if pod_attachments %}
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    {% for att in pod_attachments %}
+                                        <div class="position-relative rounded-3 border overflow-hidden bg-light shadow-sm" style="width: 80px; height: 80px; cursor: pointer;" onclick="openPhotoModal('{{ att.file.url }}')">
+                                            {% if att.media_type == 'VIDEO' %}
+                                                <video src="{{ att.file.url }}" class="w-100 h-100 object-fit-cover"></video>
+                                                <span class="position-absolute bottom-0 end-0 bg-dark bg-opacity-75 text-white p-1 rounded-start small" style="font-size: 0.65rem;"><i class="ph-bold ph-play"></i></span>
+                                            {% else %}
+                                                <img src="{{ att.file.url }}" class="w-100 h-100 object-fit-cover" alt="Bukti POD">
+                                                <span class="position-absolute bottom-0 end-0 bg-dark bg-opacity-75 text-white p-1 rounded-start small" style="font-size: 0.65rem;"><i class="ph-bold ph-magnifying-glass-plus"></i></span>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% elif shipment.pod_image %}
+                                <div class="position-relative rounded-3 border overflow-hidden bg-light shadow-sm d-inline-block" style="width: 90px; height: 90px; cursor: pointer;" onclick="openPhotoModal('{{ shipment.pod_image.url }}')">
+                                    <img src="{{ shipment.pod_image.url }}" class="w-100 h-100 object-fit-cover" alt="Foto POD">
+                                    <span class="position-absolute bottom-0 end-0 bg-dark bg-opacity-75 text-white p-1 rounded-start small" style="font-size: 0.65rem;"><i class="ph-bold ph-magnifying-glass-plus"></i></span>
+                                </div>
+                            {% else %}
+                                <div class="text-center py-2 px-3 bg-light rounded-3 border text-muted small" style="font-size: 0.72rem;">
+                                    <i class="ph-bold ph-image-broken me-1"></i> Belum ada foto bukti POD.
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Meta Serah Terima Ringkas -->
+                        <div class="bg-light rounded-3 p-2 border" style="font-size: 0.75rem;">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Penerima di Lokasi:</span>
+                                <strong class="text-dark">{{ shipment.pod_receiver_name|default:shipment.receiver_name|default:"-" }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Kurir / Driver:</span>
+                                <span class="text-dark fw-semibold">
+                                    {% if delivery_manifest and delivery_manifest.driver %}
+                                        {{ delivery_manifest.driver.get_full_name|default:delivery_manifest.driver.username }}
+                                    {% else %}
+                                        Petugas Kurir
+                                    {% endif %}
+                                </span>
+                            </div>
+                            {% if pod_tracking.description %}
+                            <div class="border-top pt-1 text-secondary" style="font-size: 0.7rem; line-height: 1.3;">
+                                {{ pod_tracking.description }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== KOLOM 2: RINCIAN PAKET & BARANG ==================== -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white h-100">
+                <div class="card-header bg-white border-bottom py-3 px-3 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold text-dark mb-0" style="font-size: 0.88rem;">
+                        <i class="ph-duotone ph-package me-2 text-danger"></i> Rincian Paket &amp; Koli
+                    </h6>
+                    <span class="badge bg-light text-dark border" style="font-size: 0.72rem;">{{ shipment.items.count|default:"1" }} Item</span>
+                </div>
+                <div class="card-body p-3">
+                    <!-- Stat Metrics 4 Box -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <div class="metric-pill">
+                                <div class="val">{{ shipment.total_colly|default:"1" }}</div>
+                                <div class="lbl">Total Koli</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="metric-pill">
+                                <div class="val">{{ shipment.actual_weight|default:shipment.weight|default:"0" }} <small class="fw-normal">kg</small></div>
+                                <div class="lbl">Berat Aktual</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="metric-pill">
+                                <div class="val">{{ shipment.calculated_volume_weight|default:shipment.volume_weight|default:"0"|floatformat:1 }} <small class="fw-normal">vkg</small></div>
+                                <div class="lbl">Berat Volume</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="metric-pill border-danger border-opacity-25 bg-danger bg-opacity-10">
+                                <div class="val text-danger">{{ shipment.chargeable_weight|default:shipment.actual_weight|default:shipment.weight|default:"0" }} <small class="fw-normal">kg</small></div>
+                                <div class="lbl text-danger">Charge Weight</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Items Table -->
+                    <div class="table-responsive border rounded-3">
+                        <table class="table table-hover align-middle mb-0" style="font-size: 0.78rem;">
+                            <thead class="table-light text-muted">
+                                <tr>
+                                    <th class="ps-2">Barang</th>
+                                    <th class="text-center" style="width: 50px;">Koli</th>
+                                    <th class="text-center" style="width: 70px;">Berat</th>
+                                    <th class="text-center pe-2" style="width: 75px;">Packing</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in shipment.items.all %}
+                                <tr>
+                                    <td class="ps-2">
+                                        <div class="fw-semibold text-dark">{{ item.description|default:shipment.description_item|default:"Barang Paket" }}</div>
+                                        {% if item.panjang or item.lebar or item.tinggi %}
+                                            <div class="text-muted small" style="font-size: 0.7rem;">{{ item.panjang|default:"0" }}×{{ item.lebar|default:"0" }}×{{ item.tinggi|default:"0" }} cm</div>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">{{ item.quantity|default:"1" }}</td>
+                                    <td class="text-center">{{ item.actual_weight|default:"0" }} kg</td>
+                                    <td class="text-center pe-2">
+                                        <span class="text-secondary">{{ item.get_packing_display|default:"Standar" }}</span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td class="ps-2 fw-semibold text-dark">{{ shipment.description_item|default:"Barang Paket Reguler" }}</td>
+                                    <td class="text-center">{{ shipment.total_colly|default:"1" }}</td>
+                                    <td class="text-center">{{ shipment.actual_weight|default:shipment.weight|default:"0" }} kg</td>
+                                    <td class="text-center pe-2"><span class="text-secondary">Standar</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== KOLOM 3: ALUR & RIWAYAT TRACKING ==================== -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white h-100">
+                <div class="card-header bg-white border-bottom py-3 px-3 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold text-dark mb-0" style="font-size: 0.88rem;">
+                        <i class="ph-duotone ph-clock-counter-clockwise me-2 text-danger"></i> Riwayat Pelacakan
+                    </h6>
+                    <span class="badge bg-light text-muted border" style="font-size: 0.68rem;">{{ tracking_history|length }} Titik</span>
+                </div>
+                <div class="card-body p-3">
+                    <!-- Stepper Bar -->
+                    <div class="status-stepper mb-3">
+                        <div class="step-item passed">
+                            <div class="icon-circle"><i class="ph-bold ph-package"></i></div>
+                            <div class="step-label">Pickup</div>
+                        </div>
+                        <div class="step-item passed">
+                            <div class="icon-circle"><i class="ph-bold ph-warehouse"></i></div>
+                            <div class="step-label">Asal</div>
+                        </div>
+                        <div class="step-item passed">
+                            <div class="icon-circle"><i class="ph-bold ph-truck"></i></div>
+                            <div class="step-label">Transit</div>
+                        </div>
+                        <div class="step-item passed">
+                            <div class="icon-circle"><i class="ph-bold ph-moped"></i></div>
+                            <div class="step-label">Kurir</div>
+                        </div>
+                        <div class="step-item active">
+                            <div class="icon-circle"><i class="ph-bold ph-check-circle"></i></div>
+                            <div class="step-label text-danger">POD</div>
+                        </div>
+                    </div>
+
+                    <hr class="text-muted opacity-25 my-3">
+
+                    <!-- Vertical Timeline -->
+                    <div class="vertical-timeline">
+                        {% for tr in tracking_history %}
+                            {% if forloop.counter <= 3 %}
+                                <div class="timeline-node">
+                                    <div class="timeline-marker"></div>
+                                    <div class="d-flex justify-content-between align-items-start gap-2">
+                                        <div>
+                                            <div class="fw-bold text-dark mb-1" style="font-size: 0.8rem;">
+                                                {{ tr.get_status_display }}
+                                            </div>
+                                            {% if tr.location %}
+                                            <span class="text-muted small d-block" style="font-size: 0.72rem;">
+                                                <i class="ph-fill ph-map-pin text-danger me-1"></i>{{ tr.formatted_location }}
+                                            </span>
+                                            {% endif %}
+                                            {% if tr.professional_description %}
+                                            <p class="text-secondary small mb-0 mt-1" style="font-size: 0.72rem; line-height: 1.35;">
+                                                {{ tr.professional_description }}
+                                            </p>
+                                            {% endif %}
+                                        </div>
+                                        <div class="text-end flex-shrink-0">
+                                            <span class="text-muted small fw-semibold d-block" style="font-size: 0.7rem;">
+                                                {{ tr.occurred_at|date:"d M Y"|default:tr.timestamp|date:"d M Y" }}
+                                            </span>
+                                            <span class="text-muted small" style="font-size: 0.68rem;">
+                                                {{ tr.occurred_at|date:"H:i"|default:tr.timestamp|date:"H:i" }} WIB
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% empty %}
+                            <div class="text-center py-3 text-muted small">
+                                <i class="ph-duotone ph-hourglass-empty d-block mb-1" style="font-size: 1.5rem;"></i>
+                                Belum ada catatan riwayat tracking.
+                            </div>
+                        {% endfor %}
+
+                        {% if tracking_history|length > 3 %}
+                            <div class="collapse" id="moreTrackingCollapse">
+                                {% for tr in tracking_history %}
+                                    {% if forloop.counter > 3 %}
+                                        <div class="timeline-node">
+                                            <div class="timeline-marker bg-secondary opacity-75"></div>
+                                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                                <div>
+                                                    <div class="fw-bold text-dark mb-1" style="font-size: 0.8rem;">
+                                                        {{ tr.get_status_display }}
+                                                    </div>
+                                                    {% if tr.location %}
+                                                    <span class="text-muted small d-block" style="font-size: 0.72rem;">
+                                                        <i class="ph-fill ph-map-pin text-secondary me-1"></i>{{ tr.formatted_location }}
+                                                    </span>
+                                                    {% endif %}
+                                                    {% if tr.professional_description %}
+                                                    <p class="text-secondary small mb-0 mt-1" style="font-size: 0.72rem; line-height: 1.35;">
+                                                        {{ tr.professional_description }}
+                                                    </p>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="text-end flex-shrink-0">
+                                                    <span class="text-muted small fw-semibold d-block" style="font-size: 0.7rem;">
+                                                        {{ tr.occurred_at|date:"d M Y"|default:tr.timestamp|date:"d M Y" }}
+                                                    </span>
+                                                    <span class="text-muted small" style="font-size: 0.68rem;">
+                                                        {{ tr.occurred_at|date:"H:i"|default:tr.timestamp|date:"H:i" }} WIB
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+
+                            <!-- Toggle Button -->
+                            <div class="text-center pt-2">
+                                <button class="btn btn-sm btn-outline-secondary px-3 py-1 shadow-sm" type="button" data-bs-toggle="collapse" data-bs-target="#moreTrackingCollapse" aria-expanded="false" aria-controls="moreTrackingCollapse" id="toggleTrackingBtn" onclick="toggleTrackingBtnState()" style="font-size: 0.74rem;">
+                                    <i class="ph-bold ph-caret-down me-1" id="trackingToggleIcon"></i>
+                                    <span id="trackingToggleText">Lihat Riwayat Lengkap ({{ tracking_history|length }} Titik)</span>
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Zoom Photo Universal -->
+<div class="modal fade" id="zoomPhotoModal" tabindex="-1" aria-labelledby="zoomPhotoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h6 class="modal-title fw-bold" id="zoomPhotoModalLabel">
+                    <i class="ph-bold ph-image me-2 text-danger"></i> Foto Bukti POD - {{ shipment.resi_number }}
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-3">
+                <img id="zoomModalImg" src="" class="img-fluid rounded border mb-3" style="max-height: 75vh; width: auto; object-fit: contain;" alt="Foto Bukti POD">
+                <div class="bg-light p-3 rounded text-start">
+                    <div class="row g-2">
+                        <div class="col-sm-6">
+                            <span class="text-muted small d-block">Penerima Paket:</span>
+                            <strong class="text-dark">{{ shipment.pod_receiver_name|default:shipment.receiver_name|default:"-" }}</strong>
+                        </div>
+                        <div class="col-sm-6">
+                            <span class="text-muted small d-block">Waktu Serah Terima:</span>
+                            <strong class="text-dark">
+                                {% if effective_pod_date %}
+                                    {{ effective_pod_date|date:"d F Y, H:i" }} WIB
+                                {% elif shipment.pod_date %}
+                                    {{ shipment.pod_date|date:"d F Y, H:i" }} WIB
+                                {% elif pod_tracking.occurred_at %}
+                                    {{ pod_tracking.occurred_at|date:"d F Y, H:i" }} WIB
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openPhotoModal(imgUrl) {
+    const modalImg = document.getElementById('zoomModalImg');
+    if (modalImg) {
+        modalImg.src = imgUrl;
+    }
+    const modalEl = document.getElementById('zoomPhotoModal');
+    if (modalEl) {
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+}
+
+function toggleTrackingBtnState() {
+    setTimeout(() => {
+        const collapseEl = document.getElementById('moreTrackingCollapse');
+        const toggleText = document.getElementById('trackingToggleText');
+        const toggleIcon = document.getElementById('trackingToggleIcon');
+        if (collapseEl && toggleText && toggleIcon) {
+            const isExpanded = collapseEl.classList.contains('show');
+            if (isExpanded) {
+                toggleText.innerText = 'Sembunyikan Riwayat';
+                toggleIcon.className = 'ph-bold ph-caret-up me-1';
+            } else {
+                toggleText.innerText = 'Lihat Riwayat Lengkap ({{ tracking_history|length }} Titik)';
+                toggleIcon.className = 'ph-bold ph-caret-down me-1';
+            }
+        }
+    }, 350);
+}
+</script>
+{% endblock %}

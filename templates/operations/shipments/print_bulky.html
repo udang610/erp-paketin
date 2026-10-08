@@ -1,0 +1,555 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Print Bulky AWB - ERP Paketin{% endblock %}
+{% block page_title %}Print Bulky AWB{% endblock %}
+
+{% block extra_css %}
+<style>
+    .format-card {
+        border: 1.5px solid #e9ecef;
+        border-radius: 10px;
+        padding: 10px 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: #fff;
+    }
+    .format-card:hover {
+        border-color: #ced4da;
+        background: #f8f9fa;
+    }
+    .format-card.active {
+        border-color: #dc3545;
+        background: #fff5f5;
+    }
+    .format-card input[type="radio"] {
+        display: none;
+    }
+    .format-card.active .format-title {
+        color: #dc3545 !important;
+    }
+    .resi-textarea {
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 0.88rem;
+        letter-spacing: 0.5px;
+        border-radius: 10px;
+        border: 1.5px solid #dee2e6;
+        padding: 12px;
+        line-height: 1.4;
+    }
+    .resi-textarea:focus {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.15);
+    }
+    .table-bulky {
+        border-collapse: separate;
+        border-spacing: 0;
+        width: 100%;
+        font-size: 0.85rem;
+    }
+    .table-bulky thead th {
+        background-color: #f8f9fa;
+        color: #6c757d;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 10px 14px;
+        border-bottom: 2px solid #e9ecef;
+        border-top: 1px solid #e9ecef;
+        font-size: 0.75rem;
+    }
+    .table-bulky thead th:first-child {
+        border-top-left-radius: 8px;
+        border-left: 1px solid #e9ecef;
+    }
+    .table-bulky thead th:last-child {
+        border-top-right-radius: 8px;
+        border-right: 1px solid #e9ecef;
+    }
+    .table-bulky tbody td {
+        padding: 12px 14px;
+        vertical-align: middle;
+        border-bottom: 1px solid #e9ecef;
+        color: #212529;
+        background-color: #fff;
+    }
+    .table-bulky tbody tr:hover td {
+        background-color: #f8f9fa;
+    }
+    .table-bulky tbody tr:last-child td:first-child {
+        border-bottom-left-radius: 8px;
+        border-left: 1px solid #e9ecef;
+    }
+    .table-bulky tbody tr:last-child td:last-child {
+        border-bottom-right-radius: 8px;
+        border-right: 1px solid #e9ecef;
+    }
+    .table-bulky tbody td:first-child {
+        border-left: 1px solid #e9ecef;
+    }
+    .table-bulky tbody td:last-child {
+        border-right: 1px solid #e9ecef;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="row g-0">
+        <div class="col-12">
+            <!-- Single Container Card (Standard Operational Layout) -->
+            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                <!-- Header -->
+                <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h5 class="mb-0 fw-bold text-dark">Print Bulky AWB</h5>
+                            <p class="text-muted small mb-0">Cetak banyak nomor resi sekaligus dalam satu file PDF sesuai template format yang Anda butuhkan</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'operations:shipment-list' %}" class="btn btn-outline-secondary px-4">
+                                <i class="ph-bold ph-arrow-left me-1"></i> Data Shipment
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Content Body -->
+                <div class="card-body p-4 pt-2">
+                    <div class="row g-4">
+                        <!-- Left Column: Settings & Input -->
+                        <div class="col-lg-5">
+                            <div class="p-3 border rounded-3 bg-light-subtle h-100">
+                                <!-- Format Selection Header -->
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="text-muted fw-bold small text-uppercase" style="letter-spacing: 0.5px;">
+                                        <i class="ph-bold ph-faders text-danger me-1"></i> 1. Format Cetak
+                                    </span>
+                                </div>
+
+                                <!-- Format Grid -->
+                                <div class="row g-2 mb-3" id="formatRadioGroup">
+                                    <div class="col-sm-6">
+                                        <label class="format-card d-block active" data-format="reguler">
+                                            <input type="radio" name="printFormat" value="reguler" checked>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="ph-duotone ph-printer text-danger fs-5"></i>
+                                                <div>
+                                                    <div class="fw-bold text-dark small format-title">AWB Reguler</div>
+                                                    <div class="text-muted" style="font-size: 0.7rem;">215 x 110 mm</div>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label class="format-card d-block" data-format="reguler_a4">
+                                            <input type="radio" name="printFormat" value="reguler_a4">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="ph-duotone ph-file-text text-secondary fs-5"></i>
+                                                <div>
+                                                    <div class="fw-bold text-dark small format-title">AWB Reguler A4</div>
+                                                    <div class="text-muted" style="font-size: 0.7rem;">Full Page A4</div>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label class="format-card d-block" data-format="sticker_100x100">
+                                            <input type="radio" name="printFormat" value="sticker_100x100">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="ph-duotone ph-sticker text-warning fs-5"></i>
+                                                <div>
+                                                    <div class="fw-bold text-dark small format-title">Sticker 100x100</div>
+                                                    <div class="text-muted" style="font-size: 0.7rem;">Thermal 10x10 cm</div>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label class="format-card d-block" data-format="sticker_100x150">
+                                            <input type="radio" name="printFormat" value="sticker_100x150">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="ph-duotone ph-sticker text-success fs-5"></i>
+                                                <div>
+                                                    <div class="fw-bold text-dark small format-title">Sticker 100x150</div>
+                                                    <div class="text-muted" style="font-size: 0.7rem;">Thermal 10x15 cm</div>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label class="format-card d-block" data-format="package_id">
+                                            <input type="radio" name="printFormat" value="package_id">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="ph-duotone ph-identification-badge text-info fs-5"></i>
+                                                <div>
+                                                    <div class="fw-bold text-dark small format-title">Package ID</div>
+                                                    <div class="text-muted" style="font-size: 0.7rem;">Label Per Koli</div>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label class="format-card d-block" data-format="epod">
+                                            <input type="radio" name="printFormat" value="epod">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="ph-duotone ph-certificate text-danger fs-5"></i>
+                                                <div>
+                                                    <div class="fw-bold text-dark small format-title">E-POD (Delivery)</div>
+                                                    <div class="text-muted" style="font-size: 0.7rem;">Bukti Foto POD</div>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Input Section -->
+                                <div class="border-top pt-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-muted fw-bold small text-uppercase" style="letter-spacing: 0.5px;">
+                                            <i class="ph-bold ph-barcode text-danger me-1"></i> 2. Daftar Resi / AWB
+                                        </span>
+                                        <button type="button" class="btn btn-link btn-sm text-danger p-0 text-decoration-none small" id="btnClearResi">
+                                            <i class="ph ph-trash me-1"></i>Bersihkan
+                                        </button>
+                                    </div>
+                                    <textarea id="rawResiInput" class="form-control resi-textarea bg-white" rows="6" placeholder="Paste nomor resi di sini (pisahkan dengan Enter, Koma, atau Spasi)&#10;Contoh:&#10;CRD-20260822-0002&#10;BKSC-260903-0002&#10;BKSC-260912-0001">{{ preloaded_resis }}</textarea>
+                                    <div class="d-flex justify-content-between align-items-center mt-2">
+                                        <span class="text-muted small" id="rawResiCount">0 resi terdeteksi</span>
+                                        <button type="button" class="btn btn-danger px-4 fw-bold shadow-sm" id="btnCheckResi">
+                                            <i class="ph-bold ph-magnifying-glass me-1"></i> Cek & Muat Data
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Recent Quick Picks -->
+                                {% if recent_shipments %}
+                                <div class="border-top pt-3 mt-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <span class="text-muted small fw-semibold">
+                                            <i class="ph-bold ph-clock-counter-clockwise me-1"></i>Resi Terbaru
+                                        </span>
+                                        <button type="button" class="btn btn-link btn-sm p-0 text-danger small text-decoration-none fw-semibold" id="btnAddAllRecent">
+                                            + Pilih Semua ({{ recent_shipments|length }})
+                                        </button>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-1" style="max-height: 80px; overflow-y: auto;">
+                                        {% for shp in recent_shipments %}
+                                        <button type="button" class="btn btn-sm btn-light border text-muted py-0 px-2 quick-resi-btn" data-resi="{{ shp.resi_number }}" style="font-size: 0.72rem; border-radius: 6px;">
+                                            + {{ shp.resi_number }}
+                                        </button>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Right Column: Table Preview & Bulk Print Action -->
+                        <div class="col-lg-7">
+                            <div class="d-flex flex-column h-100 justify-content-between">
+                                <div>
+                                    <!-- Table Header Info -->
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <h6 class="fw-bold text-dark mb-0">Pratinjau Resi Siap Cetak</h6>
+                                            <p class="text-muted small mb-0">Daftar resi valid yang akan dimasukkan ke dalam file cetak</p>
+                                        </div>
+                                        <span class="badge bg-secondary text-white rounded-pill px-3 py-2 fw-bold" id="validBadge">
+                                            0 Resi
+                                        </span>
+                                    </div>
+
+                                    <!-- Warning Alert for Not Found -->
+                                    <div id="notFoundAlert" class="alert alert-warning alert-dismissible fade show d-none mb-3" role="alert">
+                                        <div class="d-flex align-items-start gap-2">
+                                            <i class="ph-bold ph-warning-circle fs-5 mt-1"></i>
+                                            <div>
+                                                <strong>Beberapa resi tidak ditemukan:</strong>
+                                                <div id="notFoundList" class="small mt-1 text-break"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Operational Preview Table -->
+                                    <div class="table-responsive rounded-3 shadow-sm" style="max-height: 420px; overflow-y: auto;">
+                                        <table class="table table-bulky table-sm table-hover align-middle mb-0" id="previewTable">
+                                            <thead>
+                                                <tr>
+                                                    <th class="ps-3 text-center" style="width: 35px;">#</th>
+                                                    <th class="text-nowrap text-secondary fw-semibold">No. AWB</th>
+                                                    <th class="text-nowrap text-secondary fw-semibold">Pengirim / Penerima</th>
+                                                    <th class="text-nowrap text-secondary fw-semibold">Layanan & Rute</th>
+                                                    <th class="text-center text-nowrap text-secondary fw-semibold">Koli/Berat</th>
+                                                    <th class="text-center text-nowrap text-secondary fw-semibold">Status</th>
+                                                    <th class="text-center text-nowrap text-secondary fw-semibold" style="width: 100px;">Aksi</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="previewTableBody">
+                                                <tr>
+                                                    <td colspan="7" class="text-center py-5 text-muted">
+                                                        <i class="ph-duotone ph-printer text-muted mb-2" style="font-size: 2.5rem; opacity: 0.4;"></i>
+                                                        <p class="mb-0 fw-medium">Belum ada data resi yang dimuat.</p>
+                                                        <small class="text-muted">Masukkan nomor resi di sebelah kiri dan klik "Cek & Muat Data".</small>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- Action Bottom Bar -->
+                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-4 pt-3 border-top">
+                                    <div class="text-muted small">
+                                        Format Aktif: <span class="fw-bold text-danger" id="selectedFormatLabel">AWB Reguler (215 x 110 mm)</span>
+                                    </div>
+                                    <div>
+                                        <button type="button" class="btn btn-danger px-4 py-2 fw-bold shadow-sm" id="btnPrintBulkPDF" disabled>
+                                            <i class="ph-bold ph-printer me-2"></i> Cetak Semua AWB (Gabungan PDF)
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const rawInput = document.getElementById('rawResiInput');
+    const rawCount = document.getElementById('rawResiCount');
+    const btnCheck = document.getElementById('btnCheckResi');
+    const btnClear = document.getElementById('btnClearResi');
+    const btnPrintBulk = document.getElementById('btnPrintBulkPDF');
+    const validBadge = document.getElementById('validBadge');
+    const tableBody = document.getElementById('previewTableBody');
+    const notFoundAlert = document.getElementById('notFoundAlert');
+    const notFoundList = document.getElementById('notFoundList');
+    const formatCards = document.querySelectorAll('.format-card');
+    const formatLabel = document.getElementById('selectedFormatLabel');
+
+    let loadedShipments = [];
+
+    const formatNames = {
+        'reguler': 'AWB Reguler (215 x 110 mm)',
+        'reguler_a4': 'AWB Reguler A4 (Full Page)',
+        'sticker_100x100': 'AWB Thermal Sticker 100x100 mm',
+        'sticker_100x150': 'AWB Thermal Sticker 100x150 mm',
+        'package_id': 'Package ID (Label Per Koli)',
+        'epod': 'E-POD (Bukti Pengiriman PDF)'
+    };
+
+    function getSelectedFormat() {
+        const checked = document.querySelector('input[name="printFormat"]:checked');
+        return checked ? checked.value : 'reguler';
+    }
+
+    // Format selection click
+    formatCards.forEach(card => {
+        card.addEventListener('click', function() {
+            formatCards.forEach(c => c.classList.remove('active'));
+            this.classList.add('active');
+            const radio = this.querySelector('input[type="radio"]');
+            if (radio) {
+                radio.checked = true;
+                const fmt = radio.value;
+                if (formatLabel && formatNames[fmt]) {
+                    formatLabel.textContent = formatNames[fmt];
+                }
+            }
+        });
+    });
+
+    // Quick add recent resi
+    document.querySelectorAll('.quick-resi-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const resi = this.dataset.resi;
+            if (resi) {
+                const cur = rawInput.value.trim();
+                if (!cur.includes(resi)) {
+                    rawInput.value = cur ? `${cur}\n${resi}` : resi;
+                    updateRawCount();
+                }
+            }
+        });
+    });
+
+    // Add all recent
+    const btnAddAll = document.getElementById('btnAddAllRecent');
+    if (btnAddAll) {
+        btnAddAll.addEventListener('click', function() {
+            const resis = Array.from(document.querySelectorAll('.quick-resi-btn')).map(b => b.dataset.resi);
+            if (resis.length > 0) {
+                const cur = rawInput.value.trim();
+                const existing = new Set(cur.split(/[\r\n,;\s]+/).map(s => s.trim()).filter(Boolean));
+                resis.forEach(r => existing.add(r));
+                rawInput.value = Array.from(existing).join('\n');
+                updateRawCount();
+            }
+        });
+    }
+
+    // Clear input
+    btnClear.addEventListener('click', function() {
+        rawInput.value = '';
+        loadedShipments = [];
+        renderTable();
+        updateRawCount();
+    });
+
+    function updateRawCount() {
+        const tokens = rawInput.value.split(/[\r\n,;\s]+/).map(s => s.trim()).filter(Boolean);
+        rawCount.textContent = `${tokens.length} resi terdeteksi`;
+    }
+
+    rawInput.addEventListener('input', updateRawCount);
+    updateRawCount();
+
+    // Check & Load Resi via AJAX
+    function checkAndLoadResis() {
+        const text = rawInput.value.trim();
+        if (!text) {
+            alert('Masukkan minimal 1 nomor resi untuk diperiksa!');
+            return;
+        }
+
+        btnCheck.disabled = true;
+        btnCheck.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Memeriksa...';
+
+        fetch("{% url 'operations:print_bulky' %}?action=search&resis=" + encodeURIComponent(text), {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            btnCheck.disabled = false;
+            btnCheck.innerHTML = '<i class="ph-bold ph-magnifying-glass me-1"></i> Cek & Muat Data';
+
+            if (data.success) {
+                loadedShipments = data.shipments || [];
+                renderTable();
+
+                if (data.not_found && data.not_found.length > 0) {
+                    notFoundAlert.classList.remove('d-none');
+                    notFoundList.textContent = data.not_found.join(', ');
+                } else {
+                    notFoundAlert.classList.add('d-none');
+                }
+            } else {
+                alert('Gagal memuat data resi: ' + (data.error || 'Terjadi kesalahan sistem'));
+            }
+        })
+        .catch(err => {
+            btnCheck.disabled = false;
+            btnCheck.innerHTML = '<i class="ph-bold ph-magnifying-glass me-1"></i> Cek & Muat Data';
+            alert('Error koneksi: ' + err);
+        });
+    }
+
+    btnCheck.addEventListener('click', checkAndLoadResis);
+
+    // Auto-check if preloaded resis exist
+    if (rawInput.value.trim()) {
+        checkAndLoadResis();
+    }
+
+    function renderTable() {
+        if (loadedShipments.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-5 text-muted">
+                        <i class="ph-duotone ph-printer text-muted mb-2" style="font-size: 2.5rem; opacity: 0.4;"></i>
+                        <p class="mb-0 fw-medium">Belum ada data resi yang valid.</p>
+                        <small class="text-muted">Masukkan nomor resi di sebelah kiri dan klik "Cek & Muat Data".</small>
+                    </td>
+                </tr>
+            `;
+            validBadge.textContent = '0 Resi';
+            validBadge.className = 'badge bg-secondary text-white rounded-pill px-3 py-2 fw-bold';
+            btnPrintBulk.disabled = true;
+            return;
+        }
+
+        let html = '';
+        loadedShipments.forEach((s, idx) => {
+            let statusBadge = `<span class="badge bg-secondary text-white rounded-pill px-3 py-1 fw-bold">${s.status_display || s.status}</span>`;
+            if (s.status === 'POD' || s.status === 'POD_BALIK' || s.status === 'DELIVERED') {
+                statusBadge = `<span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold">TERKIRIM</span>`;
+            } else if (s.status === 'PENDING') {
+                statusBadge = `<span class="badge bg-warning text-dark rounded-pill px-3 py-1 fw-bold">PENDING</span>`;
+            } else if (s.status === 'TRANSIT') {
+                statusBadge = `<span class="badge bg-danger text-white rounded-pill px-3 py-1 fw-bold">TRANSIT</span>`;
+            }
+
+            html += `
+                <tr>
+                    <td class="ps-3 text-center text-muted small">${idx + 1}</td>
+                    <td class="text-nowrap">
+                        <div class="fw-bold text-dark">${s.resi_number}</div>
+                        <div class="text-muted small" style="font-size: 0.72rem;">Reff: ${s.reference_no}</div>
+                    </td>
+                    <td>
+                        <div class="small fw-semibold text-dark">${s.sender}</div>
+                        <div class="small text-muted">&rarr; ${s.receiver}</div>
+                    </td>
+                    <td>
+                        <div class="small fw-medium">${s.service}</div>
+                        <div class="small text-muted" style="font-size: 0.72rem;">${s.origin} &rarr; ${s.destination}</div>
+                    </td>
+                    <td class="text-center">
+                        <span class="fw-bold">${s.colly}</span> Koli<br/>
+                        <span class="text-muted small">${s.weight} Kg</span>
+                    </td>
+                    <td class="text-center">${statusBadge}</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-danger rounded-3 remove-item-btn" data-index="${idx}" title="Hapus dari daftar">
+                            <i class="ph-bold ph-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        tableBody.innerHTML = html;
+        validBadge.textContent = `${loadedShipments.length} Resi Siap Cetak`;
+        validBadge.className = 'badge bg-success text-white rounded-pill px-3 py-2 fw-bold';
+        btnPrintBulk.disabled = false;
+
+        // Attach remove button listeners
+        document.querySelectorAll('.remove-item-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const index = parseInt(this.dataset.index);
+                if (!isNaN(index)) {
+                    loadedShipments.splice(index, 1);
+                    rawInput.value = loadedShipments.map(s => s.resi_number).join('\n');
+                    renderTable();
+                    updateRawCount();
+                }
+            });
+        });
+    }
+
+    // Print Bulk PDF Button
+    btnPrintBulk.addEventListener('click', function() {
+        if (loadedShipments.length === 0) {
+            alert('Tidak ada resi yang siap dicetak!');
+            return;
+        }
+
+        const format = getSelectedFormat();
+        const ids = loadedShipments.map(s => s.id).join(',');
+        
+        const printUrl = "{% url 'operations:print_bulky' %}?action=pdf&format=" + encodeURIComponent(format) + "&resi_ids=" + encodeURIComponent(ids);
+        window.open(printUrl, '_blank');
+    });
+});
+</script>
+{% endblock %}

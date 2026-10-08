@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Resi {{ shipment.resi_number }}</title>
+    <style>
+        @page {
+            size: 100mm 100mm;
+            margin: 1mm 2mm;
+        }
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 8px;
+            color: #000;
+            line-height: 1.1;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        td {
+            vertical-align: top;
+        }
+        .header-cell {
+            padding: 2px;
+            border: 0.5pt solid #000;
+            border-top: none;
+            border-bottom: 0.5pt solid #000;
+        }
+        .small-label {
+            font-size: 7px;
+            margin-bottom: 2px;
+        }
+        .fw-bold {
+            font-weight: bold;
+        }
+        .table-custom th, .table-custom td {
+            border: 0.5pt solid #000;
+            padding: 1px 2px;
+            text-align: left;
+            font-size: 7px;
+        }
+    </style>
+</head>
+<body>
+    <table cellpadding="0" cellspacing="0" style="width: 100%; border: 1.5pt solid #000; border-collapse: collapse; margin: 0; padding: 0;">
+        <tr>
+            <td style="padding: 0; margin: 0;">
+                <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; border-bottom: 0.5pt solid #000;">
+                    <tr>
+                        <td style="width: 26%; text-align: center; vertical-align: middle; padding: 2px; border-right: 0.5pt solid #000;">
+                            <img src="{{ request.scheme }}://{{ request.get_host }}/static/img/logo-surat.webp" width="70" />
+                        </td>
+                        <td style="width: 16.5%; padding: 2px; border-right: 0.5pt solid #000;">
+                            <div class="small-label">Asal</div>
+                            <div class="fw-bold" style="font-size: 8px;">{{ shipment.get_tlc_origin }} - {{ shipment.get_city_origin }}</div>
+                        </td>
+                        <td style="width: 16.5%; padding: 2px; border-right: 0.5pt solid #000;">
+                            <div class="small-label">Tujuan</div>
+                            <div class="fw-bold" style="font-size: 8px;">{{ shipment.get_tlc_dest }} - {{ shipment.get_city_dest }}</div>
+                        </td>
+                        <td style="width: 20%; padding: 2px; border-right: 0.5pt solid #000;">
+                            <div class="small-label">Pembayaran</div>
+                            <div class="fw-bold" style="font-size: 8px;">KREDIT</div>
+                        </td>
+                        <td style="width: 21%; padding: 2px;">
+                            <div class="small-label">Handling</div>
+                            <div class="fw-bold" style="font-size: 8px;">GENERAL CARGO</div>
+                        </td>
+                    </tr>
+                </table>
+
+                {% if shipment.is_do_balik %}
+                <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; background-color: #000; border-bottom: 0.5pt solid #000;">
+                    <tr>
+                        <td style="color: #fff; text-align: center; font-weight: bold; font-size: 7.5px; padding: 1.5px 0; letter-spacing: 0.5px;">
+                            AWB &amp; DO BALIK (WAJIB KEMBALIKAN SURAT JALAN)
+                        </td>
+                    </tr>
+                </table>
+                {% endif %}
+
+                <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; border-bottom: 0.5pt solid #000;">
+                    <tr>
+                        <td style="text-align: center; padding: 2px 0;">
+                            <pdf:barcode value="{{ shipment.resi_number }}" type="code128" barWidth="0.75" barHeight="15" />
+                            <table cellpadding="0" cellspacing="0" style="width: 100%; margin-top: 2px; border-collapse: collapse;">
+                                <tr>
+                                    <td style="width: 50%; text-align: left; padding-left: 5px; font-size: 7px;">Reff No : {{ shipment.reference_no|default:"-" }}</td>
+                                    <td style="width: 50%; text-align: right; padding-right: 5px; font-size: 7px;">Resi No : {{ shipment.resi_number }}</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+
+                <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; border-bottom: 0.5pt solid #000;">
+                    <tr>
+                        <td style="width: 65%; border-right: 0.5pt solid #000; padding: 3px;">
+                            <div class="small-label">Pengirim :</div>
+                            <div class="fw-bold" style="margin-bottom: 8px;">{{ shipment.client.company_name|default:shipment.sender_name|default:"-"|slice:":8" }}*********</div>
+                            
+                            <div class="small-label">NAMA DAN ALAMAT PENERIMA :</div>
+                            <div class="fw-bold">{{ shipment.receiver_name|default:"-" }}</div>
+                            <div style="font-size: 8px; margin-bottom: 25px;">
+                                {{ shipment.receiver_address|default:"-" }}<br/>
+                                Phone : {{ shipment.receiver_phone|default:"-" }}<br/>
+                                <span class="fw-bold">PIC : {{ shipment.receiver_name|default:"-" }}</span>
+                            </div>
+
+                            <table class="table-custom" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+                                <tr>
+                                    <th>Berat</th>
+                                    <th>Berat Aktual</th>
+                                    <th>Berat Volumetrik</th>
+                                    <th>Dimensi</th>
+                                </tr>
+                                {% if shipment.items.exists %}
+                                {% for item in shipment.items.all|slice:":2" %}
+                                <tr>
+                                    <td>{{ item.actual_weight|default:0|floatformat:-2 }} Kg</td>
+                                    <td>{{ item.actual_weight|default:0|floatformat:-2 }} Kg</td>
+                                    <td>0 Kg</td>
+                                    <td>{{ item.panjang|default:1|floatformat:0 }}x{{ item.lebar|default:1|floatformat:0 }}x{{ item.tinggi|default:1|floatformat:0 }}</td>
+                                </tr>
+                                {% endfor %}
+                                {% if shipment.items.count > 2 %}
+                                <tr>
+                                    <td>...</td>
+                                    <td>...</td>
+                                    <td>...</td>
+                                    <td>+{{ shipment.items.count|add:"-2" }} Koli</td>
+                                </tr>
+                                {% endif %}
+                                {% else %}
+                                {% for c in colly_range|slice:":2" %}
+                                <tr>
+                                    <td>{% if forloop.first %}{{ shipment.chargeable_weight|default:shipment.weight|default:0|floatformat:-2 }} Kg{% else %}... Kg{% endif %}</td>
+                                    <td>{% if forloop.first %}{{ shipment.weight|default:0|floatformat:-2 }} Kg{% else %}... Kg{% endif %}</td>
+                                    <td>0 Kg</td>
+                                    <td>{% if forloop.first %}{{ shipment.length|default:1|floatformat:0 }}x{{ shipment.width|default:1|floatformat:0 }}x{{ shipment.height|default:1|floatformat:0 }}{% else %}---{% endif %}</td>
+                                </tr>
+                                {% endfor %}
+                                {% if colly_range|length > 2 %}
+                                <tr>
+                                    <td>...</td>
+                                    <td>...</td>
+                                    <td>...</td>
+                                    <td>+{{ colly_range|length|add:"-2" }} Koli</td>
+                                </tr>
+                                {% endif %}
+                                {% endif %}
+                            </table>
+                        </td>
+                        <td style="width: 35%; padding: 3px;">
+                            <div class="small-label">Tipe Kiriman :</div>
+                            <div class="fw-bold" style="margin-bottom: 8px;">{{ shipment.shipment_type_detail|upper|default:"PAKET" }}</div>
+                            
+                            <div class="small-label">Layanan :</div>
+                            <div class="fw-bold" style="margin-bottom: 8px;">{{ shipment.get_service_type_display|upper|default:"REGULER" }}</div>
+                            
+                            <div class="small-label">Non / COD :</div>
+                            <div class="fw-bold" style="margin-bottom: 8px;">{% if shipment.is_cod %}COD{% else %}NON COD{% endif %}</div>
+                            
+                            <div class="small-label">Instruksi Khusus :</div>
+                            <div class="fw-bold" style="font-size: 7px;">{{ shipment.special_instruction|default:"AWB DAN DO KEMBALI" }}</div>
+                        </td>
+                    </tr>
+                </table>
+
+                <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; border-bottom: 0.5pt solid #000;">
+                    <tr>
+                        <td style="width: 65%; border-right: 0.5pt solid #000; padding: 3px;">
+                            <div class="small-label">Deskripsi Barang :</div>
+                            <div style="font-size: 7px;">{{ shipment.item_description|default:shipment.description_item|default:"-" }}</div>
+                        </td>
+                        <td style="width: 17.5%; border-right: 0.5pt solid #000; text-align: center; padding: 3px;">
+                            <div class="small-label">Jumlah</div>
+                            <div class="fw-bold" style="font-size: 11px;">{{ shipment.total_colly|default:"1" }}</div>
+                        </td>
+                        <td style="width: 17.5%; text-align: center; padding: 3px;">
+                            <div class="small-label">Berat (kg)</div>
+                            <div class="fw-bold" style="font-size: 11px;">{{ shipment.chargeable_weight|default:shipment.weight|default:"0" }}</div>
+                        </td>
+                    </tr>
+                </table>
+
+                <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="width: 50%; text-align: left; font-size: 6px; padding: 2px 3px;">
+                            Copyright www.paketincargo.com All rights reserved
+                        </td>
+                        <td style="width: 50%; text-align: right; font-size: 6px; padding: 2px 3px;">
+                            Entry Date : {{ shipment.created_at|date:"Y-m-d H:i:s" }} by {{ shipment.created_by.username|default:"Sistem" }}
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

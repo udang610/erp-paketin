@@ -1,0 +1,39 @@
+# Python & Django
+__pycache__/
+*.py[cod]
+*$py.class
+*.sqlite3
+db.sqlite3
+media/
+*.log
+local_settings.py
+.env
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+
+# Scratch & Temporary
+scratch/
+.system_generated/
+*.bak
+*.tmp
+
+# Flutter & Dart (mobile)
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.pub-cache/
+mobile/.pub/
+mobile/build/
+mobile/.hermes/
+mobile/*.iml
+mobile/.idea/
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

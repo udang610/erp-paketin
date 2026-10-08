@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Data LDP - ERP Paketin{% endblock %}
+{% block page_title %}LDP (Lembar Daftar Pengiriman){% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Actions Bar (Search + Filter Pop-up + Actions) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <form class="d-flex align-items-center gap-2" method="get">
+            <!-- Search Input -->
+            <div class="search-box-clean d-flex align-items-center bg-white px-3" style="width: 280px; max-width: 320px; height: 38px;">
+                <i class="ph-bold ph-magnifying-glass me-2 text-muted" style="font-size: 1rem; color: #64748b;"></i>
+                <input type="text" name="search" class="border-0 shadow-none p-0 bg-transparent flex-grow-1" placeholder="Cari LDP, customer..." value="{{ search|default:'' }}" style="outline: none !important; font-size: 0.88rem; color: #1e293b; height: 100%;">
+            </div>
+
+            <!-- Filter Button with Pop-up Dropdown -->
+            <div class="dropdown">
+                <button class="btn shadow-sm position-relative rounded-3 d-inline-flex align-items-center gap-2 px-3 border" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Filter LDP" style="height: 38px; font-size: 0.88rem; font-weight: 600; color: #1e293b; background-color: #ffffff !important; border-color: #cbd5e1 !important;">
+                    <i class="ph-bold ph-faders fs-5" style="color: #1e293b;"></i>
+                    <span>Filter</span>
+                    {% if search or customer_id or date_filter or status_filter %}
+                    <span class="active-filter-dot" title="Filter Aktif"></span>
+                    {% endif %}
+                </button>
+                <div class="dropdown-menu filter-dropdown-menu dropdown-menu-start p-3 shadow-lg border-0" style="width: 300px; z-index: 1050; border-radius: 12px; border: 1px solid #e2e8f0 !important;">
+                    <h6 class="dropdown-header px-0 text-dark mb-2"><i class="ph-bold ph-faders me-2 text-dark"></i>Filter LDP</h6>
+                    
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Customer</label>
+                        <select name="customer" class="form-select form-select-sm">
+                            <option value="">-- Semua Customer --</option>
+                            {% for c in customers %}
+                            <option value="{{ c.id }}" {% if customer_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Tanggal LDP</label>
+                        <input type="date" name="date" class="form-control form-control-sm" value="{{ date_filter }}">
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                        <a href="{% url 'finance:ldp_list' %}" class="btn btn-sm btn-link text-decoration-none text-secondary p-0 fw-semibold">Reset</a>
+                        <button type="submit" class="btn btn-sm btn-danger px-3 fw-bold shadow-sm">Terapkan</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div>
+            <a href="{% url 'finance:ldp_create' %}" class="btn btn-danger px-4 fw-bold shadow-sm d-inline-flex align-items-center" style="height: 38px;">
+                <i class="ph-bold ph-plus me-1"></i> Buat Baru
+            </a>
+        </div>
+    </div>
+
+    <!-- Table Card (Matching Photo 1 & Photo 3) -->
+    <div class="card bg-white border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="card-body p-0">
+            <div class="table-responsive overflow-visible">
+                    <style>
+                        .table-ldp-list thead th {
+                            background-color: #f8f9fa !important;
+                            color: #6c757d !important;
+                            font-weight: 600;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                            padding: 12px 16px;
+                            border-bottom: 2px solid #e9ecef !important;
+                            border-top: 1px solid #e9ecef !important;
+                            font-size: 0.78rem;
+                        }
+                    </style>
+                    <table class="table table-hover align-middle mb-0 table-ldp-list" style="font-size: 0.85rem;">
+                        <thead>
+                            <tr>
+                                <th class="ps-4" style="width: 40px;">
+                                    <input type="checkbox" class="form-check-input" id="checkMasterLdp" onchange="toggleAllLdp(this.checked)">
+                                </th>
+                                <th>Ldp No.</th>
+                                <th>Total Awb</th>
+                                <th>Total Koli</th>
+                                <th>Invoice No</th>
+                                <th>Customer</th>
+                                <th>User inp</th>
+                                <th>Created at</th>
+                                <th class="text-center">Status</th>
+                                <th class="text-center pe-4">AKSI</th>
+                            </tr>
+                        </thead>
+                    <tbody class="divide-y">
+                        {% for ldp in ldp_list %}
+                        <tr>
+                            <td class="ps-4 py-3">
+                                <input type="checkbox" class="form-check-input ldp-item-check" value="{{ ldp.id }}">
+                            </td>
+                            <td class="py-3 fw-bold text-dark">
+                                <a href="{% url 'finance:ldp_detail' ldp.id %}" class="text-decoration-none text-dark hover-danger">
+                                    {{ ldp.ldp_number }}
+                                </a>
+                                {% if ldp.branch %}
+                                <div class="text-muted fw-normal" style="font-size: 0.72rem;">Cabang: {{ ldp.branch.code }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 fw-semibold text-dark text-nowrap">
+                                {{ ldp.items.count }} Awb
+                            </td>
+                            <td class="py-3 fw-semibold text-dark text-nowrap">
+                                {{ ldp.total_koli }} Koli
+                            </td>
+                            <td class="py-3 text-nowrap">
+                                {% if ldp.invoice %}
+                                <a href="{% url 'finance:invoice_detail' ldp.invoice.id %}" class="text-dark fw-bold text-decoration-none hover-danger">
+                                    {{ ldp.invoice.invoice_number }}
+                                </a>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3">
+                                <div class="fw-semibold text-dark">{{ ldp.client_name }}</div>
+                                {% if ldp.client.customer_code %}
+                                <div class="text-muted" style="font-size: 0.72rem;">Ref: {{ ldp.client.customer_code }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 text-dark text-nowrap">
+                                {{ ldp.created_by.get_full_name|default:ldp.created_by.username|default:"Superadmin" }}
+                            </td>
+                            <td class="py-3 text-muted text-nowrap" style="font-size: 0.8rem;">
+                                {{ ldp.created_at|date:"d M Y, H:i" }}
+                            </td>
+                            <td class="py-3 text-center text-nowrap">
+                                {% if ldp.status == 'DRAFT' %}
+                                    <span class="badge bg-warning text-dark px-3 py-1 rounded-pill fw-bold" style="font-size: 0.72rem;">DRAFT</span>
+                                {% elif ldp.status == 'CONFIRMED' %}
+                                    <span class="badge bg-primary text-white px-3 py-1 rounded-pill fw-bold" style="font-size: 0.72rem;">SIAP TAGIH</span>
+                                {% elif ldp.status == 'INVOICED' %}
+                                    <span class="badge bg-success text-white px-3 py-1 rounded-pill fw-bold" style="font-size: 0.72rem;">INVOICED</span>
+                                {% else %}
+                                    <span class="badge bg-secondary text-white px-3 py-1 rounded-pill fw-bold" style="font-size: 0.72rem;">{{ ldp.get_status_display|upper }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-4 text-center text-nowrap">
+                                <div class="dropdown">
+                                    <button class="btn btn-action-table dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Aksi">
+                                        <i class="ph-bold ph-list"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-2" style="z-index: 1050;">
+                                        <li>
+                                             <a class="dropdown-item py-2" href="{% url 'finance:ldp_detail' ldp.id %}">
+                                                <i class="ph-duotone ph-eye me-2 text-info"></i>Lihat Detail
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item py-2" href="{% url 'finance:ldp_print' ldp.id %}" target="_blank">
+                                                <i class="ph-duotone ph-printer me-2 text-secondary"></i>Print LDP
+                                            </a>
+                                        </li>
+                                        {% if ldp.status == 'DRAFT' %}
+                                        <li>
+                                            <form method="post" action="{% url 'finance:ldp_confirm' ldp.id %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="dropdown-item py-2 text-primary">
+                                                    <i class="ph-duotone ph-check-circle me-2 text-primary"></i>Konfirmasi Siap Tagih
+                                                </button>
+                                            </form>
+                                        </li>
+                                        {% endif %}
+                                        {% if ldp.status != 'INVOICED' %}
+                                        <li>
+                                            <form method="post" action="{% url 'finance:ldp_to_invoice' ldp.id %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="dropdown-item py-2 text-success">
+                                                    <i class="ph-duotone ph-receipt me-2 text-success"></i>Buat Draft Invoice
+                                                </button>
+                                            </form>
+                                        </li>
+                                        {% endif %}
+                                        {% if request.user.is_superuser or request.user.is_staff or request.user.user_type == 'ADMIN' %}
+                                        {% if ldp.status != 'INVOICED' %}
+                                        <li><hr class="dropdown-divider my-1"></li>
+                                        <li>
+                                            <a class="dropdown-item py-2 text-danger" href="#" onclick="event.preventDefault(); confirmDeleteLDP('{{ ldp.id }}', '{{ ldp.ldp_number }}');">
+                                                <i class="ph-duotone ph-trash me-2 text-danger"></i>Hapus
+                                            </a>
+                                        </li>
+                                        {% endif %}
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="10" class="text-center py-5 text-muted">
+                                <div class="py-4">
+                                    <i class="ph-duotone ph-clipboard-text text-muted mb-2" style="font-size: 3rem; opacity: 0.4;"></i>
+                                    <p class="mb-1 fw-semibold text-dark">Belum ada data LDP yang tersedia</p>
+                                    <p class="text-muted small mb-3">Klik tombol Buat Baru untuk membuat Lembar Daftar Pengiriman pertama Anda.</p>
+                                    <a href="{% url 'finance:ldp_create' %}" class="btn btn-sm btn-danger px-4 fw-bold">
+                                        + Buat Baru
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden Form for Delete LDP Submission -->
+<form id="deleteLDPForm" method="post" action="" style="display: none;">
+    {% csrf_token %}
+</form>
+
+<script>
+function toggleAllLdp(checked) {
+    document.querySelectorAll('.ldp-item-check').forEach(cb => { cb.checked = checked; });
+}
+
+function confirmDeleteLDP(ldpId, ldpNumber) {
+    const form = document.getElementById('deleteLDPForm');
+    form.action = '/finance/ldp/' + ldpId + '/delete/';
+    PaketinModal.confirm({
+        title: 'Hapus Dokumen LDP?',
+        description: 'Anda akan menghapus LDP ' + ldpNumber + '. Resi yang terdaftar di dalamnya akan dikembalikan ke antrian siap tagih.',
+        theme: 'danger',
+        confirmText: 'Ya, Hapus',
+        cancelText: 'Batal',
+        icon: 'ph-trash',
+        form: form
+    });
+}
+</script>
+{% endblock %}

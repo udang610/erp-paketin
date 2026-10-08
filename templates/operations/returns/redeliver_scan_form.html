@@ -1,0 +1,342 @@
+{% extends 'base.html' %}
+{% load static humanize %}
+
+{% block title %}Entry Scan Re-Delivery - ERP Paketin{% endblock %}
+{% block page_title %}Entry Scan Re-Delivery{% endblock %}
+
+{% block content %}
+<style>
+    .pod-img-preview { max-width: 80px; max-height: 60px; object-fit: cover; border-radius: 6px; border: 1px solid #dee2e6; cursor: pointer; }
+</style>
+
+<div class="mb-3">
+    <a href="{% url 'operations:return-list' %}?tab=redeliver" class="btn btn-outline-secondary bg-white px-3 shadow-sm btn-sm">
+            <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+        </a>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        
+        <div class="card bg-white border-0 shadow-sm rounded-4 mb-4">
+
+            <div class="card-body p-4">
+                <h5 class="fw-bold text-dark border-bottom pb-3 mb-4">Entry Scan Re-Delivery (POD Kirim Ulang)</h5>
+
+                <form method="post" action="{% url 'operations:return-redeliver-scan' %}" id="redeliverScanForm" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark">Scan Barcode (No. Re-Delivery / No. AWB)</label>
+                            <div class="input-group input-group-lg shadow-sm">
+                                <span class="input-group-text bg-white border-end-0"><i class="ph-bold ph-scan text-success"></i></span>
+                                <input type="text" id="addScanNo" class="form-control border-start-0 ps-0" placeholder="Scan No. Re-Delivery (RD-...), No. RTO, atau No. AWB..." autofocus>
+                                <button class="btn btn-success" type="button" id="btnAddScan">Scan &amp; Tambah</button>
+                            </div>
+                            <small class="text-muted mt-1 d-block">Scan No. Re-Delivery, No. RTO, atau Resi AWB. Tekan <b>Enter</b> pada scanner untuk scan berulang.</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark">Hapus dari Antrean (Batal)</label>
+                            <div class="input-group input-group-lg shadow-sm">
+                                <span class="input-group-text bg-white border-end-0"><i class="ph-bold ph-trash text-dark"></i></span>
+                                <input type="text" id="delScanNo" class="form-control border-start-0 ps-0" placeholder="Scan untuk membatalkan...">
+                                <button class="btn btn-danger" type="button" id="btnDelScan">Hapus</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Unified Detail Card -->
+                    <div class="p-3 rounded mb-4 shadow-sm" id="podDetailCard" style="background-color: #fff; border: 1px solid #dee2e6;">
+                        <h6 class="fw-bold mb-3" id="podDetailTitle">
+                            <i class="ph-bold ph-user-check me-1 text-success" id="podDetailIcon"></i>
+                            <span id="podDetailHeading" class="text-success">Detail Penerima (POD Sukses):</span>
+                        </h6>
+
+                        <div class="row g-3">
+                            <!-- Field 1: Hasil Pengantaran -->
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-semibold">Hasil Pengantaran Re-Delivery <span class="text-danger">*</span></label>
+                                <select name="delivery_outcome" id="selectDeliveryOutcome" class="form-select" onchange="updateOutcomeUI()">
+                                    <option value="DELIVERED" selected>Terkirim / POD Sukses (Delivered)</option>
+                                    <option value="FAILED">Gagal Antar (Failed / Undelivered)</option>
+                                </select>
+                            </div>
+
+                            <!-- Field 2: Samping Hasil Pengantaran (Jika DELIVERED) -->
+                            <div class="col-md-6" id="fieldWrapDescription">
+                                <label class="form-label text-muted small fw-semibold">Hubungan / Keterangan Penerima (Opsional)</label>
+                                <select name="description" class="form-select select2-tags" data-placeholder="Ketik keterangan tambahan...">
+                                    <option value=""></option>
+                                    <option value="Diterima oleh yang bersangkutan">Diterima oleh yang bersangkutan</option>
+                                    <option value="Diterima oleh penghuni rumah">Diterima oleh penghuni rumah</option>
+                                    <option value="Diterima oleh satpam/security">Diterima oleh satpam/security</option>
+                                    <option value="Diterima oleh rekan kerja">Diterima oleh rekan kerja</option>
+                                    <option value="Diterima oleh resepsionis">Diterima oleh resepsionis</option>
+                                    <option value="Dititipkan ke tetangga">Dititipkan ke tetangga</option>
+                                </select>
+                            </div>
+
+                            <!-- Field 2: Samping Hasil Pengantaran (Jika FAILED) -->
+                            <div class="col-md-6" id="fieldWrapFailedReason" style="display: none;">
+                                <label class="form-label text-muted small fw-semibold">Alasan Gagal Antar (Reason) <span class="text-danger">*</span></label>
+                                <select name="failed_reason" id="selectFailedReason" class="form-select">
+                                    {% for r_code, r_label in reason_choices %}
+                                    <option value="{{ r_code }}" {% if r_code == 'RECIPIENT_NOT_HOME' %}selected{% endif %}>{{ r_label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- DELIVERED SPECIFIC FIELDS -->
+                            <div class="col-md-6" id="fieldWrapReceiverName">
+                                <label class="form-label text-muted small fw-semibold">Nama Penerima <span class="text-danger">*</span></label>
+                                <input type="text" name="pod_receiver_name" id="inputReceiverName" class="form-control" placeholder="Masukkan nama penerima..." required>
+                            </div>
+                            <div class="col-md-6" id="fieldWrapPodImage">
+                                <label class="form-label text-muted small fw-semibold">Bukti Foto / TTD e-POD (Maks. 5)</label>
+                                <input type="file" name="pod_image" id="podImageInput" class="form-control" multiple accept="image/*,video/*">
+                                <small class="text-muted" style="font-size: 0.72rem;">Bisa pilih hingga 5 foto/video.</small>
+                            </div>
+
+                            <!-- FAILED SPECIFIC FIELDS -->
+                            <div class="col-md-6" id="fieldWrapFailedImage" style="display: none;">
+                                <label class="form-label text-muted small fw-semibold">Foto Bukti Gagal Antar (Rumah Tutup / Lokasi)</label>
+                                <input type="file" name="failed_image_upload" id="failedImageInput" class="form-control" accept="image/*">
+                            </div>
+                            <div class="col-md-6" id="fieldWrapFailedDetail" style="display: none;">
+                                <label class="form-label text-muted small fw-semibold">Catatan Detail Kurir (Opsional)</label>
+                                <input type="text" name="failed_detail" class="form-control" placeholder="Contoh: Rumah tutup, telepon tidak aktif...">
+                            </div>
+
+                            <!-- COMMON FIELDS (Tanggal & Jam) -->
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-semibold">Tanggal Kejadian</label>
+                                <input type="date" name="event_date" class="form-control" value="{{ event_date }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-semibold">Jam Kejadian</label>
+                                <input type="time" name="event_time" class="form-control" value="{{ event_time }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Table Antrean -->
+                    <div class="table-responsive bg-white rounded-3 shadow-sm border border-light mb-4">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light text-secondary">
+                                <tr>
+                                    <th class="ps-4">No. Re-Delivery / Resi</th>
+                                    <th>Asal</th>
+                                    <th>Tujuan</th>
+                                    <th>Layanan</th>
+                                    <th>Koli</th>
+                                    <th>Berat (Kg)</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scanTableBody">
+                                <tr id="emptyRow">
+                                    <td colspan="7" class="text-center text-muted py-4">Belum ada item yang discan.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div id="hiddenInputs"></div>
+
+                    <div class="d-flex justify-content-end gap-2 mb-2">
+                        <button type="button" class="btn btn-light border px-4" onclick="location.reload()">Reset</button>
+                        <button type="submit" id="btnSubmit" class="btn btn-danger px-4" disabled>
+                            <i class="ph-bold ph-check-circle me-2"></i>
+                            Simpan Re-Delivery
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    let scannedItemsSet = new Set();
+    let rtoToResiMap = {};
+
+    function updateOutcomeUI() {
+        var outcome = $('#selectDeliveryOutcome').val();
+        if (outcome === 'FAILED') {
+            $('#podDetailHeading').text('Detail Gagal Antar (Failed / Return Decision):').removeClass('text-success').addClass('text-danger');
+            $('#podDetailIcon').removeClass('ph-user-check text-success').addClass('ph-x-circle text-danger');
+            $('#fieldWrapDescription').hide();
+            $('#fieldWrapReceiverName').hide();
+            $('#fieldWrapPodImage').hide();
+            $('#fieldWrapFailedReason').show();
+            $('#fieldWrapFailedImage').show();
+            $('#fieldWrapFailedDetail').show();
+            $('#inputReceiverName').removeAttr('required');
+        } else {
+            $('#podDetailHeading').text('Detail Penerima (POD Sukses):').removeClass('text-danger').addClass('text-success');
+            $('#podDetailIcon').removeClass('ph-x-circle text-danger').addClass('ph-user-check text-success');
+            $('#fieldWrapDescription').show();
+            $('#fieldWrapReceiverName').show();
+            $('#fieldWrapPodImage').show();
+            $('#fieldWrapFailedReason').hide();
+            $('#fieldWrapFailedImage').hide();
+            $('#fieldWrapFailedDetail').hide();
+            $('#inputReceiverName').attr('required', 'required');
+        }
+    }
+
+    function updateCounter() {
+        const count = scannedItemsSet.size;
+        if (count > 0) {
+            $('#emptyRow').hide();
+            $('#btnSubmit').prop('disabled', false);
+        } else {
+            $('#emptyRow').show();
+            $('#btnSubmit').prop('disabled', true);
+        }
+    }
+
+    function appendToTable(data) {
+        const itemKey = data.resi_number;
+        const rtoKey = data.rto_number && data.rto_number !== '-' ? data.rto_number : null;
+
+        if (scannedItemsSet.has(itemKey) || (rtoKey && scannedItemsSet.has(rtoKey))) {
+            $('#addScanNo').val('').focus();
+            $(`#row-${itemKey}`).css('background-color', '#fff3cd');
+            setTimeout(() => { $(`#row-${itemKey}`).css('background-color', ''); }, 1500);
+            return;
+        }
+
+        scannedItemsSet.add(itemKey);
+        if (rtoKey) {
+            scannedItemsSet.add(rtoKey);
+            rtoToResiMap[rtoKey] = itemKey;
+        }
+
+        let rtoLabel = rtoKey ? 
+            `<span class="fw-bold text-dark">${rtoKey}</span><br><small class="text-muted">Resi: ${itemKey}</small>` : 
+            `<span class="fw-bold text-dark">${itemKey}</span>`;
+
+        const tr = `
+            <tr id="row-${itemKey}">
+                <td class="ps-4 fw-bold text-dark">${rtoLabel}</td>
+                <td>${data.origin || '-'}</td>
+                <td>${data.destination || '-'}</td>
+                <td><span class="badge bg-light text-dark border">${data.service_type || data.service || 'REG'}</span></td>
+                <td>${data.colly || 1} Koli</td>
+                <td>${data.weight || 1} Kg</td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="removeItem('${itemKey}')">
+                        <i class="ph-bold ph-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+        $('#scanTableBody').append(tr);
+        $('#hiddenInputs').append(`<input type="hidden" name="scanned_items" value="${rtoKey ? rtoKey : itemKey}" id="input-${itemKey}">`);
+        updateCounter();
+    }
+
+    function removeItem(key) {
+        let actualKey = key;
+        if (rtoToResiMap[key]) {
+            actualKey = rtoToResiMap[key];
+            scannedItemsSet.delete(key);
+            delete rtoToResiMap[key];
+        }
+
+        scannedItemsSet.delete(actualKey);
+        // Clean up any reverse mapping
+        for (let rto in rtoToResiMap) {
+            if (rtoToResiMap[rto] === actualKey) {
+                scannedItemsSet.delete(rto);
+                delete rtoToResiMap[rto];
+            }
+        }
+
+        $(`#row-${actualKey}`).remove();
+        $(`#input-${actualKey}`).remove();
+        updateCounter();
+    }
+
+    function processAddScan() {
+        const scanVal = $('#addScanNo').val().trim();
+        if (!scanVal) return;
+
+        // Check if already in queue before doing network request
+        if (scannedItemsSet.has(scanVal) || (rtoToResiMap[scanVal] && scannedItemsSet.has(rtoToResiMap[scanVal]))) {
+            const actualKey = rtoToResiMap[scanVal] || scanVal;
+            $('#addScanNo').val('').focus();
+            $(`#row-${actualKey}`).css('background-color', '#fff3cd');
+            setTimeout(() => { $(`#row-${actualKey}`).css('background-color', ''); }, 1500);
+            return;
+        }
+
+        $.ajax({
+            url: '{% url "operations:api-return-lookup" %}',
+            data: { resi: scanVal },
+            success: function(res) {
+                if (res.status === 'success') {
+                    appendToTable(res);
+                    $('#addScanNo').val('').focus();
+                } else {
+                    // Fallback to standard resi lookup
+                    $.ajax({
+                        url: '{% url "operations:api-verify-resi" %}',
+                        data: { resi_number: scanVal, purpose: 'pod' },
+                        success: function(res2) {
+                            if (res2.status === 'success' && res2.data) {
+                                appendToTable(res2.data);
+                                $('#addScanNo').val('').focus();
+                            } else {
+                                alert(res.message || 'Data resi / RTO tidak ditemukan.');
+                                $('#addScanNo').val('').focus();
+                            }
+                        },
+                        error: function() {
+                            alert(res.message || 'No. Resi / RTO tidak ditemukan.');
+                            $('#addScanNo').val('').focus();
+                        }
+                    });
+                }
+            },
+            error: function(xhr) {
+                alert('Gagal memverifikasi barcode. Pastikan format benar.');
+                $('#addScanNo').val('').focus();
+            }
+        });
+    }
+
+    $(document).ready(function() {
+        $('#btnAddScan').click(processAddScan);
+        $('#addScanNo').keypress(function(e) {
+            if (e.which === 13) {
+                e.preventDefault();
+                processAddScan();
+            }
+        });
+
+        $('#btnDelScan').click(function() {
+            const val = $('#delScanNo').val().trim();
+            if (val) {
+                if (scannedItemsSet.has(val) || rtoToResiMap[val]) {
+                    removeItem(val);
+                    $('#delScanNo').val('').focus();
+                } else {
+                    alert('Paket ' + val + ' tidak ditemukan di daftar antrean.');
+                    $('#delScanNo').val('').focus();
+                }
+            }
+        });
+
+        $('#delScanNo').keypress(function(e) {
+            if (e.which === 13) {
+                e.preventDefault();
+                $('#btnDelScan').click();
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,1047 @@
+{% extends 'base.html' %}
+
+{% block title %}Data Pickup Order - ERP Paketin{% endblock %}
+{% block page_title %}Pick Up{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Actions Bar (Search + Filter Pop-up + Actions) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <form class="d-flex align-items-center gap-2" method="get">
+            <!-- Search Input -->
+            <div class="search-box-clean d-flex align-items-center bg-white px-3" style="width: 280px; max-width: 320px; height: 38px;">
+                <i class="ph-bold ph-magnifying-glass me-2 text-muted" style="font-size: 1rem; color: #64748b;"></i>
+                <input type="text" name="q" class="border-0 shadow-none p-0 bg-transparent flex-grow-1" placeholder="Cari pickup, customer..." value="{{ search|default:'' }}" style="outline: none !important; font-size: 0.88rem; color: #1e293b; height: 100%;">
+            </div>
+
+            <!-- Filter Button with Pop-up Dropdown -->
+            <div class="dropdown">
+                <button class="btn shadow-sm position-relative rounded-3 d-inline-flex align-items-center gap-2 px-3 border" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Filter Pickup" style="height: 38px; font-size: 0.88rem; font-weight: 600; color: #1e293b; background-color: #ffffff !important; border-color: #cbd5e1 !important;">
+                    <i class="ph-bold ph-faders fs-5" style="color: #1e293b;"></i>
+                    <span>Filter</span>
+                    {% if has_active_filter %}
+                    <span class="active-filter-dot" title="Filter Aktif"></span>
+                    {% endif %}
+                </button>
+                <div class="dropdown-menu filter-dropdown-menu dropdown-menu-start p-3 shadow-lg border-0" style="width: 320px; z-index: 1050; border-radius: 12px; border: 1px solid #e2e8f0 !important;">
+                    <h6 class="dropdown-header px-0 text-dark mb-2"><i class="ph-bold ph-faders me-2 text-dark"></i>Filter Lanjutan</h6>
+                    
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Status</label>
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="">Semua Status</option>
+                            <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending</option>
+                            <option value="ASSIGNED" {% if status_filter == 'ASSIGNED' %}selected{% endif %}>Assigned</option>
+                            <option value="COMPLETED" {% if status_filter == 'COMPLETED' %}selected{% endif %}>Completed</option>
+                            <option value="CANCELLED" {% if status_filter == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Driver</label>
+                        <select name="driver" class="form-select form-select-sm">
+                            <option value="">Semua Driver</option>
+                            {% for d in drivers %}
+                            <option value="{{ d.id }}" {% if driver_filter == d.id|stringformat:"s" %}selected{% endif %}>{{ d.get_full_name|default:d.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary mb-1">Tanggal Mulai</label>
+                            <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date|default:'' }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary mb-1">Tanggal Akhir</label>
+                            <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date|default:'' }}">
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 pt-2 border-top">
+                        <button type="submit" class="btn btn-danger btn-sm w-100 fw-bold">Terapkan</button>
+                        <a href="{% url 'operations:pickup-list' %}" class="btn btn-outline-secondary btn-sm w-100">Reset</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-secondary px-4 fw-bold shadow-sm me-2 d-inline-flex align-items-center" id="btnAssignDriver" style="display: none; height: 38px;">
+                <i class="ph-bold ph-truck me-2"></i> Tugaskan ke Pengemudi (<span id="assignCountBadge">0</span>)
+            </button>
+            <a href="{% url 'operations:pickup-create' %}" class="btn btn-danger px-4 fw-bold shadow-sm d-inline-flex align-items-center" style="height: 38px;">
+                <i class="ph-bold ph-plus me-1"></i> Buat Baru
+            </a>
+        </div>
+    </div>
+
+                    <style>
+                        /* Clean Table Styling */
+                        .table-premium {
+                            border-collapse: separate;
+                            border-spacing: 0;
+                            border: none;
+                        }
+                        .table-premium thead th {
+                            background-color: #f8fafc !important;
+                            color: #475569;
+                            font-size: 11px;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                            font-weight: 700;
+                            border-bottom: 1px solid #eaedf1 !important;
+                            padding: 14px 16px;
+                            vertical-align: middle;
+                        }
+                        .table-premium tbody td {
+                            padding: 12px 16px;
+                            vertical-align: middle;
+                            border-bottom: 1px solid #f1f5f9;
+                            font-size: 13px;
+                            color: #1e293b;
+                            background-color: #ffffff;
+                            transition: background-color 0.2s ease;
+                        }
+                        .table-premium tbody tr:hover td {
+                            background-color: #f8fafc;
+                        }
+                        .table-premium tbody tr:last-child td {
+                            border-bottom: none;
+                        }
+
+                        /* Clean Nav Tabs with Uniform Thick Vertical Dividers */
+                        .nav-tabs-custom {
+                            background-color: transparent !important;
+                            padding: 0 !important;
+                            border-bottom: 1px solid #eaedf1 !important;
+                            gap: 0 !important;
+                            margin-bottom: 0 !important;
+                            display: flex;
+                            align-items: stretch;
+                        }
+                        .nav-tabs-custom .nav-item {
+                            position: relative;
+                            margin-bottom: -1px;
+                            display: flex;
+                            align-items: center;
+                        }
+                        /* Garis pembatas di ujung kiri tab pertama */
+                        .nav-tabs-custom .nav-item:first-child::before {
+                            content: '';
+                            position: absolute;
+                            left: 0;
+                            top: 50%;
+                            transform: translateY(-50%);
+                            width: 1px;
+                            height: 16px;
+                            background-color: #94a3b8;
+                            pointer-events: none;
+                            transition: opacity 0.2s ease;
+                            z-index: 1;
+                        }
+                        .nav-tabs-custom .nav-item:first-child:has(.active)::before,
+                        .nav-tabs-custom .nav-item:first-child:has(.nav-link:hover)::before {
+                            opacity: 0;
+                        }
+                        /* Garis pembatas antar tab dan ujung kanan setiap tab */
+                        .nav-tabs-custom .nav-item::after {
+                            content: '';
+                            position: absolute;
+                            right: 0;
+                            top: 50%;
+                            transform: translateY(-50%);
+                            width: 1px;
+                            height: 16px;
+                            background-color: #94a3b8;
+                            pointer-events: none;
+                            transition: opacity 0.2s ease;
+                            z-index: 1;
+                        }
+                        /* Sembunyikan garis pembatas saat tab aktif atau di-hover */
+                        .nav-tabs-custom .nav-item:has(.active)::after,
+                        .nav-tabs-custom .nav-item:has(+ .nav-item .active)::after,
+                        .nav-tabs-custom .nav-item:has(.nav-link:hover)::after,
+                        .nav-tabs-custom .nav-item:has(+ .nav-item .nav-link:hover)::after {
+                            opacity: 0;
+                        }
+                        .nav-tabs-custom .nav-link {
+                            background-color: transparent !important;
+                            border: 1px solid transparent !important;
+                            border-bottom: 1px solid transparent !important;
+                            color: #334155 !important;
+                            font-weight: 600;
+                            border-radius: 10px 10px 0 0 !important;
+                            padding: 0 20px !important;
+                            height: 42px !important;
+                            display: inline-flex !important;
+                            align-items: center !important;
+                            justify-content: center !important;
+                            transition: all 0.2s ease-in-out;
+                            box-shadow: none !important;
+                            position: relative;
+                            white-space: nowrap;
+                        }
+                        .nav-tabs-custom .nav-link i {
+                            opacity: 0.9 !important;
+                        }
+                        .nav-tabs-custom .nav-link:hover {
+                            background-color: rgba(241, 245, 249, 0.8) !important;
+                            color: #0f172a !important;
+                        }
+                        .nav-tabs-custom .nav-link.active {
+                            background-color: #f8fafc !important; /* Warna serasi persis header tabel */
+                            border: 1px solid #eaedf1 !important;
+                            border-bottom: 1px solid #f8fafc !important; /* Menutup garis bawah agar menyatu mulus dengan tabel */
+                            color: #0f172a !important;
+                            font-weight: 700;
+                            box-shadow: none !important;
+                            z-index: 2;
+                        }
+                    </style>
+
+                    <!-- Nav Tabs -->
+                    <ul class="nav nav-tabs nav-tabs-custom" id="pickupTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active px-4 py-2 fw-semibold" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab" aria-controls="pending" aria-selected="true">
+                                <i class="ph-duotone ph-clock me-2 text-warning"></i> Menunggu Penugasan
+                                <span class="badge bg-danger ms-2 rounded-pill">{{ pending_pickups.count }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link px-4 py-2 fw-semibold" id="manifest-tab" data-bs-toggle="tab" data-bs-target="#manifest" type="button" role="tab" aria-controls="manifest" aria-selected="false">
+                                <i class="ph-duotone ph-truck me-2 text-primary"></i> Manifest Pick Up (Ditugaskan)
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link px-4 py-2 fw-semibold" id="runsheet-tab" data-bs-toggle="tab" data-bs-target="#runsheet" type="button" role="tab" aria-controls="runsheet" aria-selected="false">
+                                <i class="ph-duotone ph-clipboard-text me-2 text-info"></i> Pickup Runsheet
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link px-4 py-2 fw-semibold" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab" aria-controls="history" aria-selected="false">
+                                <i class="ph-duotone ph-check-circle me-2 text-success"></i> Riwayat Selesai
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="pickupTabsContent">
+                        <!-- TAB 1: PENDING -->
+                        <div class="tab-pane fade show active" id="pending" role="tabpanel" aria-labelledby="pending-tab">
+                            <!-- Table -->
+                            <div class="table-responsive shadow-sm mt-0" style="border: 1px solid #eaedf1; border-top: none; border-radius: 0 16px 16px 16px; background-color: #fff;">
+                                <table class="table table-premium mb-0" id="pickupTable">
+                                    <thead>
+                                        <tr>
+                                            <th class="ps-3" style="width: 40px;">
+                                                <div class="form-check d-flex justify-content-center">
+                                                    <input class="form-check-input" type="checkbox" id="selectAllPickup">
+                                                </div>
+                                            </th>
+                                            <th class="text-nowrap text-secondary fw-semibold">Pickup No.</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">Tanggal Pickup</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">Waktu Pickup</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">Req. Kendaraan</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">No. Dokumen Ref</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">Catatan</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">Req. Packing</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">Asuransi</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">Kustomer</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">Kota</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">Kecamatan</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">Nama PIC</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">No. HP PIC</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">Alamat Pickup</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">Berat (kg)</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">Koli</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">Tipe Kiriman</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">Deskripsi Barang</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">Upload File</th>
+                                            <th class="text-center text-nowrap text-secondary fw-semibold">Status</th>
+                                            <th class="text-center text-nowrap text-secondary fw-semibold">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in pending_pickups %}
+                                        <tr>
+                                            <td class="ps-3">
+                                                <div class="form-check d-flex justify-content-center">
+                                                    <input class="form-check-input pickup-checkbox" type="checkbox" value="{{ item.id }}" data-no="{{ item.pickup_number }}" data-vehicle="{{ item.vehicle|default:'' }}">
+                                                </div>
+                                            </td>
+                                            <td class="fw-medium text-dark">#{{ item.pickup_number|default:item.id }}</td>
+                                            <td>{{ item.pickup_date|date:"d M Y" }}</td>
+                                            <td>{{ item.pickup_time|time:"H:i"|default:"-" }}</td>
+                                            <td>{{ item.vehicle|default:"-" }}</td>
+                                            <td>{{ item.reff_doc_no|default:"-" }}</td>
+                                            <td style="max-width: 150px;" class="text-truncate" title="{{ item.note }}">{{ item.note|default:"-" }}</td>
+                                            <td>{% if item.req_packing %}<i class="ph-bold ph-check text-success"></i> Ya{% else %}-{% endif %}</td>
+                                            <td>{% if item.insurance %}<i class="ph-bold ph-check text-success"></i> Ya{% else %}-{% endif %}</td>
+                                            <td><div class="fw-medium text-dark">{{ item.client.name|default:"-" }}</div></td>
+                                            <td>{{ item.city|default:"-" }}</td>
+                                            <td>{{ item.district|default:"-" }}</td>
+                                            <td>{{ item.pic_name|default:"-" }}</td>
+                                            <td>{{ item.pic_phone|default:"-" }}</td>
+                                            <td style="max-width: 200px;" class="text-truncate" title="{{ item.pickup_address }}">{{ item.pickup_address|default:"-" }}</td>
+                                            <td>{{ item.weight|default:"0" }} Kg</td>
+                                            <td>{{ item.colly }}</td>
+                                            <td>{{ item.shipment_type|default:"-" }}</td>
+                                            <td style="max-width: 150px;" class="text-truncate" title="{{ item.description_item }}">{{ item.description_item|default:"-" }}</td>
+                                            <td>{% if item.file_upload %}<a href="{{ item.file_upload.url }}" target="_blank"><i class="ph-duotone ph-file-text"></i> Lihat File</a>{% else %}-{% endif %}</td>
+                                            <td class="text-center">
+                                                {% if item.status == 'PENDING' %}
+                                                <span class="badge bg-warning text-dark rounded-pill px-3 py-1 fw-bold">PENDING</span>
+                                                {% elif item.status == 'ASSIGNED_TO_DRIVER' %}
+                                                <span class="badge bg-info rounded-pill px-3 py-1 fw-bold">ASSIGNED</span>
+                                                {% elif item.status == 'PICKED_UP' %}
+                                                <span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold">PICKED UP</span>
+                                                {% elif item.status == 'CANCELLED' or item.status == 'VOID' %}
+                                                <span class="badge bg-dark text-white rounded-pill px-3 py-1 fw-bold">VOID</span>
+                                                {% else %}
+                                                <span class="badge bg-secondary rounded-pill px-3 py-1 fw-bold">{{ item.get_status_display|upper }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-action-table dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Aksi">
+                                                        <i class="ph-bold ph-list"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                                        <li><a class="dropdown-item py-2" href="{% url 'operations:pickup-update' item.pk %}"><i class="ph-duotone ph-pencil-simple me-2 text-warning"></i>Ubah</a></li>
+                                                        {% if request.user.is_superuser or request.user.is_staff or request.user.user_type == 'ADMIN' %}
+                                                            {% if item.status == 'CANCELLED' or item.status == 'VOID' %}
+                                                            <li><a class="dropdown-item py-2 text-danger" href="#" onclick="event.preventDefault(); showHideModal('{% url 'operations:pickup-hide' item.pk %}', '{{ item.pickup_number|default:item.pk }}');"><i class="ph-duotone ph-trash me-2 text-danger"></i>Hapus</a></li>
+                                                            {% else %}
+                                                            <li><a class="dropdown-item py-2" href="#" onclick="event.preventDefault(); showVoidModal('{% url 'operations:pickup-delete' item.pk %}', '{{ item.pickup_number|default:item.pk }}');"><i class="ph-duotone ph-prohibit me-2 text-secondary"></i>Void</a></li>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="22" class="text-center py-5 text-muted" style="background-color: #ffffff;">
+                                                <div class="mb-3"><i class="ph-duotone ph-package text-secondary" style="font-size: 3rem;"></i></div>
+                                                <h6 class="fw-medium text-dark">Belum ada data pickup order</h6>
+                                                <p class="small mb-0">Data pickup yang masuk akan tampil di sini.</p>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- TAB 2: MANIFESTS -->
+                        <div class="tab-pane fade" id="manifest" role="tabpanel" aria-labelledby="manifest-tab">
+                            <div class="table-responsive shadow-sm mt-0" style="border: 1px solid #eaedf1; border-top: none; border-radius: 0 16px 16px 16px; background-color: #fff;">
+                                <table class="table table-premium mb-0" id="manifestTable">
+                                    <thead>
+                                        <tr>
+                                            <th class="ps-3 text-nowrap text-secondary fw-semibold">NO PICK UP ASSIGN</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">NO PICK UP</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">TANGGAL</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">DRIVER / SUPIR</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">ARMADA</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">TOTAL PICKUP</th>
+                                            <th class="text-center text-nowrap text-secondary fw-semibold">STATUS</th>
+                                            <th class="text-center text-nowrap text-secondary fw-semibold">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for man in pickup_manifests %}
+                                        <tr>
+                                            <td class="ps-3 fw-medium text-dark">{{ man.manifest_number }}</td>
+                                            <td>
+                                                {% for p in man.pickup_orders.all %}
+                                                    <span class="d-block text-dark small">{{ p.pickup_number }}</span>
+                                                {% endfor %}
+                                            </td>
+                                            <td>{{ man.date|date:"d M Y" }}</td>
+                                            <td>
+                                                <div class="fw-medium text-dark">{{ man.driver.get_full_name|default:man.driver.username|default:"-" }}</div>
+                                            </td>
+                                            <td>{{ man.vehicle.plate_number|default:man.transport_mode|default:"-" }}</td>
+                                            <td>
+                                                <span class="fw-medium text-dark">{{ man.pickup_orders.count }} Resi</span>
+                                            </td>
+                                            <td class="text-center">
+                                                {% if man.status == 'PREPARING' %}
+                                                <span class="badge bg-warning text-dark rounded-pill px-3 py-1 fw-bold">PERSIAPAN</span>
+                                                {% elif man.status == 'ON_THE_WAY' %}
+                                                <span class="badge bg-info rounded-pill px-3 py-1 fw-bold">OTW / DI JALAN</span>
+                                                {% elif man.status == 'CANCELLED' or man.status == 'VOID' %}
+                                                <span class="badge bg-dark text-white rounded-pill px-3 py-1 fw-bold">VOID</span>
+                                                {% elif man.status == 'COMPLETED' %}
+                                                <span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold">SELESAI</span>
+                                                {% else %}
+                                                <span class="badge bg-secondary rounded-pill px-3 py-1 fw-bold">{{ man.status }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-action-table dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Aksi">
+                                                        <i class="ph-bold ph-list"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                                        <li><a class="dropdown-item py-2" href="{% url 'operations:manifest-detail' man.id %}"><i class="ph-duotone ph-eye me-2 text-info"></i>Lihat Detail</a></li>
+                                                        <li>
+                                                            <a class="dropdown-item py-2 cursor-pointer btn-edit-manifest" 
+                                                               data-id="{{ man.id }}" 
+                                                               data-driver="{{ man.driver.id|default:'' }}" 
+                                                               data-vehicle="{{ man.transport_mode|default:'' }}" 
+                                                               data-branch="{{ man.branch.id|default:'' }}" 
+                                                               data-vendor="{{ man.vendor.id|default:'' }}"
+                                                               data-type="{% if man.branch %}internal{% elif man.vendor %}external{% endif %}">
+                                                                <i class="ph-duotone ph-pencil-simple me-2 text-warning"></i>Ubah
+                                                            </a>
+                                                        </li>
+                                                        {% if request.user.is_superuser or request.user.is_staff or request.user.user_type == 'ADMIN' %}
+                                                            {% if man.status == 'CANCELLED' or man.status == 'VOID' %}
+                                                            <li><a class="dropdown-item py-2 text-danger" href="#" onclick="event.preventDefault(); showHideModal('{% url 'operations:manifest-hide' man.id %}', '{{ man.manifest_number|default:man.id }}');"><i class="ph-duotone ph-trash me-2 text-danger"></i>Hapus</a></li>
+                                                            {% else %}
+                                                            <li><a class="dropdown-item py-2" href="#" onclick="event.preventDefault(); showVoidModal('{% url 'operations:manifest-delete' man.id %}', '{{ man.manifest_number|default:man.id }}');"><i class="ph-duotone ph-prohibit me-2 text-secondary"></i>Void</a></li>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li><a class="dropdown-item py-2" href="{% url 'operations:pickup-print-sppb' man.id %}" target="_blank"><i class="ph-duotone ph-printer me-2 text-primary"></i>Cetak Manifest</a></li>
+                                                        <li><h6 class="dropdown-header">Update Status</h6></li>
+                                                        <li>
+                                                            <form method="post" action="{% url 'operations:pickup-manifest-status' %}">
+                                                                {% csrf_token %}
+                                                                <input type="hidden" name="manifest_id" value="{{ man.id }}">
+                                                                <input type="hidden" name="status" value="PREPARING">
+                                                                <button type="submit" class="dropdown-item py-2"><i class="ph-duotone ph-package me-2 text-warning"></i>Persiapan</button>
+                                                            </form>
+                                                        </li>
+                                                        <li>
+                                                            <form method="post" action="{% url 'operations:pickup-manifest-status' %}">
+                                                                {% csrf_token %}
+                                                                <input type="hidden" name="manifest_id" value="{{ man.id }}">
+                                                                <input type="hidden" name="status" value="ON_THE_WAY">
+                                                                <button type="submit" class="dropdown-item py-2"><i class="ph-duotone ph-truck me-2 text-info"></i>Menuju Lokasi (OTW)</button>
+                                                            </form>
+                                                        </li>
+                                                        <li>
+                                                            <form method="post" action="{% url 'operations:pickup-manifest-status' %}">
+                                                                {% csrf_token %}
+                                                                <input type="hidden" name="manifest_id" value="{{ man.id }}">
+                                                                <input type="hidden" name="status" value="COMPLETED">
+                                                                <button type="submit" class="dropdown-item py-2"><i class="ph-duotone ph-check-circle me-2 text-success"></i>Selesai Pick Up</button>
+                                                            </form>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="8" class="text-center py-5 text-muted">
+                                                <div class="mb-3"><i class="ph-duotone ph-truck text-secondary" style="font-size: 3rem;"></i></div>
+                                                <h6>Belum ada Manifest Pick Up</h6>
+                                                <p class="small">Silakan buat penugasan terlebih dahulu melalui tab Menunggu Penugasan.</p>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- TAB 3: PICKUP RUNSHEET -->
+                        <div class="tab-pane fade" id="runsheet" role="tabpanel" aria-labelledby="runsheet-tab">
+                            <div class="table-responsive shadow-sm mt-0" style="border: 1px solid #eaedf1; border-top: none; border-radius: 0 16px 16px 16px; background-color: #fff;">
+                                <table class="table table-premium mb-0" id="runsheetTable">
+                                    <thead>
+                                        <tr>
+                                            <th class="ps-3 text-nowrap text-secondary fw-semibold">Pickup Runsheet No.</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">Total Colly</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">Total Weight</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">Total Resi / Awb.</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">Request Pickup</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">Vehicle Req.</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">User inp</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">Created at</th>
+                                            <th class="text-nowrap text-secondary fw-semibold text-center">Status</th>
+                                            <th class="text-center text-nowrap text-secondary fw-semibold">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for run in pickup_runsheets %}
+                                        <tr>
+                                            <td class="ps-3 fw-bold text-dark">
+                                                <a href="{% url 'operations:manifest-detail' run.id %}" class="text-decoration-none text-dark fw-bold">
+                                                    {{ run.manifest_number }}
+                                                </a>
+                                            </td>
+                                            <td class="fw-semibold text-dark">{{ run.total_colly }}</td>
+                                            <td class="fw-semibold text-dark">{{ run.total_weight }} Kg</td>
+                                            <td class="text-dark fw-medium">{{ run.pickup_orders.count }} Resi</td>
+                                            <td>
+                                                {% for p in run.pickup_orders.all %}
+                                                    <span class="d-block small text-muted">{{ p.pickup_number }}</span>
+                                                {% empty %}
+                                                    <span class="text-muted small">-</span>
+                                                {% endfor %}
+                                            </td>
+                                            <td>
+                                                <div class="fw-medium text-dark">{{ run.vehicle.plate_number|default:run.transport_mode|default:"-" }}</div>
+                                            </td>
+                                            <td>
+                                                <div class="small fw-medium text-dark">{% if run.created_by %}{{ run.created_by.get_full_name|default:run.created_by.username }}{% else %}Admin / CS{% endif %}</div>
+                                            </td>
+                                            <td class="text-muted small text-nowrap">
+                                                {{ run.created_at|date:"d M Y H:i" }}
+                                            </td>
+                                            <td class="text-center">
+                                                {% if run.status == 'PREPARING' %}
+                                                <span class="badge bg-warning text-dark rounded-pill px-3 py-1 fw-bold">PERSIAPAN</span>
+                                                {% elif run.status == 'ON_THE_WAY' %}
+                                                <span class="badge bg-info rounded-pill px-3 py-1 fw-bold">OTW / DI JALAN</span>
+                                                {% elif run.status == 'COMPLETED' %}
+                                                <span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold">SELESAI</span>
+                                                {% elif run.status == 'CANCELLED' or run.status == 'VOID' %}
+                                                <span class="badge bg-dark text-white rounded-pill px-3 py-1 fw-bold">VOID</span>
+                                                {% else %}
+                                                <span class="badge bg-secondary rounded-pill px-3 py-1 fw-bold">{{ run.status }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-action-table dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Aksi">
+                                                        <i class="ph-bold ph-list"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                                        <li><a class="dropdown-item py-2" href="{% url 'operations:manifest-detail' run.id %}"><i class="ph-duotone ph-eye me-2 text-info"></i>Lihat Detail</a></li>
+                                                        <li><a class="dropdown-item py-2" href="{% url 'operations:pickup-print-sppb' run.id %}" target="_blank"><i class="ph-duotone ph-printer me-2 text-primary"></i>Cetak Runsheet</a></li>
+                                                        {% if request.user.is_superuser or request.user.is_staff or request.user.user_type == 'ADMIN' %}
+                                                            <li><hr class="dropdown-divider"></li>
+                                                            {% if run.status == 'CANCELLED' or run.status == 'VOID' %}
+                                                            <li><a class="dropdown-item py-2 text-danger" href="#" onclick="event.preventDefault(); showHideModal('{% url 'operations:manifest-hide' run.id %}', '{{ run.manifest_number|default:run.id }}');"><i class="ph-duotone ph-trash me-2 text-danger"></i>Hapus</a></li>
+                                                            {% else %}
+                                                            <li><a class="dropdown-item py-2" href="#" onclick="event.preventDefault(); showVoidModal('{% url 'operations:manifest-delete' run.id %}', '{{ run.manifest_number|default:run.id }}');"><i class="ph-duotone ph-prohibit me-2 text-secondary"></i>Void</a></li>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="10" class="text-center py-5 text-muted">
+                                                <div class="mb-3"><i class="ph-duotone ph-clipboard-text text-secondary" style="font-size: 3rem;"></i></div>
+                                                <h6>Belum ada Pickup Runsheet</h6>
+                                                <p class="small mb-0">Dokumen penugasan pickup (Runsheet) akan tampil di sini.</p>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- TAB 4: RIWAYAT -->
+                        <div class="tab-pane fade" id="history" role="tabpanel" aria-labelledby="history-tab">
+                            <div class="table-responsive shadow-sm mt-0" style="border: 1px solid #eaedf1; border-top: none; border-radius: 0 16px 16px 16px; background-color: #fff;">
+                                <table class="table table-premium mb-0" id="historyTable">
+                                    <thead>
+                                        <tr>
+                                            <th class="ps-3 text-nowrap text-secondary fw-semibold">NO PICK UP ASSIGN</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">NO PICK UP</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">TANGGAL SELESAI</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">DRIVER / SUPIR</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">ARMADA</th>
+                                            <th class="text-nowrap text-secondary fw-semibold">TOTAL PICKUP</th>
+                                            <th class="text-center text-nowrap text-secondary fw-semibold">STATUS</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for man in history_manifests %}
+                                        <tr>
+                                            <td class="ps-3 fw-medium text-dark">{{ man.manifest_number }}</td>
+                                            <td>
+                                                {% for p in man.pickup_orders.all %}
+                                                    <span class="d-block text-dark small">{{ p.pickup_number }}</span>
+                                                {% endfor %}
+                                            </td>
+                                            <td>{{ man.date|date:"d M Y" }}</td>
+                                            <td>
+                                                <div class="fw-medium text-dark">{{ man.driver.get_full_name|default:man.driver.username|default:"-" }}</div>
+                                            </td>
+                                            <td>{{ man.vehicle.plate_number|default:man.transport_mode|default:"-" }}</td>
+                                            <td>
+                                                <span class="fw-medium text-dark">{{ man.pickup_orders.count }} Resi</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold">SELESAI</span>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="7" class="text-center py-5 text-muted">
+                                                <div class="mb-3"><i class="ph-duotone ph-check-circle text-secondary" style="font-size: 3rem;"></i></div>
+                                                <h6>Belum ada Riwayat Selesai</h6>
+                                                <p class="small mb-0">Manifest pick up yang sudah selesai akan muncul di sini.</p>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+</div>
+
+<!-- Assign Driver Modal -->
+<div class="modal fade" id="assignDriverModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered border-0">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+      <form id="assignDriverForm" method="post" action="{% url 'operations:pickup-assign' %}">
+        {% csrf_token %}
+        <div id="hiddenInputsContainer"></div>
+        <div class="modal-header border-0 bg-primary text-white py-3">
+          <div class="d-flex align-items-center">
+            <div class="bg-white text-primary rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 40px; height: 40px;">
+              <i class="ph-bold ph-truck" style="font-size: 1.25rem;"></i>
+            </div>
+            <h5 class="modal-title fw-bold mb-0">Tugaskan ke Pengemudi</h5>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4 bg-light">
+          <p class="text-muted small mb-3">Pilih supir dan armada untuk memproses penugasan pickup (Runsheet) untuk <span id="assignCountBadgeModal" class="badge bg-danger rounded-pill">0</span> resi terpilih.</p>
+          
+          <!-- Request Vehicle Info Box -->
+          <div class="alert alert-primary bg-primary-subtle border-primary-subtle d-flex align-items-center py-2 px-3 mb-3 rounded-3" id="reqVehicleAlert" style="display: none;">
+            <i class="ph-bold ph-truck me-2 text-primary fs-5"></i>
+            <div class="small">
+                <span class="text-muted">Req. Kendaraan dari Order:</span>
+                <strong class="text-primary ms-1" id="reqVehicleText">-</strong>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold small text-muted">Choose assign type <span class="text-danger">*</span></label>
+            <select class="form-select" name="assign_type" id="assignTypeSelect" required>
+                <option value="">-- Pilih Tipe Assign --</option>
+                <option value="internal">Assign Internal</option>
+                <option value="external">Assign External</option>
+            </select>
+          </div>
+
+          <div class="mb-3" id="branchContainer" style="display: none;">
+            <label class="form-label fw-semibold small text-muted">Branch <span class="text-danger">*</span></label>
+            <select class="form-select select2-searchable" name="branch" id="branchSelect" style="width: 100%;">
+                <option value="">-- Cari / Pilih Branch --</option>
+                {% for b in branches %}
+                <option value="{{ b.id }}">{{ b.name }} ({{ b.code }})</option>
+                {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3" id="vendorContainer" style="display: none;">
+            <label class="form-label fw-semibold small text-muted">Vendor <span class="text-danger">*</span></label>
+            <select class="form-select select2-searchable" name="vendor" id="vendorSelect" style="width: 100%;">
+                <option value="">-- Cari / Pilih Vendor --</option>
+                {% for v in vendors %}
+                <option value="{{ v.id }}">{{ v.name }}</option>
+                {% endfor %}
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label fw-semibold small text-muted">Driver / Supir <span class="text-danger">*</span></label>
+            <select class="form-select select2-searchable" name="driver" id="driverSelect" style="width: 100%;" required>
+                <option value="">-- Cari / Pilih Supir --</option>
+                {% for d in drivers %}
+                <option value="{{ d.id }}">{{ d.get_full_name|default:d.username }}</option>
+                {% endfor %}
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label fw-semibold small text-muted">Kendaraan (Armada) <span class="text-danger">*</span></label>
+            <select class="form-select select2-searchable" name="vehicle_type" id="assignVehicleSelect" style="width: 100%;" required>
+                <option value="">-- Pilih Armada --</option>
+                <optgroup label="Tipe Kendaraan">
+                    {% for vt in vehicle_types %}
+                    <option value="{{ vt }}">{{ vt }}</option>
+                    {% endfor %}
+                </optgroup>
+                {% if master_vehicles %}
+                <optgroup label="Data Armada Master">
+                    {% for mv in master_vehicles %}
+                    <option value="{{ mv.plate_number }} - {{ mv.vehicle_type }}">{{ mv.plate_number }} ({{ mv.vehicle_type }})</option>
+                    {% endfor %}
+                </optgroup>
+                {% endif %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer border-0 bg-white py-3">
+          <button type="button" class="btn btn-light fw-bold px-4 shadow-sm" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-primary fw-bold px-4 shadow-sm"><i class="ph-bold ph-check me-2"></i>Buat Penugasan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Manifest Modal -->
+<div class="modal fade" id="editManifestModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered border-0">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+      <form id="editManifestForm" method="post" action="{% url 'operations:pickup-manifest-edit' %}">
+        {% csrf_token %}
+        <input type="hidden" name="manifest_id" id="editManifestId">
+        <div class="modal-header border-0 bg-warning text-dark py-3">
+          <div class="d-flex align-items-center">
+            <div class="bg-white text-warning rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 40px; height: 40px;">
+              <i class="ph-bold ph-pencil-simple" style="font-size: 1.25rem;"></i>
+            </div>
+            <h5 class="modal-title fw-bold mb-0">Edit Penugasan Pickup</h5>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4 bg-light">
+          <div class="mb-3">
+            <label class="form-label fw-semibold small text-muted">Choose assign type <span class="text-danger">*</span></label>
+            <select class="form-select" name="assign_type" id="editAssignTypeSelect" required>
+                <option value="">-- Pilih Tipe Assign --</option>
+                <option value="internal">Assign Internal</option>
+                <option value="external">Assign External</option>
+            </select>
+          </div>
+
+          <div class="mb-3" id="editBranchContainer" style="display: none;">
+            <label class="form-label fw-semibold small text-muted">Branch <span class="text-danger">*</span></label>
+            <select class="form-select select2-searchable" name="branch" id="editBranchSelect" style="width: 100%;">
+                <option value="">-- Cari / Pilih Branch --</option>
+                {% for b in branches %}
+                <option value="{{ b.id }}">{{ b.name }} ({{ b.code }})</option>
+                {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3" id="editVendorContainer" style="display: none;">
+            <label class="form-label fw-semibold small text-muted">Vendor <span class="text-danger">*</span></label>
+            <select class="form-select select2-searchable" name="vendor" id="editVendorSelect" style="width: 100%;">
+                <option value="">-- Cari / Pilih Vendor --</option>
+                {% for v in vendors %}
+                <option value="{{ v.id }}">{{ v.name }}</option>
+                {% endfor %}
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label fw-semibold small text-muted">Driver / Supir <span class="text-danger">*</span></label>
+            <select class="form-select select2-searchable" name="driver" id="editDriverSelect" style="width: 100%;" required>
+                <option value="">-- Cari / Pilih Supir --</option>
+                {% for d in drivers %}
+                <option value="{{ d.id }}">{{ d.get_full_name|default:d.username }}</option>
+                {% endfor %}
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label fw-semibold small text-muted">Kendaraan (Armada) <span class="text-danger">*</span></label>
+            <select class="form-select select2-searchable" name="vehicle_type" id="editVehicleSelect" style="width: 100%;" required>
+                <option value="">-- Pilih Armada --</option>
+                <optgroup label="Tipe Kendaraan">
+                    {% for vt in vehicle_types %}
+                    <option value="{{ vt }}">{{ vt }}</option>
+                    {% endfor %}
+                </optgroup>
+                {% if master_vehicles %}
+                <optgroup label="Data Armada Master">
+                    {% for mv in master_vehicles %}
+                    <option value="{{ mv.plate_number }} - {{ mv.vehicle_type }}">{{ mv.plate_number }} ({{ mv.vehicle_type }})</option>
+                    {% endfor %}
+                </optgroup>
+                {% endif %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer border-0 bg-white py-3">
+          <button type="button" class="btn btn-light fw-bold px-4 shadow-sm" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-warning text-dark fw-bold px-4 shadow-sm"><i class="ph-bold ph-check me-2"></i>Simpan Perubahan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const selectAllCheckbox = document.getElementById('selectAllPickup');
+        const itemCheckboxes = document.querySelectorAll('.pickup-checkbox');
+        const btnAssignDriver = document.getElementById('btnAssignDriver');
+        const assignCountBadge = document.getElementById('assignCountBadge');
+        const assignCountBadgeModal = document.getElementById('assignCountBadgeModal');
+        const hiddenInputsContainer = document.getElementById('hiddenInputsContainer');
+
+        function updateState() {
+            const checkedCount = document.querySelectorAll('.pickup-checkbox:checked').length;
+            
+            // Update Select All Checkbox State
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = (checkedCount === itemCheckboxes.length && itemCheckboxes.length > 0);
+                selectAllCheckbox.indeterminate = (checkedCount > 0 && checkedCount < itemCheckboxes.length);
+            }
+            
+            // Enable/Disable Assign Button
+            if (btnAssignDriver) {
+                if (checkedCount > 0) {
+                    btnAssignDriver.style.display = 'inline-block';
+                    if (assignCountBadge) {
+                        assignCountBadge.textContent = checkedCount;
+                    }
+                    if (assignCountBadgeModal) {
+                        assignCountBadgeModal.textContent = checkedCount;
+                    }
+                } else {
+                    btnAssignDriver.style.display = 'none';
+                }
+            }
+        }
+
+        // Toggle Select All
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function() {
+                itemCheckboxes.forEach(cb => {
+                    cb.checked = selectAllCheckbox.checked;
+                });
+                updateState();
+            });
+        }
+
+        // Individual Checkboxes
+        itemCheckboxes.forEach(cb => {
+            cb.addEventListener('change', updateState);
+        });
+
+        // Function to initialize select2 on modal
+        function initSingleSelect2($elem, $modal) {
+            if (!$elem || !$elem.length) return;
+            if ($elem.hasClass('select2-hidden-accessible')) {
+                $elem.select2('destroy');
+            }
+            $elem.select2({
+                theme: 'bootstrap-5',
+                dropdownParent: $modal,
+                width: '100%'
+            });
+        }
+
+        function initModalSelect2($modal) {
+            $modal.find('.select2-searchable').each(function() {
+                // Only initialize visible select elements to prevent 0-width or broken search inputs
+                if ($(this).is(':visible')) {
+                    initSingleSelect2($(this), $modal);
+                }
+            });
+        }
+
+        $('#assignDriverModal').on('shown.bs.modal', function() {
+            initModalSelect2($(this));
+            // If branch or vendor container is currently visible, ensure it gets initialized
+            if ($('#branchContainer').is(':visible')) {
+                initSingleSelect2($('#branchSelect'), $(this));
+            }
+            if ($('#vendorContainer').is(':visible')) {
+                initSingleSelect2($('#vendorSelect'), $(this));
+            }
+        });
+
+        $('#editManifestModal').on('shown.bs.modal', function() {
+            initModalSelect2($(this));
+            if ($('#editBranchContainer').is(':visible')) {
+                initSingleSelect2($('#editBranchSelect'), $(this));
+            }
+            if ($('#editVendorContainer').is(':visible')) {
+                initSingleSelect2($('#editVendorSelect'), $(this));
+            }
+        });
+
+        // Handle Assign Button Click
+        if (btnAssignDriver) {
+            btnAssignDriver.addEventListener('click', function() {
+                const checkedBoxes = document.querySelectorAll('.pickup-checkbox:checked');
+                
+                // Set badge count in modal
+                if (assignCountBadge) {
+                    assignCountBadge.textContent = checkedBoxes.length;
+                }
+                if (assignCountBadgeModal) {
+                    assignCountBadgeModal.textContent = checkedBoxes.length;
+                }
+                
+                // Clear and repopulate hidden inputs
+                hiddenInputsContainer.innerHTML = '';
+                const requestedVehicles = [];
+                
+                checkedBoxes.forEach(cb => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'pickup_ids';
+                    input.value = cb.value;
+                    hiddenInputsContainer.appendChild(input);
+                    
+                    const reqVeh = cb.getAttribute('data-vehicle');
+                    if (reqVeh && reqVeh.trim() !== '' && reqVeh !== '-') {
+                        requestedVehicles.push(reqVeh.trim());
+                    }
+                });
+                
+                // Handle Request Vehicle Alert & Auto-preselection
+                const reqVehicleAlert = document.getElementById('reqVehicleAlert');
+                const reqVehicleText = document.getElementById('reqVehicleText');
+                const assignVehicleSelect = $('#assignVehicleSelect');
+                
+                if (requestedVehicles.length > 0) {
+                    const uniqueVehicles = [...new Set(requestedVehicles)];
+                    if (reqVehicleText) {
+                        reqVehicleText.textContent = uniqueVehicles.join(', ');
+                    }
+                    if (reqVehicleAlert) {
+                        reqVehicleAlert.style.display = 'flex';
+                    }
+                    
+                    // Pre-select first requested vehicle in dropdown
+                    const firstVeh = uniqueVehicles[0];
+                    if (assignVehicleSelect.length) {
+                        let matchedVal = '';
+                        assignVehicleSelect.find('option').each(function() {
+                            const optVal = $(this).val();
+                            const optText = $(this).text();
+                            if (optVal && firstVeh && (optVal.toLowerCase() === firstVeh.toLowerCase() || optText.toLowerCase().includes(firstVeh.toLowerCase()))) {
+                                matchedVal = optVal;
+                                return false;
+                            }
+                        });
+                        
+                        if (matchedVal) {
+                            assignVehicleSelect.val(matchedVal).trigger('change');
+                        } else {
+                            assignVehicleSelect.val(firstVeh).trigger('change');
+                        }
+                    }
+                } else {
+                    if (reqVehicleAlert) {
+                        reqVehicleAlert.style.display = 'none';
+                    }
+                    if (assignVehicleSelect.length) {
+                        assignVehicleSelect.val('').trigger('change');
+                    }
+                }
+                
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('assignDriverModal'));
+                modal.show();
+            });
+        }
+        
+        // Handle tab parameter and SPPB auto-print
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('tab') === 'manifest') {
+            const manifestTab = new bootstrap.Tab(document.getElementById('manifest-tab'));
+            manifestTab.show();
+        }
+        
+        const printSppbId = urlParams.get('print_sppb');
+        if (printSppbId) {
+            window.open(`/operations/pickup/print-sppb/${printSppbId}/`, '_blank');
+        }
+
+        // Handle Assign Type Change
+        const assignTypeSelect = document.getElementById('assignTypeSelect');
+        const branchContainer = document.getElementById('branchContainer');
+        const vendorContainer = document.getElementById('vendorContainer');
+        const branchSelect = document.getElementById('branchSelect');
+        const vendorSelect = document.getElementById('vendorSelect');
+
+        if (assignTypeSelect) {
+            assignTypeSelect.addEventListener('change', function() {
+                if (this.value === 'internal') {
+                    branchContainer.style.display = 'block';
+                    branchSelect.setAttribute('required', 'required');
+                    vendorContainer.style.display = 'none';
+                    vendorSelect.removeAttribute('required');
+                    initSingleSelect2($('#branchSelect'), $('#assignDriverModal'));
+                } else if (this.value === 'external') {
+                    vendorContainer.style.display = 'block';
+                    vendorSelect.setAttribute('required', 'required');
+                    branchContainer.style.display = 'none';
+                    branchSelect.removeAttribute('required');
+                    initSingleSelect2($('#vendorSelect'), $('#assignDriverModal'));
+                } else {
+                    branchContainer.style.display = 'none';
+                    branchSelect.removeAttribute('required');
+                    vendorContainer.style.display = 'none';
+                    vendorSelect.removeAttribute('required');
+                }
+            });
+        }
+        
+        // Handle Edit Manifest Modal
+        document.querySelectorAll('.btn-edit-manifest').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const id = this.getAttribute('data-id');
+                const type = this.getAttribute('data-type');
+                const driver = this.getAttribute('data-driver');
+                const vehicle = this.getAttribute('data-vehicle');
+                const branch = this.getAttribute('data-branch');
+                const vendor = this.getAttribute('data-vendor');
+                
+                document.getElementById('editManifestId').value = id;
+                document.getElementById('editAssignTypeSelect').value = type;
+                $('#editDriverSelect').val(driver).trigger('change');
+                $('#editVehicleSelect').val(vehicle).trigger('change');
+                
+                // Trigger change event to show/hide branch/vendor
+                const event = new Event('change');
+                document.getElementById('editAssignTypeSelect').dispatchEvent(event);
+                
+                if (type === 'internal') {
+                    $('#editBranchSelect').val(branch).trigger('change');
+                } else if (type === 'external') {
+                    $('#editVendorSelect').val(vendor).trigger('change');
+                }
+                
+                const modal = new bootstrap.Modal(document.getElementById('editManifestModal'));
+                modal.show();
+            });
+        });
+        
+        document.getElementById('editAssignTypeSelect').addEventListener('change', function() {
+            var val = this.value;
+            var b = document.getElementById('editBranchContainer');
+            var v = document.getElementById('editVendorContainer');
+            if (val === 'internal') {
+                b.style.display = 'block';
+                document.getElementById('editBranchSelect').setAttribute('required', 'required');
+                v.style.display = 'none';
+                document.getElementById('editVendorSelect').removeAttribute('required');
+                initSingleSelect2($('#editBranchSelect'), $('#editManifestModal'));
+            } else if (val === 'external') {
+                v.style.display = 'block';
+                document.getElementById('editVendorSelect').setAttribute('required', 'required');
+                b.style.display = 'none';
+                document.getElementById('editBranchSelect').removeAttribute('required');
+                initSingleSelect2($('#editVendorSelect'), $('#editManifestModal'));
+            } else {
+                b.style.display = 'none';
+                document.getElementById('editBranchSelect').removeAttribute('required');
+                v.style.display = 'none';
+                document.getElementById('editVendorSelect').removeAttribute('required');
+            }
+        });
+    });
+</script>
+{% endblock %}

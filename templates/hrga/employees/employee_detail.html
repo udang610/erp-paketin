@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Detail Pegawai: {{ employee.full_name }} - ERP Paketin{% endblock %}
+{% block page_title %}Detail Pegawai{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="mb-3">
+        <a href="{% url 'employees:employee_list' %}" class="btn btn-outline-secondary bg-white px-3 shadow-sm btn-sm">
+            <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+        </a>
+    </div>
+
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h4 class="mb-1 fw-bold text-dark">{{ employee.full_name }}</h4>
+            <p class="text-muted small mb-0">NIP: <strong>{{ employee.employee_id }}</strong> · Akun: <strong>@{{ employee.user.username }}</strong></p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'employees:employee_update' employee.pk %}" class="btn btn-warning px-4 fw-bold shadow-sm">
+                <i class="ph-bold ph-pencil-simple me-2"></i> Edit Data Pegawai
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Profile Overview Card -->
+    <div class="card bg-white border-0 shadow-sm rounded-4 p-4 mb-3">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-3 border-bottom mb-3">
+            <div class="d-flex align-items-center gap-3">
+                {% if employee.profile_picture %}
+                <img src="{{ employee.profile_picture.url }}" class="rounded-4 border shadow-xs" style="width:72px;height:72px;object-fit:cover;">
+                {% else %}
+                <div class="rounded-4 d-flex align-items-center justify-content-center bg-light text-primary fw-bold border" style="width:72px;height:72px;font-size:1.75rem;">
+                    {{ employee.full_name|make_list|first|upper }}
+                </div>
+                {% endif %}
+                <div>
+                    <h5 class="fw-bold text-dark mb-1">{{ employee.full_name }}</h5>
+                    <div class="text-muted small">
+                        <i class="ph-bold ph-envelope-simple me-1"></i>{{ employee.user.email }}
+                        <span class="mx-2">·</span>
+                        <i class="ph-bold ph-phone me-1"></i>{{ employee.phone_number|default:"-" }}
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                {% if employee.status == 'PERMANENT' %}
+                <span class="badge bg-success text-white rounded-pill px-3 py-2 fw-bold">TETAP</span>
+                {% elif employee.status == 'CONTRACT' %}
+                <span class="badge bg-warning text-dark rounded-pill px-3 py-2 fw-bold">KONTRAK</span>
+                {% elif employee.status == 'PROBATION' %}
+                <span class="badge bg-info text-white rounded-pill px-3 py-2 fw-bold">PROBATION</span>
+                {% else %}
+                <span class="badge bg-secondary text-white rounded-pill px-3 py-2 fw-bold">{{ employee.get_status_display|upper }}</span>
+                {% endif %}
+                
+                {% if employee.user.roles.all %}
+                <span class="badge bg-light text-danger border px-3 py-2 rounded-pill fw-semibold">
+                    Role: {{ employee.user.roles.first.name }}
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="row g-4 pt-2">
+            <!-- Col 1: Identitas & Penempatan -->
+            <div class="col-md-6">
+                <h6 class="fw-bold text-dark mb-3"><i class="ph-duotone ph-identification-card text-primary me-2"></i>Penempatan &amp; Struktur</h6>
+                <table class="table table-sm table-borderless small mb-0">
+                    <tr>
+                        <td class="text-muted" style="width: 140px;">Cabang</td>
+                        <td class="fw-semibold text-dark">{{ employee.branch.name|default:"-" }}{% if employee.branch.code %} - {{ employee.branch.code }}{% endif %}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Departemen</td>
+                        <td class="fw-semibold text-dark">{{ employee.department.name|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Posisi / Jabatan</td>
+                        <td class="fw-semibold text-dark">{{ employee.position.name|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Atasan Langsung</td>
+                        <td class="fw-semibold text-dark">{{ employee.supervisor.full_name|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">NIK / No. KTP</td>
+                        <td class="fw-semibold text-dark">{{ employee.nik|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">NPWP</td>
+                        <td class="fw-semibold text-dark">{{ employee.npwp|default:"-" }}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Col 2: Kontrak & Masa Kerja -->
+            <div class="col-md-6">
+                <h6 class="fw-bold text-dark mb-3"><i class="ph-duotone ph-calendar-check text-success me-2"></i>Masa Kerja &amp; Dokumen</h6>
+                <table class="table table-sm table-borderless small mb-0">
+                    <tr>
+                        <td class="text-muted" style="width: 160px;">Tanggal Bergabung</td>
+                        <td class="fw-semibold text-dark">{{ employee.join_date|date:"d M Y"|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Berakhir Kontrak</td>
+                        <td class="fw-semibold text-dark">{{ employee.contract_end_date|date:"d M Y"|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Dokumen KTP</td>
+                        <td>
+                            {% if employee.document_ktp %}
+                            <a href="{{ employee.document_ktp.url }}" target="_blank" class="btn btn-xs btn-outline-primary px-3 py-1">
+                                <i class="ph-bold ph-file-pdf me-1"></i> Buka KTP
+                            </a>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Dokumen Kontrak / CV</td>
+                        <td>
+                            {% if employee.document_contract %}
+                            <a href="{{ employee.document_contract.url }}" target="_blank" class="btn btn-xs btn-outline-success px-3 py-1">
+                                <i class="ph-bold ph-file-text me-1"></i> Buka Berkas
+                            </a>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payroll & Kontak Darurat -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card bg-white border-0 shadow-sm rounded-4 p-4 h-100">
+                <h6 class="fw-bold text-dark mb-3"><i class="ph-duotone ph-bank text-warning me-2"></i>Rekening Payroll</h6>
+                <table class="table table-sm table-borderless small mb-0">
+                    <tr>
+                        <td class="text-muted" style="width: 130px;">Nama Bank</td>
+                        <td class="fw-semibold text-dark">{{ employee.bank_name|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Nomor Rekening</td>
+                        <td class="fw-semibold text-dark font-monospace">{{ employee.bank_account_number|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Atas Nama</td>
+                        <td class="fw-semibold text-dark">{{ employee.bank_account_holder|default:"-" }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card bg-white border-0 shadow-sm rounded-4 p-4 h-100">
+                <h6 class="fw-bold text-dark mb-3"><i class="ph-duotone ph-phone-call text-danger me-2"></i>Kontak Darurat</h6>
+                <table class="table table-sm table-borderless small mb-0">
+                    <tr>
+                        <td class="text-muted" style="width: 130px;">Nama Kontak</td>
+                        <td class="fw-semibold text-dark">{{ employee.emergency_contact_name|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Hubungan</td>
+                        <td class="fw-semibold text-dark">{{ employee.emergency_contact_relation|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Nomor HP</td>
+                        <td class="fw-semibold text-dark">{{ employee.emergency_contact_phone|default:"-" }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

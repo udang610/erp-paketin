@@ -1,0 +1,1915 @@
+{% load static i18n %}
+{% get_current_language as CURRENT_LANGUAGE %}
+<!DOCTYPE html>
+<html lang="{{ CURRENT_LANGUAGE }}">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ERP Paketin Cargo - Sistem Manajemen Terpadu">
+    <title>{% block title %}ERP{% endblock %} | Paketin Cargo</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="{% static 'icons/favicon.svg' %}">
+    <link rel="icon" type="image/png" href="{% static 'icons/favicon.png' %}">
+    <link rel="apple-touch-icon" href="{% static 'icons/apple-touch-icon.png' %}">
+
+    <!-- Bootstrap 5 CSS (Local) -->
+    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/bold/style.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/duotone/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- jQuery and Select2 -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    
+    <!-- Custom CSS (Merged from CRM and new specs) -->
+    <link href="/static/css/style.css?v={% now 'U' %}" rel="stylesheet">
+    
+    <style>
+        /* Base Overrides for ERP */
+        :root {
+            --pk-sidebar-width: 260px;
+            --pk-navbar-height: 64px;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #eef5f1 0%, #e2ece6 45%, #f1f6f3 100%) fixed !important;
+            background-color: #eef5f1 !important;
+            min-height: 100vh;
+        }
+        .main-wrapper, .dashboard-shell {
+            background: transparent !important;
+        }
+        .page-content {
+            padding: 24px 28px !important;
+            background: transparent !important;
+            min-height: calc(100vh - var(--pk-navbar-height));
+        }
+        
+        {% if is_finance_spreadsheet %}
+        /* Special styles for Finance Spreadsheet (SPA) embedded in ERP shell */
+        .main-wrapper {
+            padding: 0 !important;
+            margin-left: var(--pk-sidebar-width, 260px);
+            transition: all 0.3s;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .page-content {
+            padding: 0 !important;
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        @media (max-width: 991.98px) {
+            .main-wrapper { margin-left: 0; }
+        }
+        {% endif %}
+
+        /* Prevent dropdown clipping in table-responsive */
+        .table-responsive {
+            min-height: 280px;
+        }
+
+        /* Checkbox in table header/body: align vertically with text */
+        table thead th .form-check:not(.form-switch),
+        table tbody td .form-check:not(.form-switch) {
+            margin: 0 !important;
+            padding: 0 !important;
+            min-height: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        table thead th .form-check-input,
+        table thead th input[type="checkbox"],
+        table tbody td .form-check:not(.form-switch) .form-check-input {
+            float: none !important;
+            margin: 0 !important;
+            vertical-align: middle !important;
+        }
+        table thead th:has(input[type="checkbox"]) {
+            vertical-align: middle !important;
+        }
+
+        /* Custom Dropdown Item States */
+        .dropdown-menu .dropdown-item:hover, .dropdown-menu .dropdown-item:focus {
+            background-color: transparent !important;
+            outline: 1px solid #ccc;
+            outline-offset: -1px;
+            border-radius: 4px;
+        }
+        .dropdown-menu .dropdown-item:active {
+            background-color: #f0f0f0 !important; /* Light gray */
+            color: #333 !important;
+            outline: none !important;
+        }
+        .sidebar-section-title.module-section-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 9px 16px 7px;
+            color: rgba(255,255,255,.48);
+            text-decoration: none;
+            cursor: pointer;
+            transition: color .2s ease;
+        }
+        .sidebar-section-title.module-section-toggle:hover,
+        .sidebar-section-title.module-section-toggle.active { color: #fff; }
+        .sidebar-section-title.module-section-toggle i { font-size: 12px; transition: transform .2s ease; }
+        .sidebar-section-title.module-section-toggle[aria-expanded="true"] i { transform: rotate(180deg); }
+        .sidebar-section-title.module-section-toggle + .collapse { margin-bottom: 8px; }
+        .user-menu { width: 300px; border: 1px solid rgba(0,0,0,0.08); border-radius: 16px; padding: 12px; overflow: hidden; box-shadow: 0 16px 36px rgba(15,23,42,.12); background: #ffffff; }
+        .user-menu-header { padding: 4px 6px 10px; }
+        .user-menu-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 10px; color: #1e293b; text-decoration: none; transition: background .15s ease; margin-bottom: 2px; }
+        .user-menu-row.clickable:hover { background: #f8fafc; color: #1e293b; }
+        .user-menu-avatar { width: 38px; height: 38px; border-radius: 10px; display:flex; align-items:center; justify-content:center; background: #eef2ff; color:#2563eb; font-size: 1.25rem; flex-shrink: 0; }
+        .user-dropdown:focus, .user-dropdown:active, .user-dropdown.show { color: #1e293b !important; box-shadow: none !important; outline: none !important; }
+        /* Language Toggle Switch (Red background with ID/EN dynamic inside white knob) */
+        .lang-toggle-switch { position: relative; display: inline-block; width: 50px; height: 26px; margin-bottom: 0; cursor: pointer; flex-shrink: 0; user-select: none; }
+        .lang-toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+        .lang-toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ed1c2e; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 9999px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.2); }
+        .lang-toggle-slider::before { position: absolute; content: "ID"; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: #ffffff; color: #ed1c2e; font-size: 0.65rem; font-weight: 800; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        .lang-toggle-switch input:checked + .lang-toggle-slider { background-color: #ed1c2e; }
+        .lang-toggle-switch input:checked + .lang-toggle-slider::before { content: "EN"; color: #ed1c2e; transform: translateX(24px); }
+        .user-menu-logout-btn { background: #fff5f5; border: 1px solid #fecaca; border-radius: 10px; padding: 9px 14px; color: #dc2626; font-weight: 600; font-size: 0.85rem; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all .15s ease-in-out; cursor: pointer; }
+        .user-menu-logout-btn:hover { background: #fee2e2; border-color: #fca5a5; color: #991b1b; }
+        /* iOS iPhone Switch Style */
+        .form-check.form-switch { padding-left: 0; display: inline-flex; align-items: center; }
+        .form-check.form-switch .form-check-input {
+            width: 44px;
+            height: 24px;
+            margin-left: 0;
+            background-color: #e5e5ea;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff' filter='drop-shadow(0 1px 2px rgba(0,0,0,0.15))'/%3e%3c/svg%3e");
+            background-position: left 2px center;
+            background-size: 20px 20px;
+            border-radius: 24px;
+            border: 1px solid transparent;
+            transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), background-position 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+            cursor: pointer;
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06);
+        }
+        .form-check.form-switch .form-check-input:checked {
+            background-color: #ed1c2e;
+            border-color: transparent;
+            background-position: right 2px center;
+            box-shadow: 0 2px 6px rgba(237, 28, 46, 0.35);
+        }
+        .form-check.form-switch .form-check-input:focus {
+            box-shadow: 0 0 0 3px rgba(237, 28, 46, 0.18);
+            border-color: transparent;
+        }
+        /* Universal ERP Button Design System */
+        .btn {
+            border-radius: 6px !important;
+            font-weight: 600 !important;
+            font-size: 0.82rem !important;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 6px 14px !important;
+            transition: all 0.15s ease-in-out !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+        }
+        .btn[style*="display: none"],
+        .btn[style*="display:none"],
+        .btn.d-none,
+        .d-none {
+            display: none !important;
+        }
+        .btn-sm {
+            padding: 4px 10px !important;
+            font-size: 0.76rem !important;
+            border-radius: 5px !important;
+        }
+        .btn-lg {
+            padding: 9px 18px !important;
+            font-size: 0.90rem !important;
+            border-radius: 8px !important;
+        }
+
+        /* 🔴 1. Red Button - KHUSUS UNTUK BUAT BARU, PROCESS / SUBMIT FORM, HAPUS, & AKSI */
+        .btn-danger, 
+        .btn-create, 
+        .btn-process,
+        .btn-submit,
+        #btnDelScan,
+        button.btn-del,
+        form button[type="submit"]:not(.btn-secondary):not(.btn-light):not(.btn-outline-secondary):not(.btn-lang):not(.user-menu-logout-btn),
+        form input[type="submit"]:not(.btn-secondary):not(.btn-light) {
+            background-color: #ed1c2e !important;
+            border-color: #ed1c2e !important;
+            color: #ffffff !important;
+        }
+        .btn-danger i,
+        .btn-create i,
+        .btn-process i,
+        .btn-submit i,
+        #btnDelScan i,
+        form button[type="submit"]:not(.btn-secondary):not(.btn-light):not(.btn-outline-secondary):not(.btn-lang):not(.user-menu-logout-btn) i {
+            color: #ffffff !important;
+        }
+        .btn-danger:hover, .btn-danger:focus, .btn-danger:active,
+        .btn-create:hover, .btn-create:focus, .btn-create:active,
+        .btn-process:hover, .btn-process:focus, .btn-process:active,
+        .btn-submit:hover, .btn-submit:focus, .btn-submit:active,
+        #btnDelScan:hover, #btnDelScan:focus, #btnDelScan:active,
+        form button[type="submit"]:not(.btn-secondary):not(.btn-light):not(.btn-outline-secondary):not(.btn-lang):not(.user-menu-logout-btn):hover {
+            background-color: #cb1323 !important;
+            border-color: #cb1323 !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 6px rgba(237, 28, 46, 0.3) !important;
+        }
+
+        /* 🔴 2. Universal ERP Table Action Hamburger Button - TETAP WARNA MERAH */
+        .btn-action-table {
+            width: 32px !important;
+            height: 32px !important;
+            min-width: 32px !important;
+            padding: 0 !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border-radius: 8px !important;
+            background-color: #ed1c2e !important;
+            border-color: #ed1c2e !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 4px rgba(237, 28, 46, 0.25) !important;
+            transition: all 0.15s ease-in-out !important;
+        }
+        .btn-action-table:hover, .btn-action-table:focus, .btn-action-table:active, .btn-action-table.show {
+            background-color: #cb1323 !important;
+            border-color: #cb1323 !important;
+            color: #ffffff !important;
+            transform: scale(1.05);
+        }
+        .btn-action-table::after {
+            display: none !important;
+        }
+        .btn-action-table i {
+            font-size: 16px !important;
+            line-height: 1 !important;
+            margin: 0 !important;
+            color: #ffffff !important;
+        }
+
+        /* 🟢 3. Button SCAN & TAMBAH - TETAP WARNA HIJAU */
+        button.btn-success,
+        a.btn.btn-success,
+        .btn-scan,
+        #btnAddScan {
+            background-color: #059669 !important;
+            border-color: #059669 !important;
+            color: #ffffff !important;
+            font-weight: 600 !important;
+        }
+        button.btn-success i,
+        a.btn.btn-success i,
+        .btn-scan i,
+        #btnAddScan i {
+            color: #ffffff !important;
+        }
+        button.btn-success:hover, button.btn-success:focus, button.btn-success:active,
+        a.btn.btn-success:hover, a.btn.btn-success:focus, a.btn.btn-success:active,
+        .btn-scan:hover, .btn-scan:focus, .btn-scan:active,
+        #btnAddScan:hover, #btnAddScan:focus, #btnAddScan:active {
+            background-color: #047857 !important;
+            border-color: #047857 !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3) !important;
+        }
+
+        /* 🔘 4. Button Lainnya: Abu-abu Soft dengan Text Abu Gelap (#f1f5f9 / text #334155) */
+        .btn-secondary,
+        .btn-dark,
+        .btn-slate,
+        .btn-warning,
+        .btn-info,
+        .btn-outline-dark, 
+        .btn-light, 
+        .btn-outline-secondary,
+        .btn-outline-warning,
+        .btn-outline-primary,
+        .dt-button {
+            background-color: #f1f5f9 !important;
+            border: 1px solid #cbd5e1 !important;
+            color: #334155 !important;
+            font-weight: 600 !important;
+        }
+        .btn-secondary i,
+        .btn-dark i,
+        .btn-slate i,
+        .btn-warning i,
+        .btn-info i,
+        .btn-outline-dark i,
+        .btn-light i,
+        .btn-outline-secondary i,
+        .dt-button i {
+            color: #334155 !important;
+        }
+        .btn-secondary:hover, .btn-secondary:focus, .btn-secondary:active,
+        .btn-dark:hover, .btn-dark:focus, .btn-dark:active,
+        .btn-slate:hover, .btn-slate:focus, .btn-slate:active,
+        .btn-warning:hover, .btn-warning:focus, .btn-warning:active,
+        .btn-info:hover, .btn-info:focus, .btn-info:active,
+        .btn-outline-dark:hover, .btn-outline-dark:focus,
+        .btn-light:hover, .btn-light:focus,
+        .btn-outline-secondary:hover, .btn-outline-secondary:focus,
+        .dt-button:hover, .dt-button:focus {
+            background-color: #e2e8f0 !important;
+            border-color: #94a3b8 !important;
+            color: #0f172a !important;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06) !important;
+        }
+        .btn-secondary:hover i,
+        .btn-light:hover i,
+        .btn-outline-secondary:hover i,
+        .dt-button:hover i {
+            color: #0f172a !important;
+        }
+
+        /* Override rounded-pill on buttons to standard 6px/8px */
+        .btn.rounded-pill, button.rounded-pill, a.btn.rounded-pill {
+            border-radius: 6px !important;
+        }
+        .topbar-search-center { 
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40%;
+            max-width: 480px;
+            min-width: 200px;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .topbar-search-center form {
+            pointer-events: auto;
+        }
+        @media (max-width: 768px) {
+            .topbar-search-center { display: none !important; }
+        }
+        .global-search-group { 
+            border-radius: 999px; 
+            overflow: hidden; 
+            border: 1px solid #e2e8f0 !important; 
+            background: #f1f5f9 !important;
+            box-shadow: none !important;
+            transition: none !important;
+        }
+        .global-search-group:focus-within,
+        .global-search-group:focus,
+        .global-search-group:hover,
+        .global-search-group:active {
+            border-color: #e2e8f0 !important;
+            box-shadow: none !important;
+            background: #f1f5f9 !important;
+            outline: none !important;
+        }
+        .global-search-group .input-group-text, 
+        .global-search-group .form-control,
+        .global-search-group .form-control:focus,
+        .global-search-group .form-control:hover,
+        .global-search-group .form-control:active,
+        .global-search-group .global-search-command { 
+            border: 0 !important; 
+            background: transparent !important; 
+            background-color: transparent !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }
+        .global-search-command { display:flex; align-items:center; gap:5px; padding:0 10px; color:#64748b; }
+        .global-search-command:hover { color:#ed1c2e; }
+        .global-search-command kbd, .command-palette-input kbd { font-size:.62rem; color:#64748b; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:4px; padding:2px 5px; }
+        .command-palette-dialog { max-width: 650px; }
+        .command-palette-dialog .modal-content { border-radius:18px; overflow:hidden; }
+        .command-palette-icon { display:grid; place-items:center; width:34px; height:34px; border-radius:10px; background:#fff1f2; color:#ed1c2e; }
+        .command-palette-input { border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; }
+        .command-palette-input .form-control, .command-palette-input .input-group-text { border:0; box-shadow:none; }
+        .command-palette-results { max-height:390px; overflow:auto; }
+        .command-palette-results .list-group-item:hover { background:#fff7f7; }
+        .notification-action-item { display:flex; align-items:center; gap:9px; white-space:normal; }
+        .notification-action-item strong { display:block; color:#1e293b; font-size:.76rem; }
+        .notification-action-item small { display:block; color:#64748b; font-size:.68rem; line-height:1.35; margin-top:2px; }
+        .notification-action-icon { display:grid; place-items:center; width:30px; height:30px; flex:none; border-radius:9px; }
+        
+        /* Topbar & Link buttons must remain clean and borderless */
+        .btn-link, 
+        .top-navbar .btn, 
+        .top-navbar button,
+        .user-dropdown,
+        .topbar-bell-btn,
+        .btn-close {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            text-decoration: none !important;
+        }
+        .topbar-bell-btn {
+            width: 38px !important;
+            height: 38px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border-radius: 8px !important;
+            padding: 0 !important;
+            text-decoration: none !important;
+            border: none !important;
+        }
+        .topbar-bell-btn .ph-bell {
+            color: #f59e0b !important;
+            transition: transform 0.15s ease;
+        }
+        .topbar-bell-btn:hover .ph-bell {
+            transform: scale(1.08);
+        }
+        .topbar-bell-btn:hover, .topbar-bell-btn:focus, .topbar-bell-btn:active {
+            background: rgba(0, 0, 0, 0.04) !important;
+            text-decoration: none !important;
+            border: none !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }
+        .topbar-bell-btn::after {
+            display: none !important;
+        }
+        .top-navbar .dropdown > .btn-link {
+            padding: 6px !important;
+            color: #475569 !important;
+            text-decoration: none !important;
+        }
+        .top-navbar .dropdown > .btn-link:hover {
+            background: rgba(0, 0, 0, 0.04) !important;
+            color: #0f172a !important;
+            border-radius: 8px !important;
+            text-decoration: none !important;
+        }
+        .user-dropdown {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            padding: 6px 12px !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            color: #1e293b !important;
+            border-radius: 8px !important;
+        }
+        .user-dropdown:hover, .user-dropdown:focus, .user-dropdown:active {
+            background: rgba(0, 0, 0, 0.05) !important;
+            border: none !important;
+            color: #0f172a !important;
+        }
+
+        /* Frameless Animated Sidebar Toggle Button (< untuk minimize, > untuk maximize) - TETAP HITAM */
+        .sidebar-toggle-btn {
+            width: 36px !important;
+            height: 36px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border-radius: 8px !important;
+            border: none !important;
+            background: transparent !important;
+            color: #000000 !important;
+            box-shadow: none !important;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+            cursor: pointer;
+            padding: 0 !important;
+            overflow: hidden;
+            position: relative;
+        }
+        .sidebar-toggle-btn:hover {
+            background: rgba(0, 0, 0, 0.06) !important;
+            color: #000000 !important;
+            border: none !important;
+            box-shadow: none !important;
+            transform: scale(1.05);
+        }
+        .sidebar-toggle-btn:active {
+            transform: scale(0.92);
+        }
+        .sidebar-toggle-btn .toggle-icon {
+            font-size: 1.25rem !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            color: #000000 !important;
+            transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.25s ease;
+        }
+        /* Desktop: Saat sidebar di-minimize, icon < berputar 180deg menjadi > - TETAP HITAM */
+        body.sidebar-collapsed .sidebar-toggle-btn .toggle-icon {
+            transform: rotate(180deg);
+            color: #000000 !important;
+        }
+        /* Mobile: Default tersembunyi (icon >), saat dibuka menjadi < - TETAP HITAM */
+        @media (max-width: 991.98px) {
+            .sidebar-toggle-btn .toggle-icon {
+                transform: rotate(180deg);
+                color: #000000 !important;
+            }
+            body:has(#sidebar.show) .sidebar-toggle-btn .toggle-icon {
+                transform: rotate(0deg);
+                color: #000000 !important;
+            }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    
+    <style>
+        .flatpickr-calendar { box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important; border-radius: 12px !important; border: none !important; padding: 10px; }
+        .flatpickr-day.selected { border-radius: 8px !important; font-weight: 600; }
+        .flatpickr-day { border-radius: 8px !important; }
+        input[type="date"], input.flatpickr-input { 
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236c757d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='16' y1='2' x2='16' y2='6'%3E%3C/line%3E%3Cline x1='8' y1='2' x2='8' y2='6'%3E%3C/line%3E%3Cline x1='3' y1='10' x2='21' y2='10'%3E%3C/line%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 36px;
+        }
+    </style>
+    </head>
+<body class="{% if request.path == '/' %}dashboard-page{% endif %} {% if is_finance_spreadsheet %}finance-spreadsheet-mode{% endif %} {% if '/operations/' in request.path %}operations-module{% endif %}">
+    {% if user.is_authenticated %}
+    <!-- ─── Sidebar ──────────────────────────────── -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand justify-content-center py-4">
+            <img src="/static/img/logo.webp" alt="Paketin Cargo Logo" style="width: 160px; height: auto;">
+        </div>
+        <nav class="sidebar-nav">
+            <a href="/" class="sidebar-link {% if request.path == '/' %}active{% endif %}">
+                <i class="ph-duotone ph-gauge"></i>
+                <span>Dashboard</span>
+            </a>
+
+            {% if can_access_master and menu_vis.module_master %}
+            <a href="#masterDataMenu" data-bs-toggle="collapse" class="sidebar-section-title module-section-toggle mt-3 {% if 'master' in request.path or 'users' in request.path %}active{% endif %}" role="button" aria-expanded="false" aria-controls="masterDataMenu">
+                <span>DATA MASTER</span><i class="ph-bold ph-caret-down"></i>
+            </a>
+            <div class="collapse" id="masterDataMenu">
+                {% if menu_vis.menu_master_banks %}
+                <a href="{% url 'master:banks' %}" class="sidebar-link {% if 'banks' in request.path %}active{% endif %}">
+                    <i class="ph-duotone ph-bank"></i>
+                    <span>Banks</span>
+                </a>
+                {% endif %}
+                {% if menu_vis.menu_master_branches %}
+                <a href="{% url 'master:branches' %}" class="sidebar-link {% if 'branches' in request.path %}active{% endif %}">
+                    <i class="ph-duotone ph-buildings"></i>
+                    <span>Branches</span>
+                </a>
+                {% endif %}
+                {% if menu_vis.menu_master_coverage %}
+                <a href="{% url 'master:coverage' %}" class="sidebar-link {% if 'coverage' in request.path %}active{% endif %}">
+                    <i class="ph-duotone ph-map-pin"></i>
+                    <span>Coverage By District</span>
+                </a>
+                {% endif %}
+                {% if menu_vis.menu_master_customer %}
+                <a href="{% url 'master:customer' %}" class="sidebar-link {% if 'customer' in request.path %}active{% endif %}">
+                    <i class="ph-duotone ph-users"></i>
+                    <span>Customer</span>
+                </a>
+                {% endif %}
+                {% if menu_vis.menu_master_vehicle %}
+                <a href="{% url 'master:vehicle' %}" class="sidebar-link {% if 'vehicle' in request.path %}active{% endif %}">
+                    <i class="ph-duotone ph-truck"></i>
+                    <span>Vehicle</span>
+                </a>
+                {% endif %}
+                {% if menu_vis.menu_master_price %}
+                <a href="{% url 'master:price' %}" class="sidebar-link {% if 'price' in request.path %}active{% endif %}">
+                    <i class="ph-duotone ph-tag"></i>
+                    <span>Price</span>
+                </a>
+                {% endif %}
+                {% if menu_vis.menu_master_services %}
+                <a href="{% url 'master:services' %}" class="sidebar-link {% if 'services' in request.path %}active{% endif %}">
+                    <i class="ph-duotone ph-cube"></i>
+                    <span>Services</span>
+                </a>
+                {% endif %}
+                {% if menu_vis.menu_master_vendors %}
+                <a href="{% url 'master:vendors' %}" class="sidebar-link {% if 'vendors' in request.path %}active{% endif %}">
+                    <i class="ph-duotone ph-storefront"></i>
+                    <span>Vendors</span>
+                </a>
+                {% endif %}
+                {% if menu_vis.menu_master_users %}
+                <a href="{% url 'accounts:user_list' %}" class="sidebar-link {% if 'users' in request.path %}active{% endif %}">
+                    <i class="ph-duotone ph-user-gear"></i>
+                    <span>Users</span>
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            {% if can_access_crm and menu_vis.module_crm %}
+            <a href="#crmSalesMenu" data-bs-toggle="collapse" class="sidebar-section-title module-section-toggle mt-3 {% if '/crm/' in request.path %}active{% endif %}" role="button" aria-expanded="false" aria-controls="crmSalesMenu"><span>SALES</span><i class="ph-bold ph-caret-down"></i></a>
+            <div class="collapse" id="crmSalesMenu">
+            {% if menu_vis.menu_crm_client %}
+            <a href="{% url 'crm:client-list' %}" class="sidebar-link {% if 'crm/client' in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-buildings"></i>
+                <span>Klien</span>
+            </a>
+            {% endif %}
+            {% if menu_vis.menu_crm_lead %}
+            <a href="{% url 'crm:lead-list' %}" class="sidebar-link {% if 'crm/lead' in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-funnel"></i>
+                <span>Peluang (Lead)</span>
+            </a>
+            {% endif %}
+            {% if menu_vis.menu_crm_contract %}
+            <a href="{% url 'crm:contract-list' %}" class="sidebar-link {% if 'crm/contract' in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-handshake"></i>
+                <span>Kontrak</span>
+            </a>
+            {% endif %}
+            {% if menu_vis.menu_crm_quotation %}
+            <a href="{% url 'crm:quotation-list' %}" class="sidebar-link {% if 'crm/quotation' in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-file-text"></i>
+                <span>{% if CURRENT_LANGUAGE == 'en' %}Quotation{% else %}Penawaran{% endif %}</span>
+            </a>
+            {% endif %}
+            {% if menu_vis.menu_crm_activity %}
+            <a href="{% url 'crm:activity-list' %}" class="sidebar-link {% if 'crm/activity' in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-book-open-text"></i>
+                <span>Aktivitas</span>
+            </a>
+            {% endif %}
+            {% if menu_vis.menu_crm_report %}
+            <a href="{% url 'crm:sales-report' %}" class="sidebar-link {% if '/crm/reports' in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-chart-line-up"></i>
+                <span>Report</span>
+            </a>
+            {% endif %}
+            </div>
+            {% endif %}
+
+            {% if can_access_operations and menu_vis.module_operations %}
+            <a href="#operationalMenu" data-bs-toggle="collapse" class="sidebar-section-title module-section-toggle mt-3 {% if '/operations/' in request.path %}active{% endif %}" role="button" aria-expanded="false" aria-controls="operationalMenu"><span>OPERATIONAL</span><i class="ph-bold ph-caret-down"></i></a>
+            <div class="collapse" id="operationalMenu">
+            
+            <!-- 1. Pick Up -->
+            {% if menu_vis.menu_ops_pickup %}
+            <a href="{% url 'operations:pickup-list' %}" class="sidebar-link {% if 'pickup' in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-package"></i>
+                <span>Pick Up</span>
+            </a>
+            {% endif %}
+            
+            <!-- 2. POS / Pembuatan Resi -->
+            {% if menu_vis.menu_ops_pos %}
+            <a href="{% url 'operations:shipment-list' %}" class="sidebar-link {% if 'shipments' in request.path and 'INCOMING' not in request.get_full_path and 'manifests' not in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-file-text"></i>
+                <span>Shipments</span>
+            </a>
+            {% endif %}
+            
+            <!-- 3. Outgoing -->
+            {% if menu_vis.menu_ops_outgoing %}
+            <a href="{% url 'operations:manifest-list' %}?type=OUTGOING" class="sidebar-link {% if 'type=OUTGOING' in request.get_full_path or 'manifests' in request.path and 'type=' not in request.get_full_path %}active{% endif %}">
+                <i class="ph-duotone ph-export"></i>
+                <span>Outgoing</span>
+            </a>
+            {% endif %}
+            
+            <!-- 4. Transfer Location -->
+            {% if menu_vis.menu_ops_transfer %}
+            <a href="{% url 'operations:manifest-list' %}?type=TRANSFER" class="sidebar-link {% if 'type=TRANSFER' in request.get_full_path or 'transfer' in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-arrows-left-right"></i>
+                <span>Transfer Location</span>
+            </a>
+            {% endif %}
+            
+            <!-- 4.5 Transit -->
+            {% if menu_vis.menu_ops_transit %}
+            <a href="{% url 'operations:scan-transit' %}" class="sidebar-link {% if 'scan/transit' in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-truck"></i>
+                <span>Transit</span>
+            </a>
+            {% endif %}
+            
+            <!-- 5. Incoming Destination -->
+            {% if menu_vis.menu_ops_incoming %}
+            <a href="{% url 'operations:incoming-list' %}" class="sidebar-link {% if 'incoming' in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-download-simple"></i>
+                <span>Incoming Destination</span>
+            </a>
+            {% endif %}
+            
+            <!-- 6. Delivery -->
+            {% if menu_vis.menu_ops_delivery %}
+            <a href="{% url 'operations:manifest-list' %}?type=DELIVERY" class="sidebar-link {% if 'type=DELIVERY' in request.get_full_path %}active{% endif %}">
+                <i class="ph-duotone ph-truck"></i>
+                <span>Delivery</span>
+            </a>
+            {% endif %}
+            
+            <!-- 7. POD -->
+            {% if menu_vis.menu_ops_pod %}
+            <a href="{% url 'operations:pod_list' %}" class="sidebar-link {% if 'pod' in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-check-square-offset"></i>
+                <span>POD</span>
+            </a>
+            {% endif %}
+
+            <!-- 8. DO Balik -->
+            {% if menu_vis.menu_ops_dobalik %}
+            <a href="{% url 'operations:do-balik-list' %}" class="sidebar-link {% if 'do-balik' in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-files"></i>
+                <span>DO Balik</span>
+                {% if pending_do_balik_count %}
+                <span class="badge bg-danger text-white rounded-pill ms-auto px-2 py-1" style="font-size: 0.68rem;">{{ pending_do_balik_count }}</span>
+                {% endif %}
+            </a>
+            {% endif %}
+
+            <!-- 9. Retur (RTO) -->
+            {% if menu_vis.menu_ops_retur %}
+            <a href="{% url 'operations:return-list' %}" class="sidebar-link {% if 'returns' in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-arrow-u-up-left"></i>
+                <span>Retur (RTO)</span>
+            </a>
+            {% endif %}
+
+            <!-- Tracking & Bulky -->
+            {% if menu_vis.menu_ops_tracking %}
+            <a href="{% url 'operations:tracking' %}" class="sidebar-link {% if 'tracking/' in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-map-pin"></i>
+                <span>Tracking Pencarian</span>
+            </a>
+            {% endif %}
+            {% if menu_vis.menu_ops_print_bulky %}
+            <a href="{% url 'operations:print_bulky' %}" class="sidebar-link {% if 'print-bulky' in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-printer"></i>
+                <span>Print Bulky AWB</span>
+            </a>
+            {% endif %}
+            
+            <!-- Void -->
+            {% if menu_vis.menu_ops_void %}
+            <a href="{% url 'operations:void_credit' %}" class="sidebar-link {% if 'void' in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-trash"></i>
+                <span>Void</span>
+            </a>
+            {% endif %}
+
+            <!-- Report Resi & SLA -->
+            {% if menu_vis.menu_ops_report %}
+            <a href="{% url 'operations:report-sla' %}" class="sidebar-link {% if '/operations/reports' in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-chart-bar"></i>
+                <span>Report</span>
+            </a>
+            {% endif %}
+            </div>
+            {% endif %}
+
+            {% if can_access_finance and menu_vis.module_finance %}
+            <a href="#financeMenu" data-bs-toggle="collapse" class="sidebar-section-title module-section-toggle mt-3 {% if '/finance/' in request.path %}active{% endif %}" role="button" aria-expanded="false" aria-controls="financeMenu"><span>FINANCE</span><i class="ph-bold ph-caret-down"></i></a>
+            <div class="collapse" id="financeMenu">
+            {% if menu_vis.menu_fin_worksheet %}
+            <a href="{% url 'finance:worksheet' %}" class="sidebar-link {% if request.path == '/finance/' %}active{% endif %}">
+                <i class="ph-duotone ph-table"></i>
+                <span>Worksheet</span>
+            </a>
+            {% endif %}
+            {% if menu_vis.menu_fin_ldp %}
+            <a href="{% url 'finance:ldp_list' %}" class="sidebar-link {% if 'ldp' in request.path or 'unbilled' in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-clipboard-text"></i>
+                <span>LDP (Lembar Daftar Pengiriman)</span>
+            </a>
+            {% endif %}
+            {% if menu_vis.menu_fin_invoice %}
+            <a href="{% url 'finance:invoice_list' %}" class="sidebar-link {% if 'invoices' in request.path and 'invoice-process' not in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-receipt"></i>
+                <span>Invoice</span>
+            </a>
+            {% endif %}
+            {% if menu_vis.menu_fin_process %}
+            <a href="{% url 'finance:invoice_process' %}" class="sidebar-link {% if 'invoice-process' in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-check-square-offset"></i>
+                <span>Invoice Process</span>
+            </a>
+            {% endif %}
+            {% if menu_vis.menu_fin_report %}
+            <a href="{% url 'finance:financial_report' %}" class="sidebar-link {% if '/finance/report' in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-chart-line-up"></i>
+                <span>Report</span>
+            </a>
+            {% endif %}
+            </div>
+            {% endif %}
+
+            {% if can_access_hr and menu_vis.module_hr %}
+            <a href="#hrMenu" data-bs-toggle="collapse" class="sidebar-section-title module-section-toggle mt-3 {% if '/employees/' in request.path or '/attendance/' in request.path or '/leave/' in request.path or '/documents/' in request.path %}active{% endif %}" role="button" aria-expanded="false" aria-controls="hrMenu"><span>HRGA</span><i class="ph-bold ph-caret-down"></i></a>
+            <div class="collapse {% if '/employees/' in request.path or '/attendance/' in request.path or '/leave/' in request.path or '/documents/' in request.path %}show{% endif %}" id="hrMenu">
+            {% if menu_vis.menu_hr_employees %}
+            <a href="{% url 'employees:employee_list' %}" class="sidebar-link {% if 'employees' in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-users-three"></i>
+                <span>Data Karyawan</span>
+            </a>
+            {% endif %}
+            {% if menu_vis.menu_hr_attendance %}
+            <a href="{% url 'attendance:attendance_list' %}" class="sidebar-link {% if 'attendance' in request.path and 'policies' not in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-calendar-check"></i>
+                <span>Kehadiran & Absensi</span>
+            </a>
+            {% endif %}
+            {% if menu_vis.menu_hr_policy %}
+            <a href="{% url 'attendance:policy_list' %}" class="sidebar-link {% if 'policies' in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-sliders-horizontal"></i>
+                <span>Kebijakan Absensi</span>
+            </a>
+            {% endif %}
+            {% if menu_vis.menu_hr_leave %}
+            <a href="{% url 'leave:leave_list' %}" class="sidebar-link {% if 'leave' in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-airplane-takeoff"></i>
+                <span>Pengajuan Cuti & Izin</span>
+            </a>
+            {% endif %}
+            {% if menu_vis.menu_hr_documents %}
+            <a href="{% url 'documents:document_list' %}" class="sidebar-link {% if 'documents' in request.path %}active{% endif %}">
+                <i class="ph-duotone ph-folders"></i>
+                <span>Berkas & Dokumen</span>
+            </a>
+            {% endif %}
+            </div>
+            {% endif %}
+
+            {% if can_access_vm and menu_vis.module_vm %}
+            <a href="#vmMenu" data-bs-toggle="collapse" class="sidebar-section-title module-section-toggle mt-3" role="button" aria-expanded="false" aria-controls="vmMenu"><span>VENDOR MANAGEMENT</span><i class="ph-bold ph-caret-down"></i></a>
+            <div class="collapse" id="vmMenu">
+            {% if menu_vis.menu_vm_armada %}
+            <a href="#" class="sidebar-link">
+                <i class="ph-duotone ph-truck"></i>
+                <span>Armada</span>
+            </a>
+            {% endif %}
+            {% if menu_vis.menu_vm_maintenance %}
+            <a href="#" class="sidebar-link">
+                <i class="ph-duotone ph-wrench"></i>
+                <span>Maintenance</span>
+            </a>
+            {% endif %}
+            {% if menu_vis.menu_vm_bbm %}
+            <a href="#" class="sidebar-link">
+                <i class="ph-duotone ph-gas-pump"></i>
+                <span>BBM & Pengeluaran</span>
+            </a>
+            {% endif %}
+            </div>
+            {% endif %}
+
+            {% if can_access_admin and menu_vis.module_admin %}
+            <a href="#adminMenu" data-bs-toggle="collapse" class="sidebar-section-title module-section-toggle mt-3 {% if '/admin/' in request.path %}active{% endif %}" role="button" aria-expanded="false" aria-controls="adminMenu"><span>ADMIN</span><i class="ph-bold ph-caret-down"></i></a>
+            <div class="collapse" id="adminMenu">
+            {% if menu_vis.menu_admin_settings %}
+            <a href="/admin/" class="sidebar-link" target="_blank">
+                <i class="ph-duotone ph-gear"></i>
+                <span>Pengaturan Sistem</span>
+            </a>
+            {% endif %}
+            </div>
+            {% endif %}
+        </nav>
+    </aside>
+
+    <!-- ─── Main Content ─────────────────────────── -->
+    <div class="main-wrapper" id="mainWrapper">
+        <!-- Navbar -->
+        <nav class="top-navbar">
+            <!-- Left: Sidebar Toggle & Page Title -->
+            <div class="navbar-left d-flex align-items-center gap-3">
+                <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar" title="Perkecil / Perluas Sidebar">
+                    <i class="ph-bold ph-caret-left toggle-icon"></i>
+                </button>
+                <h1 class="page-title mb-0 fs-5 fw-bold text-dark text-nowrap">{% block page_title %}{{ title|default:"Dasbor Utama" }}{% endblock %}</h1>
+            </div>
+
+            <!-- Center: Universal Search Field -->
+            <div class="topbar-search-center d-flex justify-content-center flex-grow-1 mx-3">
+                <form action="{% url 'universal_search' %}" method="get" class="w-100" style="max-width: 320px;">
+                    <div class="input-group global-search-group w-100">
+                        <span class="input-group-text bg-transparent border-0 rounded-start-pill text-muted ps-3"><i class="ph-duotone ph-magnifying-glass"></i></span>
+                        <input type="text" name="q" class="form-control bg-transparent border-0 text-dark shadow-none" placeholder="Cari resi, manifest, customer, menu..." value="{% if request.resolver_match.url_name == 'universal_search' or is_universal_search %}{{ query|default:request.GET.q|default:'' }}{% endif %}" style="font-size: 0.86rem; outline: none !important;">
+                        <button type="button" class="global-search-command bg-transparent border-0 rounded-end-pill pe-3 shadow-none" data-bs-toggle="modal" data-bs-target="#globalSearchModal" title="Quick access (Ctrl+K)"><i class="ph-bold ph-command"></i><kbd>Ctrl K</kbd></button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Right: Actions (Notifications & User) -->
+            <div class="navbar-actions d-flex align-items-center">
+                <div class="dropdown me-3">
+                    <button class="topbar-bell-btn position-relative p-0 border-0 shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="text-decoration: none !important; border: none !important; box-shadow: none !important; outline: none !important;">
+                        <i class="ph-duotone ph-bell fs-4" style="color: #f59e0b !important;"></i>
+                        {% if unread_notifications > 0 %}
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
+                            {{ unread_notifications }}
+                        </span>
+                        {% elif action_alert_count > 0 %}
+                        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-warning border border-light rounded-circle">
+                            <span class="visually-hidden">Perlu Perhatian</span>
+                        </span>
+                        {% endif %}
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end p-0 shadow-lg border-0" style="width: 350px; border-radius: 14px; overflow: hidden;">
+                        <li class="p-3 pb-2 bg-white border-bottom d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0 fw-bold text-dark fs-6">{% if CURRENT_LANGUAGE == 'en' %}Notifications{% else %}Notifikasi &amp; Aktivitas{% endif %}</h6>
+                                <small class="text-muted" style="font-size: 0.72rem;">
+                                    {% if unread_notifications %}<span class="text-danger fw-semibold">{{ unread_notifications }} {% if CURRENT_LANGUAGE == 'en' %}unread{% else %}belum dibaca{% endif %}</span>{% else %}{% if CURRENT_LANGUAGE == 'en' %}All caught up{% else %}Semua sudah dibaca{% endif %}{% endif %}
+                                </small>
+                            </div>
+                            {% if unread_notifications > 0 %}
+                            <form method="post" action="{% url 'notifications:mark-all-read' %}" class="m-0">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-light border-0 text-muted rounded-circle d-flex align-items-center justify-content-center p-0 shadow-none" style="width: 30px; height: 30px;" title="{% if CURRENT_LANGUAGE == 'en' %}Mark all as read{% else %}Tandai Semua Sudah Dibaca{% endif %}">
+                                    <i class="ph-bold ph-checks text-success fs-5"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </li>
+
+                        <!-- Recent System Notifications -->
+                        <div style="max-height: 260px; overflow-y: auto; overflow-x: hidden;">
+                            {% if recent_notifications %}
+                            {% for n in recent_notifications %}
+                            <li>
+                                <a class="dropdown-item py-2 px-3 border-bottom d-flex align-items-start gap-2 {% if not n.is_read %}bg-light-subtle{% endif %}" href="{% if n.url %}{% url 'notifications:mark-read' n.id %}{% else %}{% url 'notifications:message-list' %}{% endif %}" style="white-space: normal; overflow: hidden;">
+                                    <span class="notification-action-icon flex-shrink-0 mt-1" style="width: 28px; height: 28px; border-radius: 8px; background: {% if n.notification_type == 'OPS' %}#e0f2fe; color: #0284c7;{% elif n.notification_type == 'FINANCE' %}#d1fae5; color: #059669;{% elif n.notification_type == 'CRM' %}#fef3c7; color: #d97706;{% elif n.notification_type == 'ATTENDANCE' or n.notification_type == 'LEAVE' %}#ede9fe; color: #7c3aed;{% else %}#f1f5f9; color: #475569;{% endif %}; display: flex; align-items: center; justify-content: center;">
+                                        {% if n.notification_type == 'OPS' %}<i class="ph-bold ph-truck" style="font-size: 13px;"></i>
+                                        {% elif n.notification_type == 'FINANCE' %}<i class="ph-bold ph-receipt" style="font-size: 13px;"></i>
+                                        {% elif n.notification_type == 'CRM' %}<i class="ph-bold ph-handshake" style="font-size: 13px;"></i>
+                                        {% elif n.notification_type == 'ATTENDANCE' %}<i class="ph-bold ph-fingerprint" style="font-size: 13px;"></i>
+                                        {% elif n.notification_type == 'LEAVE' %}<i class="ph-bold ph-calendar-x" style="font-size: 13px;"></i>
+                                        {% else %}<i class="ph-bold ph-bell" style="font-size: 13px;"></i>{% endif %}
+                                    </span>
+                                    <div class="flex-grow-1 min-w-0" style="overflow: hidden;">
+                                        <div class="d-flex justify-content-between align-items-center mb-0">
+                                            <strong class="text-dark small text-truncate" style="font-size: 0.78rem; max-width: 220px;">{{ n.title }}</strong>
+                                            {% if not n.is_read %}<span class="badge bg-primary p-1 rounded-circle ms-1" style="width: 6px; height: 6px; display: inline-block;"></span>{% endif %}
+                                        </div>
+                                        <small class="text-muted d-block text-truncate" style="font-size: 0.7rem;">{{ n.message }}</small>
+                                        <small class="text-muted" style="font-size: 0.65rem;">{{ n.created_at|date:"d M H:i" }}</small>
+                                    </div>
+                                </a>
+                            </li>
+                            {% endfor %}
+                            {% else %}
+                            <li class="text-center py-4 text-muted small">
+                                <i class="ph-duotone ph-bell-simple fs-4 d-block mb-1 text-secondary"></i>
+                                {% if CURRENT_LANGUAGE == 'en' %}No new notifications.{% else %}Belum ada notifikasi baru.{% endif %}
+                            </li>
+                            {% endif %}
+                        </div>
+
+                        <!-- Operational Attention Section -->
+                        {% if action_alerts %}
+                        <li class="bg-light px-3 py-2 border-top border-bottom">
+                            <small class="fw-bold text-dark text-uppercase" style="font-size: 0.65rem; letter-spacing: 0.5px;">{% if CURRENT_LANGUAGE == 'en' %}Operational Attention{% else %}Perlu Perhatian Operasional{% endif %}</small>
+                        </li>
+                        <div style="max-height: 160px; overflow-y: auto; overflow-x: hidden;">
+                            {% for alert in action_alerts %}
+                            <li>
+                                <a class="dropdown-item notification-action-item py-2 px-3 border-bottom d-flex align-items-center gap-2" href="{{ alert.url }}">
+                                    <span class="notification-action-icon action-tone-{{ alert.tone }}" style="width: 26px; height: 26px; font-size: 12px;"><i class="ph-bold {{ alert.icon }}"></i></span>
+                                    <span class="flex-grow-1 min-w-0"><strong class="d-block text-dark text-truncate" style="font-size: 0.76rem;">{{ alert.label }}</strong><small class="text-muted d-block text-truncate" style="font-size: 0.68rem;">{{ alert.count }} item · {{ alert.description }}</small></span>
+                                    <i class="ph-bold ph-arrow-up-right text-muted flex-shrink-0" style="font-size: 0.75rem;"></i>
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <li class="p-3 bg-white border-top">
+                            <a class="btn btn-danger w-100 py-2 d-flex align-items-center justify-content-center gap-2 text-white fw-semibold" href="{% url 'notifications:message-list' %}" style="font-size: 0.82rem; background-color: #ed1c2e !important; border-color: #ed1c2e !important; color: #ffffff !important; border-radius: 8px; box-shadow: 0 2px 5px rgba(237, 28, 46, 0.25);">
+                                <span style="color: #ffffff !important;">{% if CURRENT_LANGUAGE == 'en' %}View All Notifications{% else %}Lihat Semua Notifikasi{% endif %}</span>
+                                <i class="ph-bold ph-arrow-right text-white" style="color: #ffffff !important;"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="dropdown">
+                    <button class="btn btn-link dropdown-toggle user-dropdown" id="userMenuDropdownBtn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span>{{ user.get_full_name|default:user.username }}</span>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end user-menu">
+                        <!-- Profile Header -->
+                        <div class="user-menu-header d-flex align-items-center justify-content-between border-bottom pb-3 mb-2">
+                            <div class="d-flex align-items-center gap-2 min-w-0">
+                                <div class="min-w-0 text-start">
+                                    <div class="fw-bold text-dark text-truncate" style="font-size: 0.9rem;">
+                                        {{ user.get_full_name|default:user.username }}
+                                    </div>
+                                    <div class="text-muted text-truncate" style="font-size: 0.74rem;">
+                                        <i class="ph-bold ph-buildings me-1 text-secondary"></i>{% if user.employee_profile and user.employee_profile.branch %}{{ user.employee_profile.branch.name }} - {{ user.employee_profile.branch.code }}{% elif user_branch %}{{ user_branch.name }} - {{ user_branch.code|default:"BKS" }}{% else %}Cabang Bekasi - BKS{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Divisi / Role | Jabatan -->
+                        <div class="user-menu-row">
+                            <div class="d-flex align-items-center gap-2 min-w-0">
+                                <i class="ph-duotone ph-users-three text-secondary fs-5 flex-shrink-0"></i>
+                                <div class="min-w-0 text-start">
+                                    <div class="text-muted" style="font-size: 0.68rem; line-height: 1.1;">Divisi / Role</div>
+                                    <div class="fw-semibold text-dark text-truncate" style="font-size: 0.82rem;">
+                                        {% if user.is_superuser %}
+                                            Superadmin{% if user.employee_profile and user.employee_profile.position %} | {{ user.employee_profile.position.name }}{% endif %}
+                                        {% elif user.roles.all %}
+                                            {{ user.roles.first.name }}{% if user.employee_profile and user.employee_profile.position %} | {{ user.employee_profile.position.name }}{% endif %}
+                                        {% elif user.employee_profile and user.employee_profile.position %}
+                                            {{ user.get_user_type_display|default:"Staff" }} | {{ user.employee_profile.position.name }}
+                                        {% else %}
+                                            {{ user.get_user_type_display|default:"Admin / Staff" }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bahasa -->
+                        <div class="user-menu-row">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="ph-duotone ph-translate text-secondary fs-5 flex-shrink-0"></i>
+                                <div class="text-start">
+                                    <div class="fw-semibold text-dark" style="font-size: 0.82rem;">Bahasa</div>
+                                    <div class="text-muted" style="font-size: 0.68rem;">Pilihan bahasa sistem</div>
+                                </div>
+                            </div>
+                            <form id="langToggleForm" method="post" action="{% url 'set_language' %}" class="m-0 d-flex align-items-center">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <input type="hidden" name="language" id="langToggleInput" value="{% if CURRENT_LANGUAGE == 'en' %}id{% else %}en{% endif %}">
+                                <label class="lang-toggle-switch" title="Ganti bahasa ke {% if CURRENT_LANGUAGE == 'en' %}Bahasa Indonesia (ID){% else %}English (EN){% endif %}">
+                                    <input type="checkbox" id="langSwitchInput" onchange="sessionStorage.setItem('reopen_user_menu', '1'); document.getElementById('langToggleForm').submit();" {% if CURRENT_LANGUAGE == 'en' %}checked{% endif %}>
+                                    <span class="lang-toggle-slider"></span>
+                                </label>
+                            </form>
+                        </div>
+
+                        <!-- Personalisasi & Opsi -->
+                        <a href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#personalizationModal" class="user-menu-row clickable">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="ph-duotone ph-sliders text-secondary fs-5 flex-shrink-0"></i>
+                                <div class="text-start">
+                                    <div class="fw-semibold text-dark" style="font-size: 0.82rem;">Personalisasi &amp; Opsi</div>
+                                    <div class="text-muted" style="font-size: 0.68rem;">Tema, Zoom tampilan &amp; preferensi</div>
+                                </div>
+                            </div>
+                            <i class="ph-bold ph-caret-right text-muted" style="font-size: 0.8rem;"></i>
+                        </a>
+
+                        <!-- Admin Panel (Khusus Role Admin / Superadmin) -->
+                        {% if user.is_superuser or user.is_staff or user.user_type == 'ADMIN' %}
+                        <a href="{% url 'admin:index' %}" target="_blank" class="user-menu-row clickable">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="ph-duotone ph-shield-check text-secondary fs-5 flex-shrink-0"></i>
+                                <div class="text-start">
+                                    <div class="fw-semibold text-dark" style="font-size: 0.82rem;">Admin Panel</div>
+                                    <div class="text-muted" style="font-size: 0.68rem;">Akses database &amp; sistem</div>
+                                </div>
+                            </div>
+                            <i class="ph-bold ph-arrow-square-out text-muted" style="font-size: 0.85rem;"></i>
+                        </a>
+                        {% endif %}
+
+                        <hr class="my-2 border-top">
+
+                        <!-- Logout -->
+                        <form method="post" action="{% url 'accounts:logout' %}" class="m-0 mt-1">
+                            {% csrf_token %}
+                            <button type="submit" class="user-menu-logout-btn">
+                                <i class="ph-duotone ph-sign-out fs-5"></i>
+                                <span>Keluar</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="modal fade" id="globalSearchModal" tabindex="-1" aria-labelledby="globalSearchLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered command-palette-dialog">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-header border-bottom px-4 py-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="command-palette-icon"><i class="ph-bold ph-command"></i></span>
+                            <div><h5 class="modal-title mb-0" id="globalSearchLabel">Quick access</h5><small class="text-muted">Cari menu sesuai akses Anda</small></div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                    </div>
+                    <div class="modal-body p-0">
+                        <div class="px-4 py-3 border-bottom">
+                            <div class="input-group command-palette-input">
+                                <span class="input-group-text border-end-0 bg-white"><i class="ph-bold ph-magnifying-glass"></i></span>
+                                <input type="search" id="globalSearchInput" class="form-control border-start-0" placeholder="Cari menu, aktivitas, atau modul..." autocomplete="off">
+                                <span class="input-group-text bg-white text-muted"><kbd>ESC</kbd></span>
+                            </div>
+                        </div>
+                        <div id="globalSearchResults" class="list-group list-group-flush command-palette-results">
+                            <div id="globalSearchEmptyState" class="text-center py-5 text-muted">
+                                <i class="ph-duotone ph-sparkle fs-1 text-danger mb-2"></i>
+                                <p class="mb-1 fw-semibold text-dark">Akses cepat ke menu ERP</p>
+                                <small>Ketik kata kunci untuk menemukan menu yang tersedia.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        {% if messages and not is_finance_spreadsheet %}
+        <div class="container-fluid px-4 mt-3">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Content Block -->
+        <main class="page-content py-4">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    {% else %}
+    <!-- Login/Auth Pages Layout -->
+    {% block auth_content %}{% endblock %}
+    {% endif %}
+
+    <!-- Bootstrap 5 JS Bundle (Local) -->
+    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+    <!-- Custom JS -->
+    <script src="/static/js/main.js?v={% now 'U' %}"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Select2 for specific select elements with .select2 or .select2-tags
+            $('select.select2, select.select2-search, select.select2-searchable, select.select2-industry').not('.no-select2').not('.select2-tags').each(function() {
+                var placeholder = $(this).data('placeholder') || '';
+                var config = {
+                    theme: 'bootstrap-5',
+                    width: '100%'
+                };
+                if (placeholder) {
+                    config.placeholder = placeholder;
+                }
+                $(this).select2(config);
+            });
+            
+            // Initialize Select2 with tags support
+            $('.select2-tags').select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                tags: true,
+                placeholder: 'Pilih atau Ketik Baru...'
+            });
+
+            // Preserve sidebar scroll position across page reloads
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) {
+                const scrollPos = sessionStorage.getItem('sidebarScrollPos');
+                if (scrollPos) {
+                    sidebar.scrollTop = parseInt(scrollPos, 10);
+                }
+                
+                window.addEventListener('beforeunload', function() {
+                    sessionStorage.setItem('sidebarScrollPos', sidebar.scrollTop);
+                });
+            }
+
+            // Persist every sidebar module independently. This prevents an
+            // expanded module from resetting when navigating to another page.
+            const sidebarCollapseStorageKey = 'erpSidebarCollapseStateV2';
+            const sidebarCollapseState = (() => {
+                try {
+                    return JSON.parse(localStorage.getItem(sidebarCollapseStorageKey) || '{}');
+                } catch (error) {
+                    return {};
+                }
+            })();
+            const saveSidebarCollapseState = function() {
+                try {
+                    localStorage.setItem(sidebarCollapseStorageKey, JSON.stringify(sidebarCollapseState));
+                } catch (error) {
+                    // Sidebar persistence is optional; navigation must continue
+                    // if browser storage is unavailable.
+                }
+            };
+            const sidebarCollapses = document.querySelectorAll('#sidebar .collapse[id]');
+            let sidebarStateChanged = false;
+            const rememberSidebarCollapseState = function() {
+                sidebarCollapses.forEach(function(collapseElement) {
+                    sidebarCollapseState[collapseElement.id] = collapseElement.classList.contains('show');
+                });
+                saveSidebarCollapseState();
+            };
+
+            sidebarCollapses.forEach(function(collapseElement) {
+                const moduleId = collapseElement.id;
+                const savedState = sidebarCollapseState[moduleId];
+
+                collapseElement.addEventListener('shown.bs.collapse', function() {
+                    sidebarCollapseState[moduleId] = true;
+                    saveSidebarCollapseState();
+                });
+                collapseElement.addEventListener('hidden.bs.collapse', function() {
+                    sidebarCollapseState[moduleId] = false;
+                    saveSidebarCollapseState();
+                });
+
+                if (typeof savedState === 'boolean') {
+                    const collapseInstance = bootstrap.Collapse.getOrCreateInstance(collapseElement, { toggle: false });
+                    if (savedState) {
+                        collapseInstance.show();
+                    } else {
+                        collapseInstance.hide();
+                    }
+                } else {
+                    // The first page load is also a valid state. Persisting it
+                    // prevents the server-rendered active module from replacing
+                    // the user's expanded modules after the next navigation.
+                    sidebarCollapseState[moduleId] = collapseElement.classList.contains('show');
+                    sidebarStateChanged = true;
+                }
+            });
+
+            if (sidebarStateChanged) {
+                saveSidebarCollapseState();
+            }
+
+            // Capture the current state before a normal link navigation. This
+            // is important because the next page is server-rendered again.
+            document.querySelectorAll('#sidebar a[href]:not([data-bs-toggle="collapse"])').forEach(function(link) {
+                link.addEventListener('click', rememberSidebarCollapseState);
+            });
+            window.addEventListener('beforeunload', rememberSidebarCollapseState);
+
+            // Prevent accidental double submissions and provide consistent feedback.
+            document.querySelectorAll('form:not([data-no-loading])').forEach(function(form) {
+                form.addEventListener('submit', function(event) {
+                    if (event.defaultPrevented || form.dataset.loadingBound === 'true') return;
+                    const submitter = event.submitter || form.querySelector('button[type="submit"]');
+                    if (!submitter || submitter.disabled) return;
+                    form.dataset.loadingBound = 'true';
+                    submitter.disabled = true;
+                    submitter.classList.add('btn-loading');
+                    submitter.dataset.originalLabel = submitter.innerHTML;
+                    submitter.innerHTML = '<i class="ph-bold ph-spinner me-1"></i> Memproses...';
+                });
+            });
+        });
+    </script>
+
+    <script>
+        // Lightweight UI dictionary keeps the language switch visible across
+        // existing server-rendered screens while templates are progressively
+        // migrated to Django translation tags.
+        document.addEventListener('DOMContentLoaded', function() {
+            const lang = document.documentElement.lang || 'id';
+            const dictionaries = {
+                en: {
+                    'Dasbor Utama': 'Dashboard', 'DATA MASTER': 'MASTER DATA', 'CRM & SALES': 'CRM & SALES',
+                    'OPERATIONAL': 'OPERATIONS', 'FINANCE': 'FINANCE', 'HR & GA': 'HR & ADMIN', 'HRGA': 'HRGA', 'ADMIN': 'ADMIN',
+                    'Pick Up': 'Pickup', 'Shipments': 'Shipments', 'Outgoing': 'Outgoing',
+                    'Transfer Location': 'Transfer Location', 'Incoming Destination': 'Incoming Destination', 'Penawaran': 'Quotation',
+                    'Tracking Pencarian': 'Shipment Tracking', 'Cek Tarif': 'Rate Calculator', 'Print Bulky AWB': 'Print Bulky AWB',
+                    'Void': 'Void', 'Pengaturan Sistem': 'System Settings', 'Pelanggan': 'Customers',
+                    'Peluang (Lead)': 'Leads', 'Kontrak': 'Contracts', 'Aktivitas': 'Activities',
+                    'Data Karyawan': 'Employees', 'Kehadiran & Absensi': 'Attendance', 'Kebijakan Absensi': 'Attendance Policy',
+                    'Pengajuan Cuti & Izin': 'Leave & Permissions', 'Berkas & Dokumen': 'Documents',
+                    'DO Balik': 'POD Return', 'Retur (RTO)': 'Returns (RTO)',
+                    'LDP (Lembar Daftar Pengiriman)': 'Delivery Sheets (LDP)',
+                    'Dasbor Utama Paketin': 'Paketin Executive Dashboard', 'PAKETIN CONTROL CENTER': 'PAKETIN CONTROL CENTER',
+                    'Pengiriman Aktif': 'Active Shipments', 'Total Klien Aktif': 'Active Clients',
+                    'Total Pendapatan': 'Total Revenue', 'Karyawan Hadir': 'Employees Present',
+                    'Revenue & Profit': 'Revenue & Profit', 'Status CRM Leads': 'CRM Lead Status',
+                    'Distribusi Pengiriman': 'Shipment Distribution', 'REAL-TIME': 'REAL-TIME',
+                    'Filter Map': 'Map Filters', 'Status': 'Status', 'Origin': 'Origin',
+                    'Destination': 'Destination', 'Layanan': 'Service', 'Bahasa': 'Language',
+                    'Language preference': 'Language preference', 'Keluar': 'Sign out',
+                    'Lihat semua notifikasi': 'View all notifications'
+                },
+                id: {
+                    'Dashboard': 'Dasbor Utama', 'MASTER DATA': 'DATA MASTER', 'OPERATIONS': 'OPERATIONAL',
+                    'HR & ADMIN': 'HR & GA', 'Pickup': 'Pick Up', 'Quotation': 'Penawaran',
+                    'Shipment Tracking': 'Tracking Pencarian',
+                    'Rate Calculator': 'Cek Tarif', 'System Settings': 'Pengaturan Sistem',
+                    'Customers': 'Pelanggan', 'Leads': 'Peluang (Lead)', 'Contracts': 'Kontrak',
+                    'Activities': 'Aktivitas', 'Employees': 'Data Karyawan', 'Attendance': 'Kehadiran & Absensi',
+                    'Attendance Policy': 'Kebijakan Absensi', 'Leave & Permissions': 'Pengajuan Cuti & Izin',
+                    'Documents': 'Berkas & Dokumen', 'POD Return': 'DO Balik', 'Returns (RTO)': 'Retur (RTO)',
+                    'Delivery Sheets (LDP)': 'LDP (Lembar Daftar Pengiriman)',
+                    'Paketin Executive Dashboard': 'Dasbor Utama Paketin',
+                    'Active Shipments': 'Pengiriman Aktif', 'Active Clients': 'Total Klien Aktif',
+                    'Total Revenue': 'Total Pendapatan', 'Employees Present': 'Karyawan Hadir',
+                    'CRM Lead Status': 'Status CRM Leads', 'Shipment Distribution': 'Distribusi Pengiriman',
+                    'Map Filters': 'Filter Map', 'Service': 'Layanan', 'Language': 'Bahasa',
+                    'Sign out': 'Keluar', 'View all notifications': 'Lihat semua notifikasi'
+                }
+            };
+            const dictionary = dictionaries[lang] || {};
+            const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+            const nodes = [];
+            while (walker.nextNode()) nodes.push(walker.currentNode);
+            nodes.forEach(node => {
+                const value = node.nodeValue.trim();
+                if (!value || !dictionary[value] || node.parentElement.closest('script,style')) return;
+                node.nodeValue = node.nodeValue.replace(value, dictionary[value]);
+            });
+        });
+    </script>
+
+    <!-- Modal Personalisasi & Opsi Sistem -->
+    <div class="modal fade" id="personalizationModal" tabindex="-1" aria-labelledby="personalizationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 540px;">
+            <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+                <div class="modal-header border-bottom p-4 pb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="rounded-3 d-flex align-items-center justify-content-center" style="width:38px;height:38px;background:#fff1f2;color:#e11d48;">
+                            <i class="ph-duotone ph-sliders fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0" id="personalizationModalLabel">Personalisasi &amp; Opsi</h5>
+                            <span class="text-muted small" style="font-size:0.75rem;">Sesuaikan tampilan sistem sesuai kenyamanan kerja Anda</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- 1. Tema Warna (Dark / Light Mode) -->
+                    <div class="mb-4">
+                        <label class="form-label text-dark fw-bold small d-flex align-items-center justify-content-between mb-2">
+                            <span><i class="ph-bold ph-sun-dim me-1 text-warning"></i> Tema Tampilan (Theme)</span>
+                            <span class="badge bg-light text-secondary border fw-normal" id="themeStatusBadge">Terang</span>
+                        </label>
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <button type="button" class="btn btn-outline-secondary w-100 py-2 rounded-3 text-center border theme-opt-btn" data-theme="light" id="themeBtnLight">
+                                    <i class="ph-duotone ph-sun fs-4 d-block mb-1 text-warning"></i>
+                                    <span class="small fw-semibold">Terang</span>
+                                </button>
+                            </div>
+                            <div class="col-4">
+                                <button type="button" class="btn btn-outline-secondary w-100 py-2 rounded-3 text-center border theme-opt-btn" data-theme="dark" id="themeBtnDark">
+                                    <i class="ph-duotone ph-moon fs-4 d-block mb-1 text-primary"></i>
+                                    <span class="small fw-semibold">Gelap</span>
+                                </button>
+                            </div>
+                            <div class="col-4">
+                                <button type="button" class="btn btn-outline-secondary w-100 py-2 rounded-3 text-center border theme-opt-btn" data-theme="system" id="themeBtnSystem">
+                                    <i class="ph-duotone ph-laptop fs-4 d-block mb-1 text-secondary"></i>
+                                    <span class="small fw-semibold">Sistem</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Skala Tampilan / View Zoom (Bawaan Chrome) -->
+                    <div class="mb-4">
+                        <label class="form-label text-dark fw-bold small d-flex align-items-center justify-content-between mb-2">
+                            <span><i class="ph-bold ph-magnifying-glass-plus me-1 text-primary"></i> Skala Tampilan / View Zoom</span>
+                            <span class="badge bg-light text-secondary border fw-normal" id="zoomStatusBadge">100%</span>
+                        </label>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <button type="button" class="btn btn-sm btn-outline-secondary px-3 zoom-opt-btn" data-zoom="80">80%</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary px-3 zoom-opt-btn" data-zoom="90">90%</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary px-3 zoom-opt-btn" data-zoom="100">100% (Bawaan Chrome)</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary px-3 zoom-opt-btn" data-zoom="110">110%</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary px-3 zoom-opt-btn" data-zoom="125">125%</button>
+                        </div>
+                        <div class="form-text small mt-1" style="font-size:0.72rem;">Sesuaikan skala tampilan sesuai persentase bawaan Google Chrome.</div>
+                    </div>
+
+                    <!-- 3. Preferensi Tambahan -->
+                    <div class="border-top pt-3">
+                        <h6 class="text-dark fw-bold small mb-3"><i class="ph-bold ph-gear me-1 text-secondary"></i> Opsi Operasional</h6>
+                        
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div>
+                                <div class="fw-semibold text-dark small">Suara Notifikasi</div>
+                                <div class="text-muted small" style="font-size:0.72rem;">Bunyikan nada saat ada resi / manifest baru</div>
+                            </div>
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" id="prefSoundAlert" checked>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <div>
+                                <div class="fw-semibold text-dark small">Animasi Antarmuka</div>
+                                <div class="text-muted small" style="font-size:0.72rem;">Efek transisi halus pada menu &amp; tabel</div>
+                            </div>
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" id="prefAnimations" checked>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top p-3 bg-light d-flex justify-content-between">
+                    <button type="button" class="btn btn-sm btn-link text-muted text-decoration-none" id="btnResetPreferences">
+                        <i class="ph-bold ph-arrow-counter-clockwise me-1"></i> Reset Default
+                    </button>
+                    <button type="button" class="btn btn-sm btn-danger px-4 fw-bold shadow-sm" data-bs-dismiss="modal">
+                        Tutup &amp; Simpan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dark Mode & View Scale CSS Overrides -->
+    <style>
+        /* Dark Mode Theme Styles */
+        [data-theme="dark"] body {
+            background: #0b0f19 !important;
+            background-color: #0b0f19 !important;
+            color: #f1f5f9 !important;
+        }
+        [data-theme="dark"] .main-wrapper, 
+        [data-theme="dark"] .dashboard-shell,
+        [data-theme="dark"] .page-content {
+            background: transparent !important;
+        }
+        [data-theme="dark"] .navbar {
+            background-color: #111827 !important;
+            border-bottom: 1px solid #1f2937 !important;
+        }
+        [data-theme="dark"] .card,
+        [data-theme="dark"] .modal-content,
+        [data-theme="dark"] .user-menu,
+        [data-theme="dark"] .dropdown-menu {
+            background-color: #111827 !important;
+            border-color: #1f2937 !important;
+            color: #f1f5f9 !important;
+        }
+        [data-theme="dark"] .text-dark {
+            color: #f8fafc !important;
+        }
+        [data-theme="dark"] .text-muted,
+        [data-theme="dark"] .text-secondary {
+            color: #94a3b8 !important;
+        }
+        [data-theme="dark"] .bg-white,
+        [data-theme="dark"] .bg-light {
+            background-color: #111827 !important;
+            border-color: #1f2937 !important;
+        }
+        [data-theme="dark"] .table-premium {
+            color: #f1f5f9 !important;
+        }
+        [data-theme="dark"] .table-premium thead th {
+            background-color: #1f2937 !important;
+            color: #94a3b8 !important;
+            border-color: #374151 !important;
+        }
+        [data-theme="dark"] .table-premium tbody td {
+            background-color: #111827 !important;
+            color: #f1f5f9 !important;
+            border-color: #1f2937 !important;
+        }
+        [data-theme="dark"] .table-premium tbody tr:hover td {
+            background-color: #1f2937 !important;
+        }
+        [data-theme="dark"] .form-control,
+        [data-theme="dark"] .form-select,
+        [data-theme="dark"] .input-group-text {
+            background-color: #0b0f19 !important;
+            border-color: #374151 !important;
+            color: #f1f5f9 !important;
+        }
+        [data-theme="dark"] .shipment-filter-summary {
+            background: #111827 !important;
+            border-color: #1f2937 !important;
+        }
+        [data-theme="dark"] .filter-chip {
+            background: #450a0a !important;
+            border-color: #991b1b !important;
+            color: #fecdd3 !important;
+        }
+        [data-theme="dark"] .user-menu-row.clickable:hover {
+            background: #1f2937 !important;
+            color: #f1f5f9 !important;
+        }
+        [data-theme="dark"] .user-menu-row {
+            color: #f1f5f9 !important;
+        }
+        [data-theme="dark"] .border-bottom,
+        [data-theme="dark"] .border-top,
+        [data-theme="dark"] .border {
+            border-color: #1f2937 !important;
+        }
+
+        /* Dashboard Multi-Tab & Content Wrapper in Dark Mode */
+        [data-theme="dark"] .dashboard-content-wrapper {
+            background-color: #0f172a !important;
+            border-color: #1e293b !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+        }
+        [data-theme="dark"] .dashboard-chrome-tabs-wrapper {
+            border-bottom-color: #1e293b !important;
+        }
+        [data-theme="dark"] .chrome-tab-glider {
+            background-color: #0f172a !important;
+            border-color: #1e293b !important;
+            border-bottom: 2px solid #0f172a !important;
+        }
+        [data-theme="dark"] .chrome-tab-glider::after {
+            background-color: #0f172a !important;
+        }
+        [data-theme="dark"] .nav-tabs-custom .chrome-tab-btn {
+            color: #94a3b8 !important;
+        }
+        [data-theme="dark"] .nav-tabs-custom .chrome-tab-btn:not(.active):hover {
+            background-color: #1e293b !important;
+            border-color: #334155 !important;
+            color: #f8fafc !important;
+        }
+        [data-theme="dark"] .nav-tabs-custom .chrome-tab-btn.active {
+            color: #f8fafc !important;
+        }
+        [data-theme="dark"] .nav-tabs-custom .nav-item:first-of-type::before,
+        [data-theme="dark"] .nav-tabs-custom .nav-item::after {
+            background-color: #334155 !important;
+        }
+        [data-theme="dark"] .dashboard-slide-panel .card,
+        [data-theme="dark"] .chart-card-accent,
+        [data-theme="dark"] .premium-metric-card {
+            background-color: #1e293b !important;
+            border-color: #334155 !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+        }
+        [data-theme="dark"] .dashboard-slide-panel .card:hover,
+        [data-theme="dark"] .chart-card-accent:hover,
+        [data-theme="dark"] .premium-metric-card:hover {
+            border-color: #475569 !important;
+        }
+        [data-theme="dark"] .user-menu-logout-btn {
+            background-color: rgba(220, 38, 38, 0.15) !important;
+            border-color: rgba(220, 38, 38, 0.35) !important;
+            color: #f87171 !important;
+        }
+        [data-theme="dark"] .user-menu-logout-btn:hover {
+            background-color: rgba(220, 38, 38, 0.3) !important;
+            border-color: #dc2626 !important;
+            color: #ffffff !important;
+        }
+        [data-theme="dark"] .language-switch {
+            background: #0f172a !important;
+            border-color: #334155 !important;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4) !important;
+        }
+        [data-theme="dark"] .language-switch .btn-lang {
+            color: #94a3b8 !important;
+        }
+        [data-theme="dark"] .language-switch .btn-lang:hover {
+            color: #f8fafc !important;
+        }
+        [data-theme="dark"] .language-switch .btn-lang.active {
+            background: #ed1c2e !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 6px rgba(237, 28, 46, 0.4) !important;
+        }
+        [data-theme="dark"] .form-check.form-switch .form-check-input {
+            background-color: #334155;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+        }
+        [data-theme="dark"] .form-check.form-switch .form-check-input:checked {
+            background-color: #ed1c2e;
+            box-shadow: 0 2px 8px rgba(237, 28, 46, 0.45);
+        }
+        [data-theme="dark"] .top-navbar {
+            background-color: #0b0f19 !important;
+            border-bottom: 1px solid #1e293b !important;
+        }
+        [data-theme="dark"] .global-search-group input,
+        [data-theme="dark"] .global-search-group .input-group-text,
+        [data-theme="dark"] .global-search-group .global-search-command {
+            background-color: #1e293b !important;
+            border-color: #334155 !important;
+            color: #f8fafc !important;
+        }
+        [data-theme="dark"] .global-search-command kbd {
+            background-color: #0f172a !important;
+            color: #94a3b8 !important;
+            border-color: #334155 !important;
+        }
+        [data-theme="dark"] .sidebar-toggle-btn {
+            background-color: #1e293b !important;
+            border-color: #334155 !important;
+            color: #f8fafc !important;
+        }
+        [data-theme="dark"] .btn-link.user-dropdown {
+            color: #f8fafc !important;
+        }
+
+        .theme-opt-btn.active, .zoom-opt-btn.active {
+            background-color: #0f172a !important;
+            border-color: #0f172a !important;
+            color: #ffffff !important;
+        }
+        [data-theme="dark"] .theme-opt-btn.active, [data-theme="dark"] .zoom-opt-btn.active {
+            background-color: #38bdf8 !important;
+            border-color: #38bdf8 !important;
+            color: #0f172a !important;
+            font-weight: 700;
+        }
+        .theme-opt-btn.active i {
+            color: inherit !important;
+        }
+    </style>
+
+    <!-- JavaScript Preferences & Theme Engine -->
+    <script>
+        (function() {
+            // Apply preferences immediately before render to avoid flash
+            const savedTheme = localStorage.getItem('erp_theme') || 'light';
+            const savedZoom = localStorage.getItem('erp_zoom') || '100';
+
+            function applyTheme(theme) {
+                if (theme === 'dark') {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                    document.documentElement.setAttribute('data-bs-theme', 'dark');
+                } else if (theme === 'system') {
+                    const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    if (isSystemDark) {
+                        document.documentElement.setAttribute('data-theme', 'dark');
+                        document.documentElement.setAttribute('data-bs-theme', 'dark');
+                    } else {
+                        document.documentElement.removeAttribute('data-theme');
+                        document.documentElement.removeAttribute('data-bs-theme');
+                    }
+                } else {
+                    document.documentElement.removeAttribute('data-theme');
+                    document.documentElement.removeAttribute('data-bs-theme');
+                }
+            }
+
+            function applyZoom(zoomVal) {
+                const scale = parseInt(zoomVal, 10) / 100;
+                document.body.style.zoom = scale;
+            }
+
+            applyTheme(savedTheme);
+            if (savedZoom !== '100') {
+                document.addEventListener('DOMContentLoaded', () => applyZoom(savedZoom));
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+                // Initialize UI buttons
+                const theme = localStorage.getItem('erp_theme') || 'light';
+                const zoom = localStorage.getItem('erp_zoom') || '100';
+                const sound = localStorage.getItem('erp_sound') !== 'false';
+                const anim = localStorage.getItem('erp_anim') !== 'false';
+
+                // Update Theme UI
+                document.querySelectorAll('.theme-opt-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.theme === theme);
+                    btn.addEventListener('click', function() {
+                        const newTheme = this.dataset.theme;
+                        localStorage.setItem('erp_theme', newTheme);
+                        applyTheme(newTheme);
+                        document.querySelectorAll('.theme-opt-btn').forEach(b => b.classList.toggle('active', b.dataset.theme === newTheme));
+                        const badge = document.getElementById('themeStatusBadge');
+                        if (badge) badge.textContent = newTheme.charAt(0).toUpperCase() + newTheme.slice(1);
+                    });
+                });
+
+                // Update Zoom UI
+                document.querySelectorAll('.zoom-opt-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.zoom === zoom);
+                    btn.addEventListener('click', function() {
+                        const newZoom = this.dataset.zoom;
+                        localStorage.setItem('erp_zoom', newZoom);
+                        applyZoom(newZoom);
+                        document.querySelectorAll('.zoom-opt-btn').forEach(b => b.classList.toggle('active', b.dataset.zoom === newZoom));
+                        const badge = document.getElementById('zoomStatusBadge');
+                        if (badge) badge.textContent = newZoom + '%';
+                    });
+                });
+
+                // Switches
+                const soundSw = document.getElementById('prefSoundAlert');
+                if (soundSw) {
+                    soundSw.checked = sound;
+                    soundSw.addEventListener('change', function() {
+                        localStorage.setItem('erp_sound', this.checked);
+                    });
+                }
+
+                const animSw = document.getElementById('prefAnimations');
+                if (animSw) {
+                    animSw.checked = anim;
+                    animSw.addEventListener('change', function() {
+                        localStorage.setItem('erp_anim', this.checked);
+                        if (!this.checked) {
+                            document.body.style.transition = 'none';
+                        }
+                    });
+                }
+
+                // Reset button
+                const resetBtn = document.getElementById('btnResetPreferences');
+                if (resetBtn) {
+                    resetBtn.addEventListener('click', function() {
+                        localStorage.removeItem('erp_theme');
+                        localStorage.removeItem('erp_zoom');
+                        localStorage.removeItem('erp_sound');
+                        localStorage.removeItem('erp_anim');
+                        applyTheme('light');
+                        applyZoom('100');
+                        location.reload();
+                    });
+                }
+            });
+        })();
+    </script>
+
+    <script>
+        // Auto-expand sidebar section that contains the active link
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.sidebar-nav .collapse').forEach(function(collapseEl) {
+                if (collapseEl.querySelector('.sidebar-link.active, .nav-link.active')) {
+                    collapseEl.classList.add('show');
+                    var toggle = collapseEl.previousElementSibling;
+                    if (toggle && toggle.classList.contains('module-section-toggle')) {
+                        toggle.setAttribute('aria-expanded', 'true');
+                        toggle.classList.add('active');
+                    }
+                }
+            });
+        });
+    </script>
+    <!-- ========================================== -->
+    <!-- Universal Modern Confirmation Modal       -->
+    <!-- Matches visual cue & signal emphasis UX   -->
+    <!-- ========================================== -->
+    <div class="modal fade" id="globalConfirmModal" tabindex="-1" role="alertdialog" aria-modal="true" aria-labelledby="globalConfirmTitle" aria-describedby="globalConfirmDesc" style="backdrop-filter: blur(4px); background-color: rgba(15, 23, 42, 0.45);">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+            <div class="modal-content border-0 shadow-lg p-4" style="border-radius: 24px; background-color: #ffffff;">
+                <div class="modal-body p-0 text-center">
+                    
+                    <!-- Signal Emphasis Pattern & Visual Cue Icon -->
+                    <div class="signal-emphasis-wrapper" id="globalConfirmSignalWrapper">
+                        <div class="signal-emphasis-ring ring-1"></div>
+                        <div class="signal-emphasis-ring ring-2"></div>
+                        <div class="signal-emphasis-ring ring-3"></div>
+                        <div class="signal-icon-core" id="globalConfirmIconCore">
+                            <i id="globalConfirmIcon" class="ph-bold ph-trash"></i>
+                        </div>
+                    </div>
+
+                    <!-- Title (Headline / Question) -->
+                    <h5 class="fw-bold text-dark mb-2 px-2" id="globalConfirmTitle" style="font-size: 1.18rem; line-height: 1.35; letter-spacing: -0.2px;">
+                        Konfirmasi Tindakan?
+                    </h5>
+
+                    <!-- Description (Context / Consequence) -->
+                    <p class="text-muted mb-0 px-2" id="globalConfirmDesc" style="font-size: 0.88rem; line-height: 1.45;">
+                        Tindakan ini tidak dapat dibatalkan.
+                    </p>
+
+                    <!-- Friction Mechanism [Optional] -->
+                    <div id="globalConfirmFrictionContainer" class="mt-3 px-2" style="display: none;">
+                        <input type="text" id="globalConfirmFrictionInput" class="form-control text-center py-2" placeholder="Ketik konfirmasi" style="border-radius: 12px; font-size: 0.88rem; border-color: #cbd5e1; background-color: #f8fafc;">
+                    </div>
+
+                    <!-- Reason / Prompt Input [Optional] -->
+                    <div id="globalConfirmInputContainer" class="mt-3 text-start px-1" style="display: none;">
+                        <label class="form-label fw-bold text-dark small mb-1" id="globalConfirmInputLabel" style="font-size: 0.82rem;">
+                            Alasan Void <span class="text-danger">*</span>
+                        </label>
+                        <textarea id="globalConfirmInputTextarea" class="form-control shadow-none" rows="3" placeholder="Masukkan alasan secara detail..." style="border-radius: 12px; font-size: 0.88rem; border-color: #cbd5e1;"></textarea>
+                        <div class="text-danger small mt-1" id="globalConfirmInputFeedback" style="display: none; font-size: 0.78rem;">
+                            Alasan wajib diisi sebelum melanjutkan.
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-2 mt-4 pt-1">
+                        <button type="button" class="btn btn-outline-secondary w-50 py-2 fw-semibold" id="globalConfirmCancelBtn" data-bs-dismiss="modal" style="border-radius: 12px; border-color: #e2e8f0; color: #475569; font-size: 0.9rem;">
+                            Batal
+                        </button>
+                        <button type="button" class="btn btn-danger w-50 py-2 fw-bold shadow-sm" id="globalConfirmOkBtn" style="border-radius: 12px; font-size: 0.9rem;">
+                            Konfirmasi
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .signal-emphasis-wrapper {
+            position: relative;
+            width: 84px;
+            height: 84px;
+            margin: 4px auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ef4444;
+        }
+        .signal-emphasis-ring {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .signal-emphasis-ring.ring-1 {
+            width: 84px;
+            height: 84px;
+            opacity: 0.25;
+            border: 1px solid currentColor;
+            animation: pulseRingAnim 2.4s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        .signal-emphasis-ring.ring-2 {
+            width: 66px;
+            height: 66px;
+            opacity: 0.45;
+            border: 1px solid currentColor;
+            animation: pulseRingAnim 2.4s cubic-bezier(0.215, 0.61, 0.355, 1) infinite 0.4s;
+        }
+        .signal-emphasis-ring.ring-3 {
+            width: 48px;
+            height: 48px;
+            opacity: 0.7;
+            border: 1px solid currentColor;
+            animation: pulseRingAnim 2.4s cubic-bezier(0.215, 0.61, 0.355, 1) infinite 0.8s;
+        }
+        .signal-icon-core {
+            position: relative;
+            z-index: 3;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: all 0.2s ease;
+        }
+        @keyframes pulseRingAnim {
+            0% { transform: scale(0.85); opacity: 0.8; }
+            50% { transform: scale(1.15); opacity: 0.2; }
+            100% { transform: scale(0.85); opacity: 0.8; }
+        }
+    </style>
+
+    <script src="{% static 'js/paketin-confirm.js' %}"></script>
+    <script src="{% static 'js/paketin-masking.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+    <!-- Flatpickr for unified date formatting -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Apply flatpickr to all date inputs to ensure dd/mm/yyyy display globally
+            flatpickr('input[type="date"]', {
+                dateFormat: "Y-m-d",
+                altInput: true,
+                altFormat: "d/m/Y",
+                allowInput: true,
+                animate: true,
+                disableMobile: "true"
+            });
+
+            // Re-open user menu dropdown if triggered by language switch
+            if (sessionStorage.getItem('reopen_user_menu') === '1') {
+                sessionStorage.removeItem('reopen_user_menu');
+                const userMenuBtn = document.getElementById('userMenuDropdownBtn');
+                if (userMenuBtn) {
+                    setTimeout(() => {
+                        const bsDropdown = bootstrap.Dropdown.getOrCreateInstance(userMenuBtn);
+                        if (bsDropdown) {
+                            bsDropdown.show();
+                        }
+                    }, 80);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

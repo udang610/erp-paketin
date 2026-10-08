@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - ERP Paketin{% endblock %}
+{% block page_title %}Data Master Vendor{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="mb-3">
+        <a href="{% url 'master:vendors' %}" class="btn btn-outline-secondary bg-white px-3 shadow-sm btn-sm">
+            <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+        </a>
+    </div>
+
+    
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <!-- Section 1: Informasi Dasar & Moda Transportasi -->
+        <div class="card bg-white border-0 shadow-sm rounded-4 p-4 mb-3">
+            <h5 class="fw-bold text-dark border-bottom pb-3 mb-4">{{ title }}</h5>
+
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                <div class="rounded-3 d-flex align-items-center justify-content-center" style="width:36px;height:36px;background:#fef2f2;color:#dc2626;">
+                    <i class="ph-duotone ph-truck fs-5"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-0 text-dark">Informasi Vendor & Moda Transportasi</h6>
+                    <span class="text-muted small" style="font-size:0.75rem;">Nama perusahaan, PIC, tipe pengiriman, dan armada</span>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-semibold">Tipe Pengiriman <span class="text-danger">*</span></label>
+                    {{ form.delivery_type }}
+                    {% if form.delivery_type.errors %}<div class="text-danger small mt-1">{{ form.delivery_type.errors|striptags }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-semibold">Moda Transportasi Utama <span class="text-danger">*</span></label>
+                    {{ form.primary_transport_mode }}
+                    {% if form.primary_transport_mode.errors %}<div class="text-danger small mt-1">{{ form.primary_transport_mode.errors|striptags }}</div>{% endif %}
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label text-muted small fw-semibold d-block">Moda Transportasi yang Disediakan</label>
+                    <div class="d-flex flex-wrap gap-4 mt-1">
+                        <div class="form-check form-switch">
+                            {{ form.provided_darat }}
+                            <label class="form-check-label ms-2 small fw-semibold text-dark" for="{{ form.provided_darat.id_for_label }}">Darat</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            {{ form.provided_laut }}
+                            <label class="form-check-label ms-2 small fw-semibold text-dark" for="{{ form.provided_laut.id_for_label }}">Laut</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            {{ form.provided_udara }}
+                            <label class="form-check-label ms-2 small fw-semibold text-dark" for="{{ form.provided_udara.id_for_label }}">Udara</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            {{ form.provided_kereta }}
+                            <label class="form-check-label ms-2 small fw-semibold text-dark" for="{{ form.provided_kereta.id_for_label }}">Kereta</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">Nama Vendor <span class="text-danger">*</span></label>
+                    {{ form.name }}
+                    {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors|striptags }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">Nama PIC <span class="text-danger">*</span></label>
+                    {{ form.contact_person }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">Telepon / HP <span class="text-danger">*</span></label>
+                    {{ form.phone }}
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-semibold">Email <span class="text-danger">*</span></label>
+                    {{ form.email }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-semibold">Kota <span class="text-danger">*</span></label>
+                    {{ form.city }}
+                </div>
+                <div class="col-12">
+                    <label class="form-label text-muted small fw-semibold">Alamat Lengkap <span class="text-danger">*</span></label>
+                    {{ form.address }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Rekening & Syarat Pembayaran -->
+        <div class="card bg-white border-0 shadow-sm rounded-4 p-4 mb-3">
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                <div class="rounded-3 d-flex align-items-center justify-content-center" style="width:36px;height:36px;background:#fefce8;color:#ca8a04;">
+                    <i class="ph-duotone ph-currency-circle-dollar fs-5"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-0 text-dark">Rekening Bank & Syarat Pembayaran</h6>
+                    <span class="text-muted small" style="font-size:0.75rem;">Informasi perpajakan, nomor rekening, dan jatuh tempo</span>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">NPWP <span class="text-danger">*</span></label>
+                    {{ form.npwp }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">Nama Bank <span class="text-danger">*</span></label>
+                    {{ form.bank_name }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">No. Rekening <span class="text-danger">*</span></label>
+                    {{ form.bank_account_number }}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">A/n Rekening Bank <span class="text-danger">*</span></label>
+                    {{ form.bank_account_name }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">Term Pembayaran (Hari) <span class="text-danger">*</span></label>
+                    {{ form.payment_term_days }}
+                </div>
+                <div class="col-md-4 d-flex align-items-center">
+                    <div class="form-check form-switch mt-3">
+                        {{ form.is_active }}
+                        <label class="form-check-label ms-2 small fw-semibold text-dark">Status Vendor Aktif</label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-none">
+                {{ form.service_type }}
+                {{ form.branch }}
+            </div>
+        </div>
+
+        <!-- Bottom Action Bar (Operational style) -->
+        <div class="d-flex justify-content-end align-items-center gap-2 mt-4 mb-5">
+            <a href="{% url 'master:vendors' %}" class="btn btn-light px-4 border fw-semibold">
+                Batal
+            </a>
+            <button type="submit" class="btn btn-danger px-4 fw-bold shadow-sm">
+                <i class="ph-bold ph-floppy-disk me-2"></i> Simpan Data Vendor
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

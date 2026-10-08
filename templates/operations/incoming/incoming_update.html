@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Edit Inbound - {{ session.inbound_number }}{% endblock %}
+{% block page_title %}Edit Data Inbound / Incoming{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    
+    <div class="card bg-white border-0 shadow-sm rounded-4">
+        <div class="card-body p-4">
+                <h5 class="fw-bold text-dark border-bottom pb-3 mb-4">Edit Sesi Inbound: {{ session.inbound_number }}</h5>
+
+            <form method="POST">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label text-muted small fw-semibold">Lokasi Gudang / Cabang <span class="text-danger">*</span></label>
+                    <input type="text" name="location" class="form-control" value="{{ session.location }}" required>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label text-muted small fw-semibold">Keterangan / Description</label>
+                    <textarea name="description" class="form-control" rows="3">{{ session.description|default:'' }}</textarea>
+                </div>
+                
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{% url 'operations:incoming-list' %}" class="btn btn-light">Batal</a>
+                    <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

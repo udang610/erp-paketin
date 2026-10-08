@@ -1,0 +1,676 @@
+{% extends 'base.html' %}
+{% load static humanize %}
+
+{% block title %}{% if form.instance.pk %}Edit{% else %}Buat{% endif %} Quotation{% endblock %}
+{% block page_title %}{% if form.instance.pk %}Edit Quotation{% else %}Buat Quotation Baru{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .colly-table th {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #475569;
+        background-color: #f8fafc;
+        border-bottom: 2px solid #e2e8f0;
+        padding: 8px 10px;
+    }
+    .colly-table td {
+        vertical-align: middle;
+        padding: 8px 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="mb-3">
+        <a href="{% if form.lead.value %}{% url 'crm:lead-detail' form.lead.value %}{% else %}{% url 'crm:quotation-list' %}{% endif %}" class="btn btn-outline-secondary bg-white px-3 shadow-sm btn-sm">
+            <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card bg-white border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold text-dark border-bottom pb-3 mb-4">{% if form.instance.pk %}Edit Quotation{% else %}Buat Quotation Baru{% endif %}</h5>
+
+                    <form method="post" enctype="multipart/form-data" id="quotationForm" novalidate>
+                        {% csrf_token %}
+
+                        {% if form.errors %}
+                        <div class="alert alert-danger shadow-sm rounded-3 mb-4">
+                            <i class="ph-duotone ph-warning-circle me-2 fs-5"></i>
+                            <strong>Terdapat kesalahan pada pengisian form:</strong>
+                            <ul class="mb-0 mt-2">
+                                {% for field, errors in form.errors.items %}
+                                    {% for error in errors %}
+                                        <li>{{ field }}: {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                        <!-- ===== 1. DETAIL LEAD & PENGIRIMAN ===== -->
+                        <h6 class="fw-bold text-dark mb-3">Detail Lead &amp; Pengiriman</h6>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.lead.id_for_label }}" class="form-label fw-semibold small text-dark mb-1">Pilih Lead / Klien <span class="text-danger">*</span></label>
+                                {{ form.lead }}
+                                {% if form.lead.errors %}<div class="invalid-feedback d-block">{{ form.lead.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small text-dark mb-1">Jenis Layanan</label>
+                                <div class="d-flex flex-wrap gap-3 pt-1" id="serviceCheckboxContainer">
+                                    {% for checkbox in form.service %}
+                                    <div class="form-check">
+                                        {{ checkbox.tag }}
+                                        <label class="form-check-label small" for="{{ checkbox.id_for_label }}">{{ checkbox.choice_label }}</label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.origin_input.id_for_label }}" class="form-label fw-semibold small text-dark mb-1">Kota Asal</label>
+                                {{ form.origin_input }}
+                                {% if form.origin_input.errors %}<div class="invalid-feedback d-block">{{ form.origin_input.errors.0 }}</div>{% endif %}
+                                <div class="form-text mt-1 text-muted" style="font-size: 0.75rem;"><i class="ph-duotone ph-info"></i> Ketik nama kota, lalu Enter jika belum ada.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.destination_input.id_for_label }}" class="form-label fw-semibold small text-dark mb-1">Kota Tujuan</label>
+                                {{ form.destination_input }}
+                                {% if form.destination_input.errors %}<div class="invalid-feedback d-block">{{ form.destination_input.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <hr class="my-3">
+
+                        <!-- ===== 2. UPLOAD LAMPIRAN & HARGA CEPAT ===== -->
+                        <h6 class="fw-bold text-dark mb-3">Upload Lampiran &amp; Harga Manual (Opsional)</h6>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-7">
+                                <label for="{{ form.attachment.id_for_label }}" class="form-label fw-semibold small text-dark mb-1">File Penawaran (Excel / PDF / Foto)</label>
+                                {{ form.attachment }}
+                                {% if form.attachment.errors %}<div class="invalid-feedback d-block">{{ form.attachment.errors.0 }}</div>{% endif %}
+                                <div class="form-text small text-muted">Upload file jika sudah memiliki rincian penawaran offline.</div>
+                            </div>
+                            <div class="col-md-5">
+                                <label for="{{ form.manual_total_price.id_for_label }}" class="form-label fw-semibold small text-dark mb-1">Estimasi Total Harga Manual (Rp)</label>
+                                {{ form.manual_total_price }}
+                                {% if form.manual_total_price.errors %}<div class="invalid-feedback d-block">{{ form.manual_total_price.errors.0 }}</div>{% endif %}
+                                <div class="form-text small text-muted">Isi nominal ini jika menggunakan lampiran berkas.</div>
+                            </div>
+                        </div>
+
+                        <hr class="my-3">
+
+                        <!-- ===== 3. DETAIL PAKET & PERHITUNGAN DIMENSI (STYLE POS / CRM-PAKETIN) ===== -->
+                        <h6 class="fw-bold text-dark mb-3">Detail Paket &amp; Perhitungan Dimensi (Koli)</h6>
+                        
+                        <!-- Calculation Summary Bar (Exact POS Resi Style) -->
+                        <div class="bg-white border rounded-3 p-3 mb-3 shadow-xs">
+                            <div class="row align-items-center g-2">
+                                <div class="col-md-4 d-flex align-items-center">
+                                    <label class="form-label fw-semibold small text-dark mb-0 me-2 text-nowrap">
+                                        <i class="ph-duotone ph-info text-info me-1" data-bs-toggle="tooltip" data-bs-html="true" title="<b>Rumus Perhitungan:</b><br>Berat Vol = (P x L x T) / Pembagi Layanan<br>Total Charge = Max(Berat Aktual, Berat Vol)<br>Biaya Packing = ((P+L+T+15)/3) * Tarif<br><br><b>Pembagi Volume:</b><br>• Darat/Trucking: 4.000<br>• Udara/Express: 5.000 / 6.000<br>• Laut: 4.000<br><br><b>Tarif Packing:</b><br>Full: Rp 4.000<br>Kayu: Rp 2.500<br>Busa Kardus: Rp 2.000"></i>Layanan:
+                                    </label>
+                                    <select id="id_calc_service" class="form-select form-select-sm calc-trigger w-100">
+                                        <option value="UDARA">Cargo Udara (6.000)</option>
+                                        <option value="DARAT">Cargo Darat (4.000)</option>
+                                        <option value="TRUCKING">Trucking (4.000)</option>
+                                        <option value="LAUT">Cargo Laut (4.000)</option>
+                                        <option value="EXPRESS">Express (5.000)</option>
+                                    </select>
+                                </div>
+                                <div class="col-auto ms-auto d-flex flex-wrap align-items-center gap-3">
+                                    <span class="text-dark small fw-semibold">Pembagi: <strong id="displayDivisor" class="text-dark">6.000</strong></span>
+                                    <span class="text-dark small fw-semibold">Total Koli: <strong id="displayTotalKoli" class="text-dark">1</strong></span>
+                                    <span class="text-dark small fw-semibold">Berat Charge: <strong id="displayWeightCharge" class="text-danger">0.00 kg</strong></span>
+                                    <span class="text-dark small fw-semibold">Total Packing: <strong id="displayTotalPacking" class="text-success">Rp 0</strong></span>
+                                </div>
+                                <div class="col-auto ms-2">
+                                    <button class="btn btn-sm btn-danger px-3 fw-bold shadow-sm" type="button" id="btnCalc">
+                                        <i class="ph-bold ph-arrows-clockwise me-1"></i> Hitung Ulang
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Main Colly Input (Single Item / Item Utama) -->
+                        <div class="bg-white border rounded-3 p-3 mb-3">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-md-2 col-sm-6">
+                                    <label class="form-label fw-bold small text-dark mb-1">Berat Aktual (kg) <span class="text-danger">*</span></label>
+                                    {{ form.actual_weight }}
+                                </div>
+                                <div class="col-md-2 col-sm-6">
+                                    <label class="form-label fw-bold small text-dark mb-1">Panjang (cm)</label>
+                                    {{ form.panjang }}
+                                </div>
+                                <div class="col-md-2 col-sm-6">
+                                    <label class="form-label fw-bold small text-dark mb-1">Lebar (cm)</label>
+                                    {{ form.lebar }}
+                                </div>
+                                <div class="col-md-2 col-sm-6">
+                                    <label class="form-label fw-bold small text-dark mb-1">Tinggi (cm)</label>
+                                    {{ form.tinggi }}
+                                </div>
+                                <div class="col-md-2 col-sm-6">
+                                    <label class="form-label fw-bold small text-dark mb-1">Koli / Jml</label>
+                                    {{ form.quantity }}
+                                </div>
+                                <div class="col-md-2 col-sm-6">
+                                    <label class="form-label fw-bold small text-dark mb-1">Packing</label>
+                                    <select name="main_packing" id="id_main_packing" class="form-select calc-trigger">
+                                        <option value="NONE">Tidak Ada</option>
+                                        <option value="BUSA_KARDUS">Busa &amp; Kardus</option>
+                                        <option value="KAYU">Kayu</option>
+                                        <option value="FULL">Full Packing</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 mt-2">
+                                    <label class="form-label fw-bold small text-dark mb-1">Deskripsi Barang / Catatan</label>
+                                    {{ form.notes }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Multiple Colly Accordion (Exact POS Resi Style) -->
+                        <div class="mb-3">
+                            <button class="btn btn-light bg-light w-100 border text-secondary fw-semibold py-2 d-flex justify-content-center align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseColly" style="border-radius: 6px; box-shadow: none;">
+                                <i class="ph-bold ph-caret-up me-2"></i> Jika membutuhkan input multi koli
+                            </button>
+                            <div id="collapseColly" class="collapse {% if items_formset.total_form_count > 0 %}show{% endif %}">
+                                <div class="pt-3">
+                                    {{ items_formset.management_form }}
+
+                                    <div class="table-responsive">
+                                        <table class="table table-borderless table-sm align-middle colly-table mb-0" id="collyTable">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th width="12%">Berat Aktual (kg)</th>
+                                                    <th width="10%">Panjang (cm)</th>
+                                                    <th width="10%">Lebar (cm)</th>
+                                                    <th width="10%">Tinggi (cm)</th>
+                                                    <th width="8%">Koli</th>
+                                                    <th>Deskripsi Barang</th>
+                                                    <th width="15%">Packing</th>
+                                                    <th width="15%" class="text-center">Aksi</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="collyTableBody">
+                                                {% for item_form in items_formset %}
+                                                <tr class="colly-row">
+                                                    <td>{{ item_form.actual_weight }}</td>
+                                                    <td>{{ item_form.panjang }}</td>
+                                                    <td>{{ item_form.lebar }}</td>
+                                                    <td>{{ item_form.tinggi }}</td>
+                                                    <td>{{ item_form.quantity }}</td>
+                                                    <td>{{ item_form.description }}</td>
+                                                    <td>{{ item_form.packing }}</td>
+                                                    <td class="text-center align-middle text-nowrap">
+                                                        {{ item_form.id }}
+                                                        <div class="d-none delete-checkbox-wrapper">{{ item_form.DELETE }}</div>
+                                                        <span class="text-dark fw-semibold small me-2 chargeable-weight-display" title="Berat Charge">0 kg</span>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary me-1 copy-colly-row" title="Salin"><i class="ph-bold ph-copy"></i></button>
+                                                        <button type="button" class="btn btn-sm btn-outline-danger remove-colly-row" title="Hapus"><i class="ph-bold ph-trash"></i></button>
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+
+                                        <div class="mt-2 text-center">
+                                            <button type="button" class="btn btn-sm btn-danger px-4 fw-bold shadow-sm" id="addCollyBtn">
+                                                <i class="ph-bold ph-plus me-1"></i> Tambah Item
+                                            </button>
+                                        </div>
+
+                                        <!-- Empty Form Template -->
+                                        <table class="d-none">
+                                            <tbody id="emptyFormTemplate">
+                                                <tr class="colly-row">
+                                                    <td>{{ items_formset.empty_form.actual_weight }}</td>
+                                                    <td>{{ items_formset.empty_form.panjang }}</td>
+                                                    <td>{{ items_formset.empty_form.lebar }}</td>
+                                                    <td>{{ items_formset.empty_form.tinggi }}</td>
+                                                    <td>{{ items_formset.empty_form.quantity }}</td>
+                                                    <td>{{ items_formset.empty_form.description }}</td>
+                                                    <td>{{ items_formset.empty_form.packing }}</td>
+                                                    <td class="text-center align-middle text-nowrap">
+                                                        {{ items_formset.empty_form.id }}
+                                                        <div class="d-none delete-checkbox-wrapper">{{ items_formset.empty_form.DELETE }}</div>
+                                                        <span class="text-dark fw-semibold small me-2 chargeable-weight-display" title="Berat Charge">0 kg</span>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary me-1 copy-colly-row" title="Salin"><i class="ph-bold ph-copy"></i></button>
+                                                        <button type="button" class="btn btn-sm btn-outline-danger remove-colly-row" title="Hapus"><i class="ph-bold ph-trash"></i></button>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Hidden Fields for Form Processing (Exact crm-paketin style) -->
+                        <div class="d-none">
+                            {{ form.is_manual_override }}
+                            {{ form.price_per_kg }}
+                            {{ form.insurance }}
+                            {{ form.packing }}
+                            {{ form.discount }}
+                        </div>
+
+                        <!-- Grand Total Display Card -->
+                        <div class="mt-4 pt-3 border-top d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="text-muted small fw-bold text-uppercase d-block" style="letter-spacing: 0.5px;">Estimasi Total Biaya:</span>
+                            </div>
+                            <div class="text-end">
+                                <h3 class="text-danger fw-bolder mb-0" id="liveGrandTotal">Rp 0</h3>
+                            </div>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a href="{% url 'crm:quotation-list' %}" class="btn btn-outline-secondary px-4 fw-semibold">Batal</a>
+                            <button type="submit" class="btn btn-danger px-4 fw-bold shadow-sm">
+                                <i class="ph-bold ph-floppy-disk me-1"></i> Simpan Quotation
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Select2 with tags for origin and destination if available
+    if (typeof jQuery !== 'undefined' && typeof jQuery.fn.select2 !== 'undefined') {
+        $('.select2-tags').select2({
+            theme: 'bootstrap-5',
+            tags: true,
+            placeholder: 'Pilih atau Ketik Baru...',
+            allowClear: true
+        });
+    }
+
+    // Service divisors
+    const SERVICE_DIVISOR = {
+        'UDARA': 6000,
+        'DARAT': 4000,
+        'TRUCKING': 4000,
+        'LAUT': 4000,
+        'EXPRESS': 5000
+    };
+
+    function getDivisor(service) {
+        return SERVICE_DIVISOR[service] || 6000;
+    }
+
+    const PACKING_MULTIPLIER = {
+        'FULL': 4000,
+        'KAYU': 2500,
+        'BUSA_KARDUS': 2000,
+        'YES': 2500,
+        'NO': 0,
+        'NONE': 0
+    };
+
+    // Auto-format rupiah inputs
+    const rupiahInputs = document.querySelectorAll('.rupiah-input');
+    rupiahInputs.forEach(function(input) {
+        if (input.value) {
+            input.value = formatRupiah(input.value);
+        }
+        input.addEventListener('keyup', function(e) {
+            this.value = formatRupiah(this.value);
+        });
+    });
+
+    function formatRupiah(angka) {
+        let number_string = angka.toString().replace(/[^,\d]/g, ''),
+            split = number_string.split(','),
+            sisa = split[0].length % 3,
+            rupiah = split[0].substr(0, sisa),
+            ribuan = split[0].substr(sisa).match(/\d{3}/gi);
+
+        if (ribuan) {
+            let separator = sisa ? '.' : '';
+            rupiah += separator + ribuan.join('.');
+        }
+        return split[1] !== undefined ? rupiah + ',' + split[1] : rupiah;
+    }
+
+    // Sync service selection with calculation divisor
+    const serviceCheckboxes = document.querySelectorAll('#serviceCheckboxContainer input[type="checkbox"]');
+    const calcServiceSelect = document.getElementById('id_calc_service');
+
+    function syncServiceToCalc() {
+        if (!calcServiceSelect) return;
+        for (let cb of serviceCheckboxes) {
+            if (cb.checked) {
+                calcServiceSelect.value = cb.value;
+                break;
+            }
+        }
+        updateDivisorDisplay();
+        calculateAll();
+    }
+
+    serviceCheckboxes.forEach(cb => {
+        cb.addEventListener('change', syncServiceToCalc);
+    });
+
+    if (calcServiceSelect) {
+        calcServiceSelect.addEventListener('change', function() {
+            updateDivisorDisplay();
+            calculateAll();
+        });
+    }
+
+    function updateDivisorDisplay() {
+        const service = calcServiceSelect ? calcServiceSelect.value : 'UDARA';
+        const divisor = getDivisor(service);
+        const el = document.getElementById('displayDivisor');
+        if (el) el.textContent = divisor.toLocaleString('id-ID');
+    }
+
+    // Multiple Colly Formset Logic
+    const tableBody = document.getElementById('collyTableBody');
+    const totalFormsInput = document.getElementById('id_items-TOTAL_FORMS');
+    const emptyFormTemplate = document.getElementById('emptyFormTemplate')?.innerHTML || '';
+    const addCollyBtn = document.getElementById('addCollyBtn');
+
+    function updateRowIndices() {
+        if (!tableBody || !totalFormsInput) return;
+        const rows = tableBody.querySelectorAll('.colly-row');
+        let index = 0;
+        rows.forEach((row) => {
+            const inputs = row.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                const name = input.getAttribute('name');
+                if (name) {
+                    input.setAttribute('name', name.replace(/items-(__prefix__|\d+)-/, `items-${index}-`));
+                }
+                const id = input.getAttribute('id');
+                if (id) {
+                    input.setAttribute('id', id.replace(/id_items-(__prefix__|\d+)-/, `id_items-${index}-`));
+                }
+            });
+            index++;
+        });
+        totalFormsInput.value = index;
+    }
+
+    function addRow(e) {
+        if (e) e.preventDefault();
+        if (!tableBody || !emptyFormTemplate || !totalFormsInput) return;
+        tableBody.insertAdjacentHTML('beforeend', emptyFormTemplate.replace(/__prefix__/g, totalFormsInput.value));
+        const newRow = tableBody.lastElementChild;
+        updateRowIndices();
+        attachRowEvents(newRow);
+        calculateAll();
+    }
+
+    if (addCollyBtn) {
+        addCollyBtn.addEventListener('click', addRow);
+    }
+
+    function removeRow(e) {
+        const btn = e.target.closest('.remove-colly-row');
+        if (!btn) return;
+        const row = btn.closest('.colly-row');
+        const deleteCheckbox = row.querySelector('.delete-checkbox-wrapper input[type="checkbox"]');
+        if (deleteCheckbox) {
+            deleteCheckbox.checked = true;
+            row.classList.add('d-none');
+            row.classList.remove('colly-row');
+        } else {
+            row.remove();
+        }
+        updateRowIndices();
+        calculateAll();
+    }
+
+    function copyRow(e) {
+        const btn = e.target.closest('.copy-colly-row');
+        if (!btn) return;
+        const row = btn.closest('.colly-row');
+        if (!row || !emptyFormTemplate || !totalFormsInput) return;
+
+        // Clone current row values
+        const aw = row.querySelector('input[name$="-actual_weight"]')?.value || '0';
+        const p = row.querySelector('input[name$="-panjang"]')?.value || '0';
+        const l = row.querySelector('input[name$="-lebar"]')?.value || '0';
+        const t = row.querySelector('input[name$="-tinggi"]')?.value || '0';
+        const qty = row.querySelector('input[name$="-quantity"]')?.value || '1';
+        const desc = row.querySelector('input[name$="-description"]')?.value || '';
+        const pack = row.querySelector('select[name$="-packing"]')?.value || 'NO';
+
+        tableBody.insertAdjacentHTML('beforeend', emptyFormTemplate.replace(/__prefix__/g, totalFormsInput.value));
+        const newRow = tableBody.lastElementChild;
+
+        if (newRow) {
+            const newAw = newRow.querySelector('input[name$="-actual_weight"]');
+            if (newAw) newAw.value = aw;
+            const newP = newRow.querySelector('input[name$="-panjang"]');
+            if (newP) newP.value = p;
+            const newL = newRow.querySelector('input[name$="-lebar"]');
+            if (newL) newL.value = l;
+            const newT = newRow.querySelector('input[name$="-tinggi"]');
+            if (newT) newT.value = t;
+            const newQty = newRow.querySelector('input[name$="-quantity"]');
+            if (newQty) newQty.value = qty;
+            const newDesc = newRow.querySelector('input[name$="-description"]');
+            if (newDesc) newDesc.value = desc;
+            const newPack = newRow.querySelector('select[name$="-packing"]');
+            if (newPack) newPack.value = pack;
+        }
+
+        updateRowIndices();
+        attachRowEvents(newRow);
+        calculateAll();
+    }
+
+    function attachRowEvents(row) {
+        if (!row) return;
+        row.querySelectorAll('input, select').forEach(input => {
+            input.addEventListener('input', calculateAll);
+            input.addEventListener('change', calculateAll);
+        });
+    }
+
+    if (tableBody) {
+        tableBody.addEventListener('click', function(e) {
+            if (e.target.closest('.remove-colly-row')) {
+                removeRow(e);
+            } else if (e.target.closest('.copy-colly-row')) {
+                copyRow(e);
+            }
+        });
+    }
+
+    // Calculation Engine (POS Resi Exact Logic)
+    function calculateAll() {
+        const service = calcServiceSelect ? calcServiceSelect.value : 'UDARA';
+        const divisor = getDivisor(service);
+
+        // Multiple colly rows
+        const rows = document.querySelectorAll('#collyTableBody .colly-row:not(.d-none)');
+        let extraChargeable = 0;
+        let extraKoli = 0;
+        let totalPackingCost = 0;
+        let hasMultiCollyData = false;
+
+        rows.forEach(row => {
+            const aw = parseFloat(row.querySelector('input[name$="-actual_weight"]')?.value) || 0;
+            const qty = parseInt(row.querySelector('input[name$="-quantity"]')?.value) || 0;
+            const rp = parseFloat(row.querySelector('input[name$="-panjang"]')?.value) || 0;
+            const rl = parseFloat(row.querySelector('input[name$="-lebar"]')?.value) || 0;
+            const rt = parseFloat(row.querySelector('input[name$="-tinggi"]')?.value) || 0;
+            const packSelect = row.querySelector('select[name$="-packing"]');
+            const packVal = packSelect ? packSelect.value : 'NO';
+
+            if (aw > 0 || qty > 0 || rp > 0 || rl > 0 || rt > 0) {
+                hasMultiCollyData = true;
+                const effectiveQty = qty > 0 ? qty : 1;
+                const rowVol = (rp * rl * rt) / divisor;
+                const rowMax = Math.max(aw, rowVol);
+                const rowChargeable = rowMax * effectiveQty;
+                extraChargeable += rowChargeable;
+                extraKoli += effectiveQty;
+
+                const badge = row.querySelector('.chargeable-weight-display');
+                if (badge) {
+                    badge.textContent = rowChargeable.toFixed(2) + ' kg';
+                }
+
+                const mult = PACKING_MULTIPLIER[packVal] || 0;
+                if (mult > 0) {
+                    totalPackingCost += ((rp + rl + rt + 15) / 3) * mult * effectiveQty;
+                }
+            }
+        });
+
+        // Main Item row
+        const w = parseFloat(document.getElementById('id_actual_weight')?.value) || 0;
+        const p = parseFloat(document.getElementById('id_panjang')?.value) || 0;
+        const l = parseFloat(document.getElementById('id_lebar')?.value) || 0;
+        const t = parseFloat(document.getElementById('id_tinggi')?.value) || 0;
+        const mainColly = parseInt(document.getElementById('id_quantity')?.value) || 1;
+        const mainPacking = document.getElementById('id_main_packing')?.value || 'NONE';
+
+        let mainChargeable = 0;
+        let actualMainColly = 0;
+
+        if (!hasMultiCollyData || w > 0 || p > 0 || l > 0 || t > 0) {
+            const volMain = (p * l * t) / divisor;
+            const effectiveMainColly = mainColly > 0 ? mainColly : 1;
+            mainChargeable = Math.max(w, volMain) * (w > 0 || volMain > 0 ? effectiveMainColly : (hasMultiCollyData ? 0 : effectiveMainColly));
+            actualMainColly = (w > 0 || volMain > 0) ? effectiveMainColly : (hasMultiCollyData ? 0 : effectiveMainColly);
+
+            // Main packing cost
+            const mainMult = PACKING_MULTIPLIER[mainPacking] || 0;
+            if (mainMult > 0 && actualMainColly > 0) {
+                totalPackingCost += ((p + l + t + 15) / 3) * mainMult * actualMainColly;
+            }
+        }
+
+        let totalChargeable = mainChargeable + extraChargeable;
+        let totalKoli = actualMainColly + extraKoli;
+
+        if (totalChargeable === 0 && w > 0) {
+            totalChargeable = w;
+        }
+
+        // Update displays
+        const displayWeight = document.getElementById('displayWeightCharge');
+        if (displayWeight) displayWeight.textContent = totalChargeable.toFixed(2) + ' kg';
+        const displayKoli = document.getElementById('displayTotalKoli');
+        if (displayKoli) displayKoli.textContent = totalKoli > 0 ? totalKoli : 1;
+        const displayPacking = document.getElementById('displayTotalPacking');
+        if (displayPacking) displayPacking.textContent = 'Rp ' + Math.round(totalPackingCost).toLocaleString('id-ID');
+        const displayDiv = document.getElementById('displayDivisor');
+        if (displayDiv) displayDiv.textContent = divisor.toLocaleString('id-ID');
+
+        // Auto-fill packing cost input if user hasn't typed custom packing
+        const idPackingInput = document.getElementById('id_packing');
+        if (idPackingInput && totalPackingCost > 0 && (!idPackingInput.value || parseFloat(idPackingInput.value) === 0)) {
+            idPackingInput.value = Math.round(totalPackingCost);
+        }
+
+        // Calculate Grand Total
+        const cleanNumber = (val) => {
+            if (!val) return 0;
+            let str = val.toString();
+            if (str.endsWith('.00')) {
+                str = str.slice(0, -3);
+            } else if (str.endsWith('.0')) {
+                str = str.slice(0, -2);
+            }
+            const cleaned = str.replace(/\./g, '').replace(/,/g, '.');
+            return parseFloat(cleaned) || 0;
+        };
+
+        const manualPrice = cleanNumber(document.getElementById('id_manual_total_price')?.value);
+        if (manualPrice > 0) {
+            const dispGrandTotal = document.getElementById('liveGrandTotal');
+            if (dispGrandTotal) {
+                dispGrandTotal.textContent = new Intl.NumberFormat('id-ID', {
+                    style: 'currency',
+                    currency: 'IDR',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                }).format(manualPrice);
+            }
+            return;
+        }
+
+        const pricePerKg = cleanNumber(document.getElementById('id_price_per_kg')?.value);
+        const ins = cleanNumber(document.getElementById('id_insurance')?.value);
+        const pack = cleanNumber(idPackingInput?.value) || totalPackingCost;
+        const disc = cleanNumber(document.getElementById('id_discount')?.value);
+
+        const grand = Math.max(0, (totalChargeable * pricePerKg) + ins + pack - disc);
+
+        const dispGrandTotal = document.getElementById('liveGrandTotal');
+        if (dispGrandTotal) {
+            dispGrandTotal.textContent = new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(grand);
+        }
+    }
+
+    // Attach listeners
+    if (typeof $ !== 'undefined') {
+        $('.calc-trigger').on('change input', calculateAll);
+        $('#collapseColly').on('shown.bs.collapse hidden.bs.collapse', calculateAll);
+    }
+    document.getElementById('btnCalc')?.addEventListener('click', calculateAll);
+
+    ['id_actual_weight', 'id_panjang', 'id_lebar', 'id_tinggi', 'id_quantity', 'id_main_packing'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', calculateAll);
+            el.addEventListener('change', calculateAll);
+        }
+    });
+
+    ['id_price_per_kg', 'id_insurance', 'id_packing', 'id_discount', 'id_manual_total_price'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', calculateAll);
+            el.addEventListener('keyup', calculateAll);
+        }
+    });
+
+    // Init formset listeners & calculation on load
+    updateRowIndices();
+    if (tableBody) {
+        tableBody.querySelectorAll('.colly-row').forEach(attachRowEvents);
+    }
+    updateDivisorDisplay();
+    syncServiceToCalc();
+    calculateAll();
+
+    // Enable bootstrap tooltips if bootstrap is loaded
+    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    }
+});
+</script>
+{% endblock %}
+

@@ -1,0 +1,63 @@
+<!-- CRM Dashboard Component -->
+<div class="row g-4 mb-4">
+    <div class="col-md-{% if is_single_role %}4{% else %}3{% endif %}">
+        <div class="card h-100 border-0 shadow-sm" style="border-left: 4px solid var(--pk-crm-accent) !important;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="card-title text-danger mb-0"><i class="ph-duotone ph-handshake me-1"></i> Total Klien</h6>
+                    <h3 class="mb-0">{{ crm_clients }}</h3>
+                </div>
+                <div class="small text-muted">{{ crm_leads }} Lead &middot; {{ crm_quotations }} Penawaran</div>
+            </div>
+        </div>
+    </div>
+    {% if is_single_role %}
+    <!-- Extra KPI for single role CRM -->
+    <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm" style="border-left: 4px solid #ffc107 !important;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="card-title text-warning mb-0"><i class="ph-duotone ph-funnel me-1"></i> Leads Aktif</h6>
+                    <h3 class="mb-0">{{ crm_leads }}</h3>
+                </div>
+                <div class="small text-muted">Bulan ini</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm" style="border-left: 4px solid #fd7e14 !important;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="card-title mb-0" style="color: #fd7e14;"><i class="ph-duotone ph-file-text me-1"></i> Quotations</h6>
+                    <h3 class="mb-0">{{ crm_quotations }}</h3>
+                </div>
+                <div class="small text-muted">Menunggu persetujuan</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="col-md-{% if is_single_role %}6{% else %}5{% endif %}">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-0 pt-3 pb-0 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="ph-duotone ph-chart-pie me-2 text-danger"></i>Status Leads</h6>
+                <button class="btn btn-sm btn-light"><i class="ph-bold ph-dots-three"></i></button>
+            </div>
+            <div class="card-body d-flex align-items-center justify-content-center">
+                <canvas id="crmLeadsChart" height="240"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-{% if is_single_role %}6{% else %}4{% endif %}">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-0 pt-3 pb-0 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="ph-duotone ph-users me-2 text-danger"></i>Aktivitas by Sales</h6>
+                <button class="btn btn-sm btn-light"><i class="ph-bold ph-dots-three"></i></button>
+            </div>
+            <div class="card-body d-flex align-items-center justify-content-center">
+                <canvas id="crmActivityChart" height="240"></canvas>
+            </div>
+        </div>
+    </div>
+</div>

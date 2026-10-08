@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ contract.contract_number }}{% endblock %}
+{% block page_title %}Detail Kontrak{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="mb-3">
+        <a href="{% url 'crm:contract-list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="ph-duotone ph-arrow-left me-1"></i> Kembali
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card card-custom">
+                <div class="card-header card-header-custom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="ph-duotone ph-handshake me-2"></i>{{ contract.title }}
+                        <span class="badge bg-{% if contract.status == 'ACTIVE' %}success{% elif contract.status == 'EXPIRED' %}danger{% elif contract.status == 'DRAFT' %}secondary{% else %}warning{% endif %} ms-2">
+                            {{ contract.get_status_display }}
+                        </span>
+                    </h5>
+                    <div>
+                        <a href="{% url 'crm:contract-update' contract.pk %}" class="btn btn-sm btn-outline-primary"><i class="ph-duotone ph-pencil-simple me-1"></i>Edit</a>
+                        {% if is_admin %}
+                        <a href="{% url 'crm:contract-delete' contract.pk %}" class="btn btn-sm btn-outline-danger"><i class="ph-duotone ph-trash me-1"></i>Hapus</a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if contract.is_expiring_soon %}
+                    <div class="alert alert-warning">
+                        <i class="ph-duotone ph-warning-circle me-2"></i>
+                        <strong>Perhatian:</strong> Kontrak ini akan berakhir dalam <strong>{{ contract.days_remaining }} hari</strong>.
+                    </div>
+                    {% endif %}
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Nomor Kontrak</label>
+                            <p class="fw-semibold">{{ contract.contract_number }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Nilai Kontrak</label>
+                            <p class="fw-semibold text-danger">Rp {{ contract.value|intcomma }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Tanggal Mulai</label>
+                            <p>{{ contract.start_date|date:"d M Y" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Tanggal Berakhir</label>
+                            <p>{{ contract.end_date|date:"d M Y" }}</p>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small">Deskripsi</label>
+                            <p>{{ contract.description|default:"-" }}</p>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small">Penerima (Consignee)</label>
+                            <p>{{ contract.penerima|default:"-" }}</p>
+                        </div>
+                        {% if contract.terms %}
+                        <div class="col-12">
+                            <label class="form-label text-muted small">Syarat & Ketentuan</label>
+                            <p>{{ contract.terms|linebreaks }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card card-custom">
+                <div class="card-header card-header-custom">
+                    <h6 class="mb-0"><i class="ph-duotone ph-buildings me-2"></i>Informasi Klien</h6>
+                </div>
+                <div class="card-body">
+                    <a href="{% url 'crm:client-detail' contract.client.pk %}" class="fw-semibold text-decoration-none d-block mb-1">{{ contract.client.company_name }}</a>
+                    <p class="mb-1"><i class="ph-duotone ph-user me-1"></i> {{ contract.client.contact_person }}</p>
+                    <p class="mb-0"><i class="ph-duotone ph-phone me-1"></i> {{ contract.client.phone }}</p>
+                </div>
+            </div>
+
+            {% if contract.lead %}
+            <div class="card card-custom mt-3">
+                <div class="card-header card-header-custom">
+                    <h6 class="mb-0"><i class="ph-duotone ph-funnel me-2"></i>Sumber Lead</h6>
+                </div>
+                <div class="card-body">
+                    <a href="{% url 'crm:lead-detail' contract.lead.pk %}" class="fw-semibold text-decoration-none d-block mb-1">
+                        {{ contract.lead.client.company_name }} - {{ contract.lead.get_status_display }}
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card card-custom mt-3">
+                <div class="card-body">
+                    <small class="text-muted">
+                        <i class="ph-duotone ph-user me-1"></i> PIC: {{ contract.owner.get_full_name|default:contract.owner.username }}<br>
+                        <i class="ph-duotone ph-calendar-blank me-1"></i> Dibuat: {{ contract.created_at|date:"d M Y H:i" }}<br>
+                        <i class="ph-duotone ph-pencil-simple me-1"></i> Update: {{ contract.updated_at|date:"d M Y H:i" }}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

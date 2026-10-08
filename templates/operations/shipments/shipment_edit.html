@@ -1,0 +1,415 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'operations:shipment-list' %}" class="btn btn-outline-secondary bg-white px-3 shadow-sm btn-sm">
+            <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+        </a>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        
+        <div class="card bg-white border-0 shadow-sm rounded-4">
+            
+            <div class="card-body p-4">
+                <h5 class="fw-bold text-dark border-bottom pb-3 mb-4">Form {{ title }}</h5>
+
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row g-4">
+                        <!-- PENGIRIM -->
+                        <div class="col-md-6">
+                            <div class="h-100">
+                                <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">Data Pengirim</h6>
+                                {% if pos_type != 'CASH' %}
+                                <div class="mb-3">
+                                    <label class="form-label text-muted small fw-semibold">Pilih Perusahaan/Klien Pengirim (Kontrak) <span class="text-danger">*</span></label>
+                                    {{ form.client }}
+                                </div>
+                                {% endif %}
+                                <div class="mb-3">
+                                    <label class="form-label text-muted small fw-semibold">Nama PIC / Pengirim</label>
+                                    {{ form.sender_name }}
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label text-muted small fw-semibold">No. HP/Telepon</label>
+                                    {{ form.sender_phone }}
+                                </div>
+                                <div class="mb-0">
+                                    <label class="form-label text-muted small fw-semibold">Alamat Lengkap</label>
+                                    {{ form.sender_address }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PENERIMA -->
+                        <div class="col-md-6">
+                            <div class="h-100">
+                                <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">Data Penerima</h6>
+                                <div class="mb-3">
+                                    <label class="form-label text-muted small fw-semibold">Nama Lengkap</label>
+                                    {{ form.receiver_name }}
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label text-muted small fw-semibold">No. HP/Telepon</label>
+                                    {{ form.receiver_phone }}
+                                </div>
+                                <div class="mb-0">
+                                    <label class="form-label text-muted small fw-semibold">Alamat Lengkap</label>
+                                    {{ form.receiver_address }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12"><hr class="text-muted my-2"></div>
+                        
+                        <!-- RUTE DAN LAYANAN -->
+                        <div class="col-12 d-flex justify-content-between align-items-center mt-3">
+                            <h6 class="fw-bold mb-0 text-secondary"><i class="ph-bold ph-map-trifold me-2"></i>Rute & Layanan</h6>
+                            <div class="form-check form-switch bg-warning bg-opacity-10 border border-warning rounded px-3 py-1 mb-0">
+                                {{ form.is_manual_override }}
+                                <label class="form-check-label text-warning fw-bold ms-1" for="{{ form.is_manual_override.id_for_label }}">
+                                    Kargo Khusus (Bypass Master Data)
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-semibold">Kota Asal</label>
+                            {{ form.origin_input }}
+                            <div class="form-text mt-1 text-muted" style="font-size: 0.7rem;"><i class="ph-duotone ph-info"></i> Ketik nama, lalu Enter jika baru.</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-semibold">Kota Tujuan</label>
+                            {{ form.destination_input }}
+                            <div class="form-text mt-1 text-muted" style="font-size: 0.7rem;"><i class="ph-duotone ph-info"></i> Ketik nama, lalu Enter jika baru.</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-semibold">Tipe Layanan</label>
+                            {{ form.service_type }}
+                        </div>
+                        
+                        <!-- DIMENSI & HARGA -->
+                        <div class="col-12 mt-4">
+                            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">Dimensi Barang & Biaya</h6>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label class="form-label text-muted small fw-semibold">Berat Aktual (Kg)</label>
+                            <div class="input-group">
+                                {{ form.weight }}
+                                <span class="input-group-text">kg</span>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label class="form-label text-muted small fw-semibold">Dimensi (P x L x T) cm</label>
+                            <div class="input-group">
+                                {{ form.length }}
+                                <span class="input-group-text border-start-0 border-end-0 bg-transparent text-muted px-1">x</span>
+                                {{ form.width }}
+                                <span class="input-group-text border-start-0 border-end-0 bg-transparent text-muted px-1">x</span>
+                                {{ form.height }}
+                            </div>
+                            <div class="form-text mt-1 text-primary" style="font-size: 0.75rem;">
+                                <i class="ph-bold ph-info"></i> Berat volume = (P x L x T) / 5000
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label class="form-label text-muted small fw-semibold">Total Koli</label>
+                            <div class="input-group">
+                                {{ form.total_colly }}
+                                <span class="input-group-text bg-light">Koli</span>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-semibold">Chargeable Weight (kg)</label>
+                            <div class="input-group">
+                                <button class="btn btn-primary" type="button" id="btnCalcChargeable">
+                                    <i class="ph-bold ph-calculator"></i>
+                                </button>
+                                <input type="text" class="form-control fw-bold bg-light" id="displayChargeable" readonly value="0">
+                            </div>
+                        </div>
+                        
+                        <div class="col-12 mt-2">
+                            <div class="mb-3">
+                                <button class="btn btn-light bg-light w-100 border text-secondary fw-semibold py-2 d-flex justify-content-center align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseColly" style="border-radius: 6px; box-shadow: none;">
+                                    <i class="ph-bold ph-caret-up me-2"></i> Jika membutuhkan input multi koli
+                                </button>
+                                <div id="collapseColly" class="collapse">
+                                    <div class="pt-3">
+                                        {{ items_formset.management_form }}
+                                            
+                                            <div class="table-responsive">
+                                                <table class="table table-bordered table-sm align-middle" id="collyTable">
+                                                    <thead class="table-light text-center" style="font-size: 0.85rem;">
+                                                        <tr>
+                                                            <th width="5%">Aksi</th>
+                                                            <th width="12%">Berat Aktual<br>(kg)</th>
+                                                            <th width="8%">Koli</th>
+                                                            <th width="12%">Panjang<br>(cm)</th>
+                                                            <th width="12%">Lebar<br>(cm)</th>
+                                                            <th width="12%">Tinggi<br>(cm)</th>
+                                                            <th width="15%">Packing</th>
+                                                            <th>Deskripsi Barang</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="collyTableBody">
+                                                        {% for item_form in items_formset %}
+                                                        <tr class="colly-row">
+                                                            <td class="text-center">
+                                                                {{ item_form.id }}
+                                                                <div class="d-none delete-checkbox-wrapper">
+                                                                    {{ item_form.DELETE }}
+                                                                </div>
+                                                                <button type="button" class="btn btn-sm btn-danger remove-colly-row"><i class="ph-bold ph-minus"></i></button>
+                                                            </td>
+                                                            <td>{{ item_form.actual_weight }}</td>
+                                                            <td>{{ item_form.quantity }}</td>
+                                                            <td>{{ item_form.panjang }}</td>
+                                                            <td>{{ item_form.lebar }}</td>
+                                                            <td>{{ item_form.tinggi }}</td>
+                                                            <td>{{ item_form.packing }}</td>
+                                                            <td>{{ item_form.description }}</td>
+                                                        </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                                
+                                                <div class="mt-2 text-center">
+                                                    <button type="button" class="btn btn-sm btn-danger" id="addCollyBtn">
+                                                        <i class="ph-bold ph-plus me-1"></i> Tambah Item
+                                                    </button>
+                                                </div>
+
+                                                <!-- Empty Form Template -->
+                                                <table class="d-none">
+                                                    <tbody id="emptyFormTemplate">
+                                                        <tr class="colly-row">
+                                                            <td class="text-center">
+                                                                <button type="button" class="btn btn-sm btn-danger remove-colly-row"><i class="ph-bold ph-minus"></i></button>
+                                                            </td>
+                                                            <td>{{ items_formset.empty_form.actual_weight }}</td>
+                                                            <td>{{ items_formset.empty_form.quantity }}</td>
+                                                            <td>{{ items_formset.empty_form.panjang }}</td>
+                                                            <td>{{ items_formset.empty_form.lebar }}</td>
+                                                            <td>{{ items_formset.empty_form.tinggi }}</td>
+                                                            <td>{{ items_formset.empty_form.packing }}</td>
+                                                            <td>{{ items_formset.empty_form.description }}</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-semibold">Biaya Pengiriman (Rp)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">Rp</span>
+                                {{ form.price }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end gap-2 mt-5">
+                        <a href="{% url 'operations:shipment-list' %}" class="btn btn-light px-4">Batal</a>
+                        <button type="submit" class="btn btn-danger px-4">
+                            <i class="ph-bold ph-floppy-disk me-2"></i> Simpan Resi
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script to auto-calculate volume weight if needed in frontend -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Select2 initialization is now handled globally in base.html
+        const clientSelect = document.querySelector('select[name="client"]');
+        const lengthInput = document.querySelector('input[name="length"]');
+        const widthInput = document.querySelector('input[name="width"]');
+        const heightInput = document.querySelector('input[name="height"]');
+        const priceInput = document.querySelector('input[name="price"]');
+        const weightInput = document.querySelector('input[name="weight"]');
+        const serviceInput = document.querySelector('select[name="service_type"]');
+        
+        let currentContractPricePerKg = 0;
+
+        function fetchContractPrice() {
+            const clientId = clientSelect ? clientSelect.value : '';
+            const origin = document.querySelector('select[name="origin_input"]').value;
+            const destination = document.querySelector('select[name="destination_input"]').value;
+            const service = document.querySelector('select[name="service_type"]').value;
+            
+            // Allow fetch if we have origin + dest + service even without client
+            if (!clientId && (!origin || !destination || !service)) {
+                currentContractPricePerKg = 0;
+                calculatePrice();
+                return;
+            }
+
+            const url = `/operations/api/get-contract-price/?client_id=${clientId}&origin=${origin}&destination=${destination}&service_type=${service}`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.price_per_kg) {
+                        currentContractPricePerKg = data.price_per_kg;
+                        
+                        // Optional: Autofill service/origin/destination if not filled (from contract)
+                        if (data.source === 'contract' || data.source === 'quotation') {
+                            if (data.asal && !origin) {
+                                // this logic might need select2 update if it's select2
+                                // but we keep it simple for now
+                            }
+                        }
+                    } else {
+                        currentContractPricePerKg = 0;
+                    }
+                    calculatePrice();
+                })
+                .catch(err => {
+                    console.error("Error fetching price:", err);
+                    currentContractPricePerKg = 0;
+                    calculatePrice();
+                });
+        }
+        
+        function calculatePrice() {
+            let p = parseFloat(lengthInput.value) || 0;
+            let l = parseFloat(widthInput.value) || 0;
+            let t = parseFloat(heightInput.value) || 0;
+            let w = parseFloat(weightInput.value) || 0;
+            let koli = parseInt(document.querySelector('input[name="total_colly"]')?.value) || 1;
+            
+            let topVol = (p * l * t) / 5000;
+            let topChargeable = Math.max(w, topVol) * koli;
+            
+            // Multiple colly calculation
+            let tableChargeable = 0;
+            const rows = document.querySelectorAll('#collyTableBody .colly-row:not(.d-none)');
+            rows.forEach((row) => {
+                const act_w = parseFloat(row.querySelector('input[name$="-actual_weight"]')?.value) || 0;
+                const qty = parseInt(row.querySelector('input[name$="-quantity"]')?.value) || 0;
+                const rp = parseFloat(row.querySelector('input[name$="-panjang"]')?.value) || 0;
+                const rl = parseFloat(row.querySelector('input[name$="-lebar"]')?.value) || 0;
+                const rt = parseFloat(row.querySelector('input[name$="-tinggi"]')?.value) || 0;
+                
+                let rowVol = (rp * rl * rt) / 5000;
+                let rowMax = Math.max(act_w, rowVol);
+                tableChargeable += (rowMax * qty);
+            });
+            
+            let totalChargeable = topChargeable + tableChargeable;
+            const dispCalc = document.getElementById('displayChargeable');
+            if (dispCalc) dispCalc.value = totalChargeable.toFixed(2);
+            
+            let estimatedPrice = Math.ceil(totalChargeable) * currentContractPricePerKg;
+            
+            if (estimatedPrice > 0) {
+                // Only auto-fill if user hasn't explicitly entered a different price manually
+                priceInput.value = estimatedPrice;
+            }
+        }
+        
+        if (clientSelect) {
+            clientSelect.addEventListener('change', fetchContractPrice);
+            // Fetch initial if editing or if browser auto-filled
+            if (clientSelect.value) {
+                fetchContractPrice();
+            }
+        }
+
+        [lengthInput, widthInput, heightInput, weightInput].forEach(el => {
+            if(el) el.addEventListener('input', calculatePrice);
+        });
+        
+        if (serviceInput) {
+            serviceInput.addEventListener('change', fetchContractPrice);
+        }
+        
+        // Listen to select2 changes for origin and destination
+        if (typeof jQuery !== 'undefined') {
+            $('select[name="origin_input"]').on('change', fetchContractPrice);
+            $('select[name="destination_input"]').on('change', fetchContractPrice);
+        }
+        
+        const btnCalc = document.getElementById('btnCalcChargeable');
+        if (btnCalc) btnCalc.addEventListener('click', calculatePrice);
+        
+        // --- Formset Logic ---
+        const tableBody = document.getElementById('collyTableBody');
+        const totalFormsInput = document.getElementById('id_items-TOTAL_FORMS');
+        const emptyFormTemplate = document.getElementById('emptyFormTemplate')?.innerHTML;
+        const addCollyBtn = document.getElementById('addCollyBtn');
+        
+        function updateRowIndices() {
+            if(!tableBody) return;
+            const rows = tableBody.querySelectorAll('.colly-row');
+            let index = 0;
+            rows.forEach((row) => {
+                const inputs = row.querySelectorAll('input, select, textarea');
+                inputs.forEach(input => {
+                    const name = input.getAttribute('name');
+                    if (name) {
+                        input.setAttribute('name', name.replace(/items-(__prefix__|\d+)-/, `items-${index}-`));
+                    }
+                    const id = input.getAttribute('id');
+                    if (id) {
+                        input.setAttribute('id', id.replace(/id_items-(__prefix__|\d+)-/, `id_items-${index}-`));
+                    }
+                });
+                index++;
+            });
+            if(totalFormsInput) totalFormsInput.value = index;
+            calculatePrice();
+        }
+
+        if (addCollyBtn) {
+            addCollyBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                tableBody.insertAdjacentHTML('beforeend', emptyFormTemplate.replace(/__prefix__/g, totalFormsInput.value));
+                const newRow = tableBody.lastElementChild;
+                newRow.querySelectorAll('input').forEach(input => {
+                    input.addEventListener('input', calculatePrice);
+                });
+                updateRowIndices();
+            });
+        }
+
+        if (tableBody) {
+            tableBody.addEventListener('click', function(e) {
+                const btn = e.target.closest('.remove-colly-row');
+                if (!btn) return;
+                const row = btn.closest('.colly-row');
+                
+                const deleteCheckbox = row.querySelector('.delete-checkbox-wrapper input[type="checkbox"]');
+                if (deleteCheckbox) {
+                    deleteCheckbox.checked = true;
+                    row.classList.add('d-none');
+                    row.classList.remove('colly-row');
+                } else {
+                    row.remove();
+                }
+                updateRowIndices();
+            });
+            tableBody.querySelectorAll('.colly-row input').forEach(input => {
+                input.addEventListener('input', calculatePrice);
+            });
+        }
+    });
+</script>
+{% endblock %}

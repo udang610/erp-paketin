@@ -1,0 +1,247 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Resi {{ shipment.resi_number }}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Libre+Barcode+39&display=swap');
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            font-size: 10px;
+            margin: 0;
+            padding: 20px 0;
+            color: #000;
+            background-color: #525659;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .print-container {
+            width: 100mm;
+            height: 100mm;
+            margin: 0 auto;
+            border: 1px solid #000;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            background-color: #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        .header-grid {
+            display: grid;
+            grid-template-columns: 27% 16.5% 16.5% 20% 20%;
+            border-bottom: 1px solid #000;
+            min-height: 45px;
+        }
+
+        .header-cell {
+            padding: 4px;
+            border-right: 1px solid #000;
+        }
+        .header-cell:last-child { border-right: none; }
+
+        .barcode-section {
+            text-align: center;
+            padding: 4px;
+            border-bottom: 1px solid #000;
+        }
+
+        .barcode {
+            font-family: 'Libre Barcode 39', cursive;
+            font-size: 40px;
+            line-height: 1;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            flex-grow: 1;
+            border-bottom: 1px solid #000;
+        }
+
+        .left-col {
+            border-right: 1px solid #000;
+            padding: 5px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .right-col {
+            padding: 5px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            min-height: 30px;
+            border-bottom: 1px solid #000;
+        }
+
+        .footer-left {
+            border-right: 1px solid #000;
+            padding: 5px;
+        }
+
+        .footer-right {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            text-align: center;
+        }
+        
+        .footer-right > div {
+            border-right: 1px solid #000;
+            padding: 5px;
+        }
+        .footer-right > div:last-child {
+            border-right: none;
+        }
+
+        .table-custom {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8px;
+            margin-top: auto;
+        }
+        .table-custom th, .table-custom td {
+            border: 1px solid #000;
+            padding: 2px;
+            text-align: left;
+        }
+        
+        .fw-bold { font-weight: bold; }
+        .text-center { text-align: center; }
+        .small-label { font-size: 8px; }
+        
+        @media print {
+            body { padding: 0; background-color: #fff; display: block; }
+            .print-container { 
+                width: 98mm; 
+                height: 98mm; 
+                margin: 1mm auto; 
+                box-shadow: none;
+            }
+            @page { size: 100mm 100mm; margin: 0; }
+        }
+    </style>
+</head>
+<body onload="window.print()">
+    <div class="print-container">
+        <div class="header-grid">
+            <div class="header-cell" style="display: flex; align-items: center; justify-content: center; padding: 5px;">
+                <img src="{% static 'img/logo-surat.webp' %}" alt="Paketin Cargo" style="width: 90%; object-fit: contain;">
+            </div>
+            <div class="header-cell" style="padding-left: 8px;">
+                <div class="small-label">Asal</div>
+                <div class="fw-bold" style="font-size: 10px;">{{ shipment.get_tlc_origin }} - {{ shipment.get_city_origin }}</div>
+            </div>
+            <div class="header-cell" style="padding-left: 8px;">
+                <div class="small-label">Tujuan</div>
+                <div class="fw-bold" style="font-size: 10px;">{{ shipment.get_tlc_dest }} - {{ shipment.get_city_dest }}</div>
+            </div>
+            <div class="header-cell">
+                <div class="small-label">Pembayaran</div>
+                <div class="fw-bold" style="font-size: 10px;">{{ shipment.payment_type|default:"KREDIT" }}</div>
+            </div>
+            <div class="header-cell">
+                <div class="small-label">Handling</div>
+                <div class="fw-bold" style="font-size: 10px;">GENERAL CARGO</div>
+            </div>
+        </div>
+
+        <div class="barcode-section">
+            {% if shipment.is_do_balik %}
+            <div style="background-color: #000; color: #fff; font-weight: bold; font-size: 9.5px; padding: 2px 0; margin-bottom: 2px; letter-spacing: 0.5px;">
+                ★ AWB &amp; DO BALIK (WAJIB KEMBALIKAN SURAT JALAN) ★
+            </div>
+            {% endif %}
+            <div class="barcode">*{{ shipment.resi_number }}*</div>
+            <div style="display: flex; justify-content: space-between; font-size: 9px; padding: 0 10px;">
+                <span>Reff No : {{ shipment.reference_no|default:"-" }}</span>
+                <span>Resi No : {{ shipment.resi_number }}</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="left-col">
+                <div style="margin-bottom: 10px;">
+                    <div class="small-label">Pengirim :</div>
+                    <div class="fw-bold">{{ shipment.client.company_name|default:shipment.sender_name|default:"-"|slice:":8" }}*********</div>
+                </div>
+                
+                <div>
+                    <div class="small-label">NAMA DAN ALAMAT PENERIMA :</div>
+                    <div class="fw-bold">{{ shipment.receiver_name|default:"-" }}</div>
+                    <div style="font-size: 9px;">
+                        {{ shipment.receiver_address|default:"-" }}<br>
+                        Phone : {{ shipment.receiver_phone|default:"-" }}<br>
+                        <span class="fw-bold">PIC : {{ shipment.receiver_name|default:"-" }}</span>
+                    </div>
+                </div>
+
+                <table class="table-custom mt-2">
+                    <tr>
+                        <th>Berat</th>
+                        <th>Berat Aktual</th>
+                        <th>Berat Volumetrik</th>
+                        <th>Dimensi</th>
+                    </tr>
+                    <tr>
+                        <td>{{ shipment.chargeable_weight|default:shipment.weight|default:"0" }} Kg</td>
+                        <td>{{ shipment.weight|default:"0" }} Kg</td>
+                        <td>{{ shipment.volume_weight|default:"0" }} Kg</td>
+                        <td>{{ shipment.length|default:"0" }}x{{ shipment.width|default:"0" }}x{{ shipment.height|default:"0" }} Cm</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="right-col">
+                <div style="margin-bottom: 10px;">
+                    <div class="small-label">Tipe Kiriman :</div>
+                    <div class="fw-bold">{{ shipment.shipment_type_detail|upper|default:"PAKET" }}</div>
+                </div>
+                
+                <div style="margin-bottom: 10px;">
+                    <div class="small-label">Layanan :</div>
+                    <div class="fw-bold">{{ shipment.get_service_type_display|upper|default:"REGULER" }}</div>
+                </div>
+
+                <div style="margin-bottom: 10px;">
+                    <div class="small-label">Non / COD :</div>
+                    <div class="fw-bold">{% if shipment.is_cod %}COD{% else %}NON COD{% endif %}</div>
+                </div>
+
+                <div>
+                    <div class="small-label">Instruksi Khusus :</div>
+                    <div class="fw-bold" style="font-size: 9px;">{% if shipment.is_do_balik %}★ AWB &amp; DO BALIK ★{% else %}{{ shipment.special_instruction|default:"-" }}{% endif %}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-grid">
+            <div class="footer-left">
+                <div class="small-label">Deskripsi Barang :</div>
+                <div style="font-size: 9px;">{{ shipment.description_item|default:"-" }}</div>
+                <div style="height: 50px;"></div>
+            </div>
+            <div class="footer-right">
+                <div>
+                    <div class="small-label">Jumlah</div>
+                    <div class="fw-bold" style="font-size: 14px;">{{ shipment.total_colly|default:"1" }}</div>
+                </div>
+                <div>
+                    <div class="small-label">Berat (kg)</div>
+                    <div class="fw-bold" style="font-size: 14px;">{{ shipment.chargeable_weight|default:shipment.weight|default:"0" }}</div>
+                </div>
+            </div>
+        </div>
+        <div style="font-size: 7px; text-align: right; padding: 2px 5px 0 0; margin-top: 2px;">
+            Entry Date : {{ shipment.created_at|date:"Y-m-d H:i:s" }} by {{ shipment.created_by.username|default:"Sistem" }}
+        </div>
+    </div>
+</body>
+</html>

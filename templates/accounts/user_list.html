@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Manajemen Pengguna - ERP Paketin{% endblock %}
+{% block page_title %}Users{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Actions Bar (Search + Filter Pop-up + Actions) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <form class="d-flex align-items-center gap-2" method="get">
+            <!-- Search Input -->
+            <div class="search-box-clean d-flex align-items-center bg-white px-3" style="width: 270px; max-width: 320px; height: 38px;">
+                <i class="ph-bold ph-magnifying-glass me-2 text-muted" style="font-size: 1rem; color: #64748b;"></i>
+                <input type="text" name="q" class="border-0 shadow-none p-0 bg-transparent flex-grow-1" placeholder="Cari pengguna..." value="{{ search_q|default:'' }}" style="outline: none !important; font-size: 0.88rem; color: #1e293b; height: 100%;">
+            </div>
+
+            <!-- Filter Button with Pop-up Dropdown (Photo 2 Style) -->
+            <div class="dropdown">
+                <button class="btn shadow-sm position-relative rounded-3 d-inline-flex align-items-center gap-2 px-3 border" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Filter Users" style="height: 38px; font-size: 0.88rem; font-weight: 600; color: #1e293b; background-color: #ffffff !important; border-color: #cbd5e1 !important;">
+                    <i class="ph-bold ph-faders fs-5" style="color: #1e293b;"></i>
+                    <span>Filter</span>
+                    {% if search_q or active_filters %}
+                    <span class="active-filter-dot" title="Filter Aktif"></span>
+                    {% endif %}
+                </button>
+                <div class="dropdown-menu filter-dropdown-menu dropdown-menu-start p-3 shadow-lg border-0" style="width: 320px; z-index: 1050; border-radius: 12px; border: 1px solid #e2e8f0 !important;">
+                    <h6 class="dropdown-header px-0 text-dark mb-2"><i class="ph-bold ph-faders me-2 text-dark"></i>Filter Lanjutan</h6>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Kategori User</label>
+                        <select name="user_type" class="form-select form-select-sm">
+                            <option value="">Semua Kategori</option>
+                            <option value="ADMIN" {% if current_type == 'ADMIN' %}selected{% endif %}>Admin / Staff</option>
+                            <option value="IT" {% if current_type == 'IT' %}selected{% endif %}>IT / Tech Support</option>
+                            <option value="SALES" {% if current_type == 'SALES' %}selected{% endif %}>Sales</option>
+                            <option value="DRIVER" {% if current_type == 'DRIVER' %}selected{% endif %}>Driver / Courier</option>
+                            <option value="OPS" {% if current_type == 'OPS' %}selected{% endif %}>Operations / Gudang</option>
+                            <option value="CS" {% if current_type == 'CS' %}selected{% endif %}>Customer Service</option>
+                            <option value="FINANCE" {% if current_type == 'FINANCE' %}selected{% endif %}>Finance / Keuangan</option>
+                            <option value="MANAGER" {% if current_type == 'MANAGER' %}selected{% endif %}>Manager / SPV</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Role Utama</label>
+                        <select name="role" class="form-select form-select-sm">
+                            <option value="">Semua Role</option>
+                            {% for r in preset_roles %}
+                            <option value="{{ r.name }}" {% if current_role == r.name %}selected{% endif %}>{{ r.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Status Akun</label>
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="">Semua Status</option>
+                            <option value="active" {% if current_status == 'active' %}selected{% endif %}>Aktif</option>
+                            <option value="inactive" {% if current_status == 'inactive' %}selected{% endif %}>Nonaktif</option>
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-muted small mb-1">Tanggal Mulai</label>
+                            <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date|default:'' }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small mb-1">Tanggal Akhir</label>
+                            <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date|default:'' }}">
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 pt-2 border-top">
+                        <button type="submit" class="btn btn-danger btn-sm w-100 fw-bold">Terapkan</button>
+                        <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-secondary btn-sm w-100">Reset</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div class="d-flex gap-2">
+            <a href="{% url 'accounts:user_create' %}" class="btn btn-danger px-4 fw-bold shadow-sm" style="height: 38px;">
+                <i class="ph-bold ph-plus me-1"></i> Buat Baru
+            </a>
+        </div>
+    </div>
+
+    <!-- Table Styles matching Operational -->
+    <style>
+        .table-premium {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            font-size: 0.875rem;
+        }
+        .table-premium thead th {
+            background-color: #f8f9fa;
+            color: #6c757d;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 12px 16px;
+            border-bottom: 2px solid #e9ecef;
+            border-top: 1px solid #e9ecef;
+        }
+        .table-premium thead th:first-child {
+            border-top-left-radius: 8px;
+            border-left: 1px solid #e9ecef;
+        }
+        .table-premium thead th:last-child {
+            border-top-right-radius: 8px;
+            border-right: 1px solid #e9ecef;
+        }
+        .table-premium tbody td {
+            padding: 16px;
+            vertical-align: middle;
+            border-bottom: 1px solid #e9ecef;
+            color: #212529;
+            background-color: #fff;
+            transition: background-color 0.2s ease;
+        }
+        .table-premium tbody tr:hover td {
+            background-color: #f8f9fa;
+        }
+        .table-premium tbody tr:last-child td {
+            border-bottom: 1px solid #e9ecef;
+        }
+        .table-premium tbody tr:last-child td:first-child {
+            border-bottom-left-radius: 8px;
+            border-left: 1px solid #e9ecef;
+        }
+        .table-premium tbody tr:last-child td:last-child {
+            border-bottom-right-radius: 8px;
+            border-right: 1px solid #e9ecef;
+        }
+        .table-premium tbody td:first-child {
+            border-left: 1px solid #e9ecef;
+        }
+        .table-premium tbody td:last-child {
+            border-right: 1px solid #e9ecef;
+        }
+        .shipment-filter-summary { 
+            padding: 10px 12px; 
+            border: 1px solid #edf1f7; 
+            border-radius: 10px; 
+            background: #fbfcfe; 
+        }
+        .filter-chip { 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 6px; 
+            padding: 5px 9px; 
+            border-radius: 999px; 
+            background: #fff1f2; 
+            color: #be123c; 
+            border: 1px solid #fecdd3; 
+            font-size: .72rem; 
+            font-weight: 600; 
+            text-decoration: none; 
+        }
+        .filter-chip:hover { 
+            color: #9f1239; 
+            background: #ffe4e6; 
+        }
+    </style>
+
+    <!-- Table Data Container -->
+    <div class="table-responsive rounded-4 shadow-sm bg-white border" style="font-size: 0.85rem;">
+        <table class="table table-premium table-sm table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th class="ps-4 text-nowrap text-secondary fw-semibold">PENGGUNA</th>
+                    <th class="text-nowrap text-secondary fw-semibold">KONTAK</th>
+                    <th class="text-nowrap text-secondary fw-semibold">ROLE UTAMA</th>
+                    <th class="text-nowrap text-secondary fw-semibold">CABANG</th>
+                    <th class="text-center text-nowrap text-secondary fw-semibold">STATUS</th>
+                    <th class="text-center text-nowrap text-secondary fw-semibold pe-4">AKSI</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <!-- User Info -->
+                    <td class="ps-4">
+                        <div>
+                            <div class="fw-semibold text-dark">{{ u.get_full_name|default:u.username }}</div>
+                            <div class="text-muted small" style="font-size:0.75rem;">@{{ u.username }}</div>
+                        </div>
+                    </td>
+                    <!-- Contact -->
+                    <td>
+                        <div>{{ u.email|default:"-" }}</div>
+                        <div class="text-muted small" style="font-size:0.75rem;">{{ u.phone_number|default:"-" }}</div>
+                    </td>
+                    <!-- Roles -->
+                    <td>
+                        {% for role in u.roles.all %}
+                        <span class="badge rounded-pill me-1" style="background:{% if role.can_access_admin %}#dc2626{% elif role.can_access_monitoring %}#7c3aed{% elif role.can_access_operations %}#2563eb{% elif role.can_access_finance %}#059669{% elif role.can_access_crm %}#d97706{% elif role.can_access_hr %}#0891b2{% else %}#64748b{% endif %};font-size:0.7rem;padding:4px 10px;">
+                            {{ role.name }}
+                        </span>
+                        {% empty %}
+                        <span class="text-muted small">-</span>
+                        {% endfor %}
+                    </td>
+                    <!-- Branch -->
+                    <td>
+                        {% if u.employee_profile and u.employee_profile.branch %}
+                        <span class="text-dark">{{ u.employee_profile.branch.name }} - {{ u.employee_profile.branch.code }}</span>
+                        {% else %}
+                        <span class="text-muted small">-</span>
+                        {% endif %}
+                    </td>
+                    <!-- Status -->
+                    <td class="text-center">
+                        {% if u.is_active %}
+                        <span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold">AKTIF</span>
+                        {% else %}
+                        <span class="badge bg-danger text-white rounded-pill px-3 py-1 fw-bold">NONAKTIF</span>
+                        {% endif %}
+                    </td>
+                    <!-- Actions -->
+                    <td class="text-center pe-4">
+                        <div class="dropdown">
+                            <button class="btn btn-action-table dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Aksi">
+                                <i class="ph-bold ph-list"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 p-2" style="min-width:180px; z-index: 9999;">
+                                <li>
+                                    <a href="{% url 'accounts:user_update' u.id %}" class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2">
+                                        <i class="ph-bold ph-pencil-simple text-primary"></i>
+                                        <span>Edit Pengguna</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <form method="POST" action="{% url 'accounts:user_reset_password' u.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="button" class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 w-100" onclick="PaketinModal.confirm({ title: 'Reset Password Pengguna?', description: 'Password untuk akun {{ u.username }} akan direset ke password default (Paketin123!).', theme: 'warning', confirmText: 'Reset Password', cancelText: 'Batal', icon: 'ph-key', form: this.closest('form') })">
+                                            <i class="ph-bold ph-key text-warning"></i>
+                                            <span>Reset Password</span>
+                                        </button>
+                                    </form>
+                                </li>
+                                {% if u.is_active and not u.is_superuser %}
+                                <li><hr class="dropdown-divider my-1"></li>
+                                <li>
+                                    <form method="POST" action="{% url 'accounts:user_delete' u.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="button" class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2 w-100 text-danger" onclick="PaketinModal.confirm({ title: 'Nonaktifkan Pengguna?', description: 'Akun {{ u.username }} akan dinonaktifkan dan tidak dapat login ke sistem.', theme: 'danger', confirmText: 'Nonaktifkan', cancelText: 'Batal', icon: 'ph-user-minus', form: this.closest('form') })">
+                                            <i class="ph-bold ph-user-minus"></i>
+                                            <span>Nonaktifkan</span>
+                                        </button>
+                                    </form>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-5 text-muted">
+                        <i class="ph-duotone ph-users-three fs-1 d-block mb-2 opacity-50"></i>
+                        Belum ada data pengguna yang sesuai filter.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

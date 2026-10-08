@@ -1,0 +1,419 @@
+{% extends 'base.html' %}
+{% block title %}POD (Proof of Delivery) - ERP Paketin{% endblock %}
+{% block page_title %}POD{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Actions Bar (Search + Filter Pop-up + Actions) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <form class="d-flex align-items-center gap-2" method="get">
+            <!-- Search Input -->
+            <div class="search-box-clean d-flex align-items-center bg-white px-3" style="width: 280px; max-width: 320px; height: 38px;">
+                <i class="ph-bold ph-magnifying-glass me-2 text-muted" style="font-size: 1rem; color: #64748b;"></i>
+                <input type="text" name="q" class="border-0 shadow-none p-0 bg-transparent flex-grow-1" placeholder="Cari nomor resi, penerima..." value="{{ q_search|default:search_resi|default:'' }}" style="outline: none !important; font-size: 0.88rem; color: #1e293b; height: 100%;">
+            </div>
+
+            <!-- Filter Button with Pop-up Dropdown -->
+            <div class="dropdown">
+                <button class="btn shadow-sm position-relative rounded-3 d-inline-flex align-items-center gap-2 px-3 border" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Filter POD" style="height: 38px; font-size: 0.88rem; font-weight: 600; color: #1e293b; background-color: #ffffff !important; border-color: #cbd5e1 !important;">
+                    <i class="ph-bold ph-faders fs-5" style="color: #1e293b;"></i>
+                    <span>Filter</span>
+                    {% if has_active_filter %}
+                    <span class="active-filter-dot" title="Filter Aktif"></span>
+                    {% endif %}
+                </button>
+                <div class="dropdown-menu filter-dropdown-menu dropdown-menu-start p-3 shadow-lg border-0" style="width: 320px; z-index: 1050; border-radius: 12px; border: 1px solid #e2e8f0 !important;">
+                    <h6 class="dropdown-header px-0 text-dark mb-2"><i class="ph-bold ph-faders me-2 text-dark"></i>Filter Lanjutan</h6>
+                    
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Status / Tipe POD</label>
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="">Semua Status</option>
+                            <option value="POD" {% if search_type == 'POD' %}selected{% endif %}>Delivered (POD)</option>
+                            <option value="DELIVERY_FAILED" {% if search_type == 'DELIVERY_FAILED' %}selected{% endif %}>Failed (Gagal Antar)</option>
+                            <option value="POD_BALIK" {% if search_type == 'POD_BALIK' %}selected{% endif %}>POD Balik</option>
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary mb-1">Tanggal Mulai</label>
+                            <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date|default:date_from|default:'' }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary mb-1">Tanggal Akhir</label>
+                            <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date|default:date_to|default:'' }}">
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 pt-2 border-top">
+                        <button type="submit" class="btn btn-danger btn-sm w-100 fw-bold">Terapkan</button>
+                        <a href="{% url 'operations:pod_list' %}" class="btn btn-outline-secondary btn-sm w-100">Reset</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div class="d-flex align-items-center flex-wrap gap-2">
+            <!-- Batch Action Buttons -->
+            <button type="button" class="btn btn-secondary px-3 fw-bold shadow-sm" id="btnBatchPodBalik" style="display: none; height: 38px;">
+                <i class="ph-bold ph-arrow-u-up-left me-1"></i> <span id="batchPodBalikText">Bulk POD Balik (0)</span>
+            </button>
+            <button type="button" class="btn btn-secondary px-3 shadow-sm" id="btnBatchPodPrint" style="display: none; height: 38px;">
+                <i class="ph-bold ph-printer me-1"></i> <span id="batchPodPrintText">Print Bulky (0)</span>
+            </button>
+
+            <div class="dropdown">
+                <button class="btn btn-danger px-4 fw-bold shadow-sm dropdown-toggle d-inline-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="height: 38px;">
+                    <i class="ph-bold ph-plus me-1"></i> Buat Baru
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                    <li><a class="dropdown-item py-2" href="{% url 'operations:entry_pod' %}"><i class="ph-duotone ph-check-square-offset me-2 text-success"></i>POD (Entry Tanda Terima)</a></li>
+                    <li><a class="dropdown-item py-2" href="{% url 'operations:entry_pod_return' %}"><i class="ph-duotone ph-arrow-u-up-left me-2 text-warning"></i>POD Balik (Opsional)</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table Container ONLY -->
+    <style>
+        .table-premium {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            font-size: 0.875rem;
+        }
+        .table-premium thead th {
+            background-color: #f8fafc;
+            color: #64748b;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 12px 16px;
+            border-bottom: 1px solid #edf1f7;
+            border-top: none;
+        }
+        .table-premium tbody tr {
+            transition: all 0.2s ease;
+        }
+        .table-premium tbody tr:hover {
+            background-color: #f8fafc;
+        }
+        .table-premium tbody td {
+            padding: 14px 16px;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f5f9;
+            color: #1e293b;
+        }
+    </style>
+    <div class="table-responsive rounded-3 shadow-sm bg-white border" style="font-size: 0.85rem;">
+        <table class="table table-premium table-sm table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th class="ps-3" style="width: 40px;">
+                        <div class="form-check d-flex justify-content-center">
+                            <input class="form-check-input" type="checkbox" id="selectAllPod">
+                        </div>
+                    </th>
+                    <th class="text-nowrap text-secondary fw-semibold">Nomor Resi</th>
+                    <th class="text-nowrap text-secondary fw-semibold">Tipe</th>
+                    <th class="text-nowrap text-secondary fw-semibold">Courier</th>
+                    <th class="text-nowrap text-secondary fw-semibold">Receiver Name</th>
+                    <th class="text-nowrap text-secondary fw-semibold">Destination</th>
+                    <th class="text-nowrap text-secondary fw-semibold">Weight (kg)</th>
+                    <th class="text-nowrap text-secondary fw-semibold">Colly</th>
+                    <th class="text-nowrap text-secondary fw-semibold">Created Date</th>
+                    <th class="text-nowrap text-secondary fw-semibold text-center">Foto</th>
+                    <th class="text-nowrap text-secondary fw-semibold text-center">Status</th>
+                    <th class="text-center text-nowrap text-secondary fw-semibold pe-4">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tracking in page_obj %}
+                <tr>
+                    <td class="ps-3">
+                        <div class="form-check d-flex justify-content-center">
+                            <input class="form-check-input pod-checkbox" type="checkbox" value="{{ tracking.shipment.id }}">
+                        </div>
+                    </td>
+                    <td>
+                        <a href="{% url 'operations:pod-detail' tracking.shipment.pk %}" class="fw-bold text-dark text-decoration-none">
+                            {{ tracking.shipment.resi_number }}
+                        </a>
+                    </td>
+                    <td>
+                        <span class="text-dark fw-medium">
+                            {% if tracking.status == 'POD_BALIK' %}
+                            POD Balik
+                            {% else %}
+                            POD
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="text-dark fw-medium">{{ tracking.shipment.get_courier_name|default:"-" }}</span>
+                    </td>
+                    <td>
+                        <span class="text-dark">{{ tracking.shipment.pod_receiver_name|default:tracking.shipment.receiver_name|default:"-" }}</span>
+                        {% if tracking.description %}
+                        <small class="text-muted d-block" style="font-size: 0.75rem;">{{ tracking.description|truncatechars:30 }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="text-dark">{{ tracking.shipment.get_city_dest|title }} - {{ tracking.shipment.get_tlc_dest }}</span>
+                    </td>
+                    <td>
+                        <span class="text-dark">{{ tracking.shipment.chargeable_weight|default:tracking.shipment.weight|floatformat:0 }} Kg</span>
+                    </td>
+                    <td>
+                        <span class="text-dark">{{ tracking.shipment.total_colly|default:1 }} Koli</span>
+                    </td>
+                    <td>
+                        <span class="text-muted small">{{ tracking.occurred_at|date:"d M Y H:i" }}</span>
+                    </td>
+                    <td class="text-center">
+                        {% if tracking.shipment.pod_image %}
+                        <a href="javascript:void(0)" class="d-inline-block position-relative pod-photo-link" data-bs-toggle="modal" data-bs-target="#podImageModal" data-img-url="{{ tracking.shipment.pod_image.url }}" data-resi="{{ tracking.shipment.resi_number }}" data-receiver="{{ tracking.shipment.pod_receiver_name|default:tracking.shipment.receiver_name }}" data-date="{{ tracking.occurred_at|date:'d M Y H:i' }}">
+                            <img src="{{ tracking.shipment.pod_image.url }}" class="rounded shadow-sm border" style="width: 44px; height: 44px; object-fit: cover; cursor: pointer; transition: transform 0.15s ease-in-out;" alt="Bukti POD" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                        </a>
+                        {% elif tracking.shipment.failed_image %}
+                        <a href="javascript:void(0)" class="d-inline-block position-relative pod-photo-link" data-bs-toggle="modal" data-bs-target="#podImageModal" data-img-url="{{ tracking.shipment.failed_image.url }}" data-resi="{{ tracking.shipment.resi_number }}" data-receiver="{{ tracking.shipment.pod_receiver_name|default:tracking.shipment.receiver_name }}" data-date="{{ tracking.occurred_at|date:'d M Y H:i' }}">
+                            <img src="{{ tracking.shipment.failed_image.url }}" class="rounded shadow-sm border border-danger" style="width: 44px; height: 44px; object-fit: cover; cursor: pointer; transition: transform 0.15s ease-in-out;" alt="Bukti Gagal" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                        </a>
+                        {% else %}
+                        <span class="badge bg-light text-muted border py-1 px-2" style="font-size: 0.75rem;"><i class="ph-bold ph-image-broken me-1"></i>Tidak Ada</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if tracking.status == 'DELIVERY_FAILED' or tracking.shipment.status == 'DELIVERY_FAILED' %}
+                        <span class="badge bg-danger text-white rounded-pill px-3 py-1 fw-bold">FAILED</span>
+                        {% elif tracking.status == 'POD_BALIK' or tracking.shipment.status == 'POD_BALIK' %}
+                        <span class="badge bg-warning text-dark rounded-pill px-3 py-1 fw-bold">DELIVERED (BALIK)</span>
+                        {% else %}
+                        <span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold">DELIVERED</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center pe-4">
+                        <div class="dropdown">
+                            <button class="btn btn-action-table dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Aksi">
+                                <i class="ph-bold ph-list"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                <li>
+                                    <a class="dropdown-item py-2" href="{% url 'operations:pod-detail' tracking.shipment.pk %}">
+                                        <i class="ph-duotone ph-eye me-2 text-info"></i>Lihat Detail POD
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item py-2" href="{% url 'operations:pod-edit' tracking.shipment.pk %}">
+                                        <i class="ph-duotone ph-pencil-simple me-2 text-warning"></i>Edit
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item py-2" href="{% url 'operations:print-e-pod' tracking.shipment.pk %}" target="_blank">
+                                        <i class="ph-duotone ph-printer me-2 text-success"></i>Print E POD
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="12" class="text-center py-5 text-muted">
+                        <i class="ph-duotone ph-check-square-offset text-muted mb-3" style="font-size: 3rem; opacity: 0.5;"></i>
+                        <p class="mb-0">Belum ada data POD.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="d-flex justify-content-center mt-4">
+        <nav aria-label="Page navigation">
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link text-dark border-0 shadow-none px-3" href="?page={{ page_obj.previous_page_number }}{% if search_resi %}&resi={{ search_resi }}{% endif %}{% if search_type %}&type={{ search_type }}{% endif %}"><i class="ph-bold ph-caret-left"></i></a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link text-muted border-0 shadow-none px-3 bg-transparent" tabindex="-1"><i class="ph-bold ph-caret-left"></i></a>
+                </li>
+                {% endif %}
+                <li class="page-item disabled d-none d-md-block">
+                    <span class="page-link text-dark fw-medium px-4 border-0 shadow-none bg-transparent">Halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</span>
+                </li>
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link text-dark border-0 shadow-none px-3" href="?page={{ page_obj.next_page_number }}{% if search_resi %}&resi={{ search_resi }}{% endif %}{% if search_type %}&type={{ search_type }}{% endif %}"><i class="ph-bold ph-caret-right"></i></a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link text-muted border-0 shadow-none px-3 bg-transparent" tabindex="-1"><i class="ph-bold ph-caret-right"></i></a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+
+<!-- Modal Preview Foto POD -->
+<div class="modal fade" id="podImageModal" tabindex="-1" aria-labelledby="podImageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h6 class="modal-title fw-bold" id="podImageModalLabel"><i class="ph-bold ph-image me-2 text-primary"></i>Foto Bukti POD - <span id="modalResi"></span></h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-3">
+                <img id="modalImg" src="" class="img-fluid rounded shadow-sm border mb-3" style="max-height: 450px; width: auto; object-fit: contain;" alt="Bukti Foto POD">
+                <div class="text-start bg-light p-3 rounded">
+                    <p class="mb-1 small"><strong>Penerima:</strong> <span id="modalReceiver">-</span></p>
+                    <p class="mb-0 small"><strong>Waktu:</strong> <span id="modalDate">-</span></p>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <a id="modalOpenTab" href="#" target="_blank" class="btn btn-sm btn-outline-primary"><i class="ph-bold ph-arrow-square-out me-1"></i>Buka Ukuran Penuh</a>
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Bulk POD Balik -->
+<div class="modal fade" id="bulkPodBalikModal" tabindex="-1" aria-labelledby="bulkPodBalikModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="post" action="{% url 'operations:pod-bulk-update' %}">
+                {% csrf_token %}
+                <input type="hidden" name="pod_status" value="POD_BALIK">
+                <div id="bulkPodBalikIdsContainer"></div>
+                <div class="modal-header bg-warning bg-opacity-10 border-0">
+                    <h5 class="modal-title fw-bold text-dark" id="bulkPodBalikModalLabel">
+                        <i class="ph-bold ph-arrow-u-up-left text-warning me-2"></i>Update Massal: POD Balik
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="mb-3 text-dark">Anda akan mengubah status <strong id="bulkPodBalikCount">0</strong> resi terpilih menjadi <strong>POD BALIK</strong> (Surat Jalan Balik diterima di Origin/Hub).</p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Lokasi Penerimaan POD Balik</label>
+                        <input type="text" name="location" class="form-control" placeholder="Contoh: Hub Origin Jakarta">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Keterangan / Catatan</label>
+                        <input type="text" name="description" class="form-control" placeholder="Contoh: DO Balik / Surat jalan fisik telah diterima kembali">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning px-4 fw-bold">Konfirmasi & Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const podModal = document.getElementById('podImageModal');
+    if (podModal) {
+        podModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            if (button) {
+                const imgUrl = button.getAttribute('data-img-url');
+                const resi = button.getAttribute('data-resi');
+                const receiver = button.getAttribute('data-receiver');
+                const date = button.getAttribute('data-date');
+
+                document.getElementById('modalImg').src = imgUrl;
+                document.getElementById('modalResi').textContent = resi;
+                document.getElementById('modalReceiver').textContent = receiver;
+                document.getElementById('modalDate').textContent = date;
+                document.getElementById('modalOpenTab').href = imgUrl;
+            }
+        });
+    }
+
+    // Checkbox & Bulk Actions
+    const selectAllPod = document.getElementById('selectAllPod');
+    const itemCheckboxes = document.querySelectorAll('.pod-checkbox');
+    const btnBatchPodBalik = document.getElementById('btnBatchPodBalik');
+    const batchPodBalikText = document.getElementById('batchPodBalikText');
+    const btnBatchPodPrint = document.getElementById('btnBatchPodPrint');
+    const batchPodPrintText = document.getElementById('batchPodPrintText');
+
+    function getSelectedShipmentIds() {
+        const checked = document.querySelectorAll('.pod-checkbox:checked');
+        return Array.from(checked).map(cb => cb.value);
+    }
+
+    function updateCheckboxState() {
+        const checkedCount = document.querySelectorAll('.pod-checkbox:checked').length;
+        
+        if (selectAllPod) {
+            selectAllPod.checked = (checkedCount === itemCheckboxes.length && itemCheckboxes.length > 0);
+            selectAllPod.indeterminate = (checkedCount > 0 && checkedCount < itemCheckboxes.length);
+        }
+
+        const show = checkedCount > 0 ? 'inline-block' : 'none';
+
+        if (btnBatchPodBalik) {
+            btnBatchPodBalik.style.display = show;
+            if (batchPodBalikText) batchPodBalikText.textContent = `Bulk POD Balik (${checkedCount})`;
+        }
+
+        if (btnBatchPodPrint) {
+            btnBatchPodPrint.style.display = show;
+            if (batchPodPrintText) batchPodPrintText.textContent = `Print Bulky (${checkedCount})`;
+        }
+    }
+
+    if (selectAllPod) {
+        selectAllPod.addEventListener('change', function() {
+            itemCheckboxes.forEach(cb => cb.checked = selectAllPod.checked);
+            updateCheckboxState();
+        });
+    }
+
+    itemCheckboxes.forEach(cb => cb.addEventListener('change', updateCheckboxState));
+
+    // Handle Bulk POD Balik
+    if (btnBatchPodBalik) {
+        btnBatchPodBalik.addEventListener('click', function() {
+            const shipmentIds = getSelectedShipmentIds();
+            const container = document.getElementById('bulkPodBalikIdsContainer');
+            container.innerHTML = '';
+            shipmentIds.forEach(id => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'shipment_ids';
+                input.value = id;
+                container.appendChild(input);
+            });
+            document.getElementById('bulkPodBalikCount').textContent = shipmentIds.length;
+            const modal = new bootstrap.Modal(document.getElementById('bulkPodBalikModal'));
+            modal.show();
+        });
+    }
+
+    // Handle Bulk Print E-POD
+    if (btnBatchPodPrint) {
+        btnBatchPodPrint.addEventListener('click', function() {
+            const shipmentIds = getSelectedShipmentIds();
+            if (shipmentIds.length === 0) {
+                alert('Pilih data POD terlebih dahulu.');
+                return;
+            }
+            const params = shipmentIds.map(id => 'resi_ids=' + encodeURIComponent(id)).join('&');
+            window.open('{% url "operations:print_bulky" %}?' + params, '_blank');
+        });
+    }
+});
+</script>
+{% endblock %}

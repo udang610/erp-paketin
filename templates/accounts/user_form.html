@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - ERP Paketin{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="mb-3">
+        <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-secondary bg-white px-3 shadow-sm btn-sm">
+            <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+        </a>
+    </div>
+
+    
+
+    <form method="POST" id="userForm">
+        {% csrf_token %}
+        
+        <!-- Card: Data Akun & Hak Akses (Ringkas & Lengkap) -->
+        <div class="card bg-white border-0 shadow-sm rounded-4 p-4 mb-4">
+            <h5 class="fw-bold text-dark border-bottom pb-3 mb-4">{{ title }}</h5>
+
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                <div class="rounded-3 d-flex align-items-center justify-content-center" style="width:36px;height:36px;background:#fef2f2;color:#dc2626;">
+                    <i class="ph-duotone ph-user-circle fs-5"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-0 text-dark">Data Pengguna & Akses</h6>
+                    <span class="text-muted small" style="font-size:0.75rem;">Informasi login, role akses sistem, dan cabang penempatan</span>
+                </div>
+            </div>
+            
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label text-muted fw-semibold small">Username <span class="text-danger">*</span></label>
+                    {{ form.username }}
+                    {% if form.username.errors %}<div class="text-danger small mt-1">{{ form.username.errors|striptags }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted fw-semibold small">Email <span class="text-danger">*</span></label>
+                    {{ form.email }}
+                    {% if form.email.errors %}<div class="text-danger small mt-1">{{ form.email.errors|striptags }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted fw-semibold small">Nama Depan</label>
+                    {{ form.first_name }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted fw-semibold small">Nama Belakang</label>
+                    {{ form.last_name }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted fw-semibold small">Nomor HP</label>
+                    {{ form.phone_number }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted fw-semibold small">Password{% if is_create %} <span class="text-danger">*</span>{% endif %}</label>
+                    {{ form.password }}
+                    <div class="form-text small" style="font-size:0.72rem;">{% if is_create %}Default: Paketin123! jika dikosongkan{% else %}Kosongkan jika tidak ingin mengubah password{% endif %}</div>
+                </div>
+                
+                <!-- Role / Hak Akses Utama -->
+                <div class="col-md-6">
+                    <label class="form-label text-muted fw-semibold small">Role / Hak Akses Utama <span class="text-danger">*</span></label>
+                    {{ form.role }}
+                    <div class="form-text small" style="font-size:0.72rem;">CS/Driver: Ops, Sales: CRM, Finance: Finance, IT: Semua, Customer: Monitoring</div>
+                    {% if form.role.errors %}<div class="text-danger small mt-1">{{ form.role.errors|striptags }}</div>{% endif %}
+                </div>
+                
+                <!-- Cabang Penempatan -->
+                <div class="col-md-6">
+                    <label class="form-label text-muted fw-semibold small">Cabang Penempatan</label>
+                    {{ form.branch }}
+                    <div class="form-text small" style="font-size:0.72rem;">Penempatan cabang untuk pembatasan data operasional</div>
+                </div>
+
+                <div class="col-12">
+                    <div class="form-check form-switch pt-2">
+                        {{ form.is_active }}
+                        <label class="form-check-label ms-2 small fw-semibold text-dark">Status Akun Aktif</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons (Horizontal & Simple) -->
+        <div class="d-flex justify-content-end align-items-center gap-2 mb-4">
+            <a href="{% url 'accounts:user_list' %}" class="btn btn-light px-4 fw-semibold border">
+                Batal
+            </a>
+            <button type="submit" class="btn btn-danger px-5 fw-bold shadow-sm">
+                <i class="ph-bold ph-floppy-disk me-2"></i>
+                {% if is_create %}Simpan Pengguna Baru{% else %}Simpan Perubahan{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

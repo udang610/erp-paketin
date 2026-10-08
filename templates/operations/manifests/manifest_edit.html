@@ -1,0 +1,915 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Buat Manifest - ERP Paketin{% endblock %}
+{% block page_title %}Buat Manifest Baru ({% if manifest_type == 'TRANSFER' %}Transfer{% elif manifest_type == 'DELIVERY' %}Delivery{% else %}Outgoing{% endif %}){% endblock %}
+
+{% block content %}
+<style>
+    /* Delivery uses a solid action color once at least one shipment is queued. */
+    #btnSubmit:not(:disabled) {
+        background-color: #dc3545 !important;
+        border-color: #dc3545 !important;
+        color: #fff !important;
+        opacity: 1 !important;
+    }
+</style>
+<div class="mb-3">
+    <a href="{% url 'operations:manifest-list' %}?type={{ manifest_type }}" class="btn btn-outline-secondary bg-white px-3 shadow-sm btn-sm">
+            <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+        </a>
+</div>
+
+<form method="post" id="manifestForm" action="?type={{ manifest_type }}&mode={{ mode }}">
+    {% csrf_token %}
+    <input type="hidden" name="mode" value="{{ mode }}">
+    {% if manifest_type == 'DELIVERY' %}
+    <div class="row">
+        <div class="col-12">
+            
+            <div class="card bg-white border-0 shadow-sm rounded-4">
+
+                <div class="card-body p-4">
+                <h5 class="fw-bold text-dark border-bottom pb-3 mb-4">Buat Manifest Baru (Delivery)</h5>
+
+                    <div class="row g-3 mb-4 p-3 rounded" style="background-color: #fff; border: 1px solid #dee2e6;">
+                        <h6 class="fw-bold mb-2">Konfigurasi Kurir:</h6>
+                        <div class="col-md-3">
+                            <label class="form-label text-muted small fw-semibold">Tipe Penugasan <span
+                                    class="text-danger">*</span></label>
+                            <select class="form-select" id="assignTypeSelect">
+                                <option value="INTERNAL">INTERNAL</option>
+                                <option value="EKSTERNAL">EKSTERNAL</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3" id="driverWrapper">
+                            <label class="form-label text-muted small fw-semibold">Driver Internal <span
+                                    class="text-danger">*</span></label>
+                            {{ form.driver }}
+                        </div>
+                        <div class="col-md-3" id="branchWrapper">
+                            <label class="form-label text-muted small fw-semibold">Cabang <span
+                                    class="text-danger">*</span></label>
+                            {{ form.branch }}
+                        </div>
+                        <div class="col-md-6 d-none" id="vendorWrapper">
+                            <label class="form-label text-muted small fw-semibold">Vendor <span
+                                    class="text-danger">*</span></label>
+                            {{ form.vendor }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-muted small fw-semibold">Tanggal Delivery <span
+                                    class="text-danger">*</span></label>
+                            {{ form.date }}
+                        </div>
+                    </div>
+
+                    <div class="d-none">
+                        {{ form.manifest_type }}
+                        {{ form.manifest_number }}
+                        {{ form.shipments }}
+                    </div>
+                    <div id="hiddenShipmentInputs"></div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark">Scan Tambah No Resi</label>
+                            <div class="input-group input-group-lg shadow-sm">
+                                <span class="input-group-text bg-white border-end-0"><i
+                                        class="ph-bold ph-scan text-success"></i></span>
+                                <input type="text" id="addScanNo" class="form-control border-start-0 ps-0"
+                                    placeholder="Arahkan Barcode Scanner kesini..." autofocus>
+                                <button class="btn btn-success" type="button" id="btnAddScan"
+                                    style="background-color: #198754; border-color: #198754;">Scan & Simpan</button>
+                            </div>
+                            <small class="text-muted mt-1 d-block">Tekan <b>Enter</b> pada scanner.</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark">Scan Hapus No Resi</label>
+                            <div class="input-group input-group-lg shadow-sm">
+                                <span class="input-group-text bg-white border-end-0"><i
+                                        class="ph-bold ph-trash text-danger"></i></span>
+                                <input type="text" id="delScanNo" class="form-control border-start-0 ps-0"
+                                    placeholder="Scan untuk membatalkan...">
+                                <button class="btn btn-danger" type="button" id="btnDelScan"
+                                    style="background-color: #dc3545; border-color: #dc3545;">Hapus</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive bg-white rounded-3 shadow-sm border border-light">
+                        <table class="table table-hover align-middle mb-0" id="scanTable">
+                            <thead class="table-light text-secondary">
+                                <tr>
+                                    <th class="ps-4">No. Resi (AWB)</th>
+                                    <th>Destination</th>
+                                    <th>Service</th>
+                                    <th>Tipe</th>
+                                    <th>Weight (kg)</th>
+                                    <th>Colly</th>
+                                    <th class="text-center pe-4">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scanTableBody">
+                                <tr id="emptyRow">
+                                    <td colspan="7" class="text-center text-muted py-4">Belum ada data resi yang discan.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-4 mb-2">
+                        <div class="d-flex flex-wrap gap-3">
+                            <div class="px-3 py-2 bg-white rounded shadow-sm border border-light">
+                                <span class="text-muted small fw-semibold me-2">Total AWB</span>
+                                <span class="fw-bold text-dark" id="totalPackageBadgeAlt">0</span>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-light border px-4 py-2 fw-semibold"
+                                onclick="location.reload()">Reset</button>
+                            <button type="submit" id="btnSubmit" class="btn btn-danger px-4 py-2 fw-semibold" disabled>
+                                <i class="ph-bold ph-check-circle me-2"></i> Proses Delivery
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% include "operations/_scan_history.html" with history_page=recent_deliveries history_title="History Scan Delivery Terakhir" history_location_label="Lokasi Delivery" history_empty_text="Belum ada riwayat scan Delivery." %}
+        </div>
+    </div>
+    {% else %}
+    <div class="row g-4 justify-content-center">
+        <!-- HEADER MANIFEST -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 12px;">
+                <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
+                    <h5 class="mb-0 fw-bold text-dark">
+                        {% if manifest_type == 'DELIVERY' %}<i class="ph-duotone ph-truck me-2 text-dark"></i> Delivery
+                        Runsheet
+                        {% elif mode == 'AIR' %}<i class="ph-duotone ph-airplane me-2 text-dark"></i> Air Freight
+                        Manifest
+                        {% elif mode == 'VENDOR' %}<i class="ph-duotone ph-storefront me-2 text-primary"></i> Vendor
+                        Manifest
+                        {% elif mode == 'LAND' %}<i class="ph-duotone ph-truck me-2 text-warning"></i> Land Manifest
+                        Internal
+                        {% elif mode == 'SEA' %}<i class="ph-duotone ph-boat me-2 text-info"></i> Sea Manifest
+                        {% elif manifest_type == 'OUTGOING' and mode == 'BIASA' %}<i
+                            class="ph-duotone ph-map-pin me-2 text-dark"></i> Outgoing Biasa
+                        {% elif manifest_type == 'OUTGOING' and mode == 'BYPASS' %}<i
+                            class="ph-duotone ph-arrows-merge me-2 text-warning"></i> Outgoing By Pass
+                        {% else %}<i class="ph-duotone ph-file-text me-2 text-primary"></i> Detail Manifest
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    {% if manifest_type == 'TRANSFER' %}
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-semibold">No Manifest <span
+                                class="text-danger">*</span></label>
+                        {{ form.manifest_number }}
+                        <div class="d-none">{{ form.manifest_type }}</div>
+                    </div>
+                    {% else %}
+                    <div class="mb-3 d-none">
+                        {{ form.manifest_type }}
+                        {{ form.manifest_number.as_hidden }}
+                    </div>
+                    {% endif %}
+
+                    {% if mode == 'AIR' %}
+                    <!-- AIR FREIGHT MANIFEST FORM -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">City Destination <span
+                                    class="text-danger">*</span></label>
+                            {{ form.destination_city }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Vendor <span
+                                    class="text-danger">*</span></label>
+                            {{ form.vendor }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Colly <span
+                                    class="text-danger">*</span></label>
+                            {{ form.colly_cmo }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Actual Weight Manifest <span
+                                    class="text-danger">*</span></label>
+                            {{ form.actual_weight }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small fw-semibold">Description</label>
+                            {{ form.description }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small fw-semibold">PIC / Penanggung Jawab</label>
+                            {{ form.pic }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Departure Date</label>
+                            {{ form.date }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Departure Time</label>
+                            {{ form.departure_time }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Arrival Date</label>
+                            {{ form.arrival_date }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Arrival Time</label>
+                            {{ form.arrival_time }}
+                        </div>
+                    </div>
+
+                    {% elif mode == 'VENDOR' %}
+                    <!-- VENDOR MANIFEST FORM -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Moda Transportasi <span
+                                    class="text-danger">*</span></label>
+                            {{ form.transport_mode }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Vendor <span
+                                    class="text-danger">*</span></label>
+                            {{ form.vendor }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Vendor Middle</label>
+                            {{ form.vendor_middle }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Colly <span
+                                    class="text-danger">*</span></label>
+                            {{ form.colly_cmo }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Actual Weight Manifest <span
+                                    class="text-danger">*</span></label>
+                            {{ form.actual_weight }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small fw-semibold">Description</label>
+                            {{ form.description }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small fw-semibold">PIC / Penanggung Jawab</label>
+                            {{ form.pic }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Departure Date</label>
+                            {{ form.date }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Departure Time</label>
+                            {{ form.departure_time }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Arrival Date</label>
+                            {{ form.arrival_date }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Arrival Time</label>
+                            {{ form.arrival_time }}
+                        </div>
+                    </div>
+
+                    {% elif mode == 'LAND' %}
+                    <!-- LAND MANIFEST FORM -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">City Destination <span
+                                    class="text-danger">*</span></label>
+                            {{ form.destination_city }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Supir <span
+                                    class="text-danger">*</span></label>
+                            {{ form.driver }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Kendaraan / Armada <span
+                                    class="text-danger">*</span></label>
+                            {{ form.vehicle }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Koli <span
+                                    class="text-danger">*</span></label>
+                            {{ form.colly_cmo }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Berat Aktual Manifest (Kg) <span
+                                    class="text-danger">*</span></label>
+                            {{ form.actual_weight }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small fw-semibold">Deskripsi</label>
+                            {{ form.description }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small fw-semibold">PIC / Penanggung Jawab</label>
+                            {{ form.pic }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Tanggal Keberangkatan <span
+                                    class="text-danger">*</span></label>
+                            {{ form.date }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Waktu Keberangkatan</label>
+                            {{ form.departure_time }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Tanggal Kedatangan</label>
+                            {{ form.arrival_date }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Waktu Kedatangan</label>
+                            {{ form.arrival_time }}
+                        </div>
+                    </div>
+
+                    {% elif mode == 'SEA' %}
+                    <!-- SEA MANIFEST FORM -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Kota Tujuan <span
+                                    class="text-danger">*</span></label>
+                            {{ form.destination_city }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Vendor <span
+                                    class="text-danger">*</span></label>
+                            {{ form.vendor }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Koli <span
+                                    class="text-danger">*</span></label>
+                            {{ form.colly_cmo }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Berat Aktual Manifest (Kg) <span
+                                    class="text-danger">*</span></label>
+                            {{ form.actual_weight }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small fw-semibold">Deskripsi</label>
+                            {{ form.description }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small fw-semibold">PIC / Penanggung Jawab</label>
+                            {{ form.pic }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Tanggal Keberangkatan</label>
+                            {{ form.date }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Waktu Keberangkatan</label>
+                            {{ form.departure_time }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Tanggal Kedatangan</label>
+                            {{ form.arrival_date }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Waktu Kedatangan</label>
+                            {{ form.arrival_time }}
+                        </div>
+                    </div>
+
+                    {% elif manifest_type == 'OUTGOING' %}
+                    <!-- OUTGOING MANIFEST FORM -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-12">
+                            <label class="form-label text-muted small fw-semibold">Tipe Manifest <i
+                                    class="ph-duotone ph-info"></i></label>
+                            {{ form.transport_mode }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Tlc / Kota Tujuan <span
+                                    class="text-danger">*</span></label>
+                            {{ form.destination_city }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Cabang <span
+                                    class="text-danger">*</span></label>
+                            {{ form.branch }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Koli CMO <span
+                                    class="text-danger">*</span></label>
+                            {{ form.colly_cmo }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Berat Aktual (Kg) <span
+                                    class="text-danger">*</span></label>
+                            {{ form.actual_weight }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small fw-semibold">Komoditas <span
+                                    class="text-danger">*</span></label>
+                            {{ form.commodity }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small fw-semibold">Deskripsi / Alasan</label>
+                            {{ form.description }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small fw-semibold">PIC / Penanggung Jawab</label>
+                            {{ form.pic }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small fw-semibold">Tanggal Outgoing <span
+                                    class="text-danger">*</span></label>
+                            {{ form.date }}
+                        </div>
+                    </div>
+
+                    {% else %}
+                    <!-- DEFAULT MANIFEST FORM -->
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-semibold">Nama Supir / Driver</label>
+                        {{ form.driver }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-semibold">Kendaraan</label>
+                        {{ form.vehicle }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-semibold">Tanggal Keberangkatan <span
+                                class="text-danger">*</span></label>
+                        {{ form.date }}
+                    </div>
+                    {% endif %}
+
+                    <!-- Form Shipments (Hidden Select) - Required for Django Form Validation but we will bypass or handle dynamically -->
+                    <div class="d-none">
+                        {{ form.shipments }}
+                    </div>
+
+                    <div id="hiddenShipmentInputs">
+                        <!-- Hidden inputs for each scanned ID will be appended here -->
+                    </div>
+
+                    <hr>
+                    <button type="submit" id="btnSubmit" class="btn btn-primary w-100 py-2 fw-bold" disabled>
+                        <i class="ph-bold ph-paper-plane-tilt me-2"></i> Proses Manifest
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCANNING AREA -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 12px;">
+                <div
+                    class="card-header bg-white border-bottom border-light pt-4 pb-3 px-4 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-dark">
+                        <i class="ph-duotone ph-barcode me-2 text-dark"></i>
+                        {% if manifest_type == 'TRANSFER' %}
+                        Pemindaian Manifest (Barcode Scan)
+                        {% else %}
+                        Pemindaian Resi (Barcode Scan)
+                        {% endif %}
+                    </h5>
+                    <span class="badge bg-secondary-subtle text-dark px-3 py-2 rounded-pill fs-6"
+                        id="totalPackageBadge">Total: 0 Paket</span>
+                </div>
+                <div class="card-body p-4 bg-light">
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark">
+                                {% if manifest_type == 'TRANSFER' %}Scan Tambah No Manifest{% else %}Scan Tambah No Resi{% endif %}
+                            </label>
+                            <div class="input-group input-group-lg shadow-sm">
+                                <span class="input-group-text bg-white border-end-0"><i
+                                        class="ph-bold ph-scan text-success"></i></span>
+                                <input type="text" id="addScanNo" class="form-control border-start-0 ps-0"
+                                    placeholder="Arahkan Barcode Scanner kesini..." autofocus>
+                                <button class="btn btn-success" type="button" id="btnAddScan">Tambah</button>
+                            </div>
+                            <small class="text-muted mt-1 d-block">Tekan <b>Enter</b> atau tombol Tambah.</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark">
+                                {% if manifest_type == 'TRANSFER' %}Scan Hapus No Manifest{% else %}Scan Hapus No Resi{% endif %}
+                            </label>
+                            <div class="input-group input-group-lg shadow-sm">
+                                <span class="input-group-text bg-white border-end-0"><i
+                                        class="ph-bold ph-trash text-danger"></i></span>
+                                <input type="text" id="delScanNo" class="form-control border-start-0 ps-0"
+                                    placeholder="Scan untuk membatalkan...">
+                                <button class="btn btn-danger" type="button" id="btnDelScan">Hapus</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive bg-white rounded-3 shadow-sm border border-light w-100">
+                        <table class="table table-hover align-middle mb-0" id="scanTable">
+                            <thead class="table-light text-secondary">
+                                <tr>
+                                    {% if manifest_type == 'TRANSFER' %}
+                                    <th class="ps-4">Aksi</th>
+                                    <th>No. Outgoing</th>
+                                    <th>Asal</th>
+                                    <th>Tujuan</th>
+                                    <th>Koli</th>
+                                    <th>Berat (kg)</th>
+                                    <th class="pe-4 text-end">Deskripsi</th>
+                                    {% elif manifest_type == 'DELIVERY' %}
+                                    <th class="ps-4">Aksi</th>
+                                    <th>No. Resi</th>
+                                    <th>Tujuan</th>
+                                    <th>Layanan</th>
+                                    <th>Tipe</th>
+                                    <th>Berat (kg)</th>
+                                    <th class="pe-4">Koli</th>
+                                    {% else %}
+                                    <th class="ps-4">No. Resi (AWB)</th>
+                                    <th>Tujuan</th>
+                                    <th>Layanan</th>
+                                    <th>Koli</th>
+                                    <th>Berat</th>
+                                    <th class="pe-4 text-end">Aksi</th>
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody id="scanTableBody">
+                                <tr id="emptyRow">
+                                    <td colspan="10" class="text-center py-5 text-muted">
+                                        <i class="ph-duotone ph-package fs-1 d-block mb-2 text-light"></i>
+                                        Belum ada resi yang di-scan.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</form>
+
+<script>
+    $(document).ready(function () {
+        if ($.fn.select2) {
+            $('.select2-searchable').select2({
+                theme: 'bootstrap-5',
+                width: '100%'
+            });
+        }
+
+        $('#assignTypeSelect').on('change', function () {
+            if ($(this).val() === 'INTERNAL') {
+                $('#driverWrapper').removeClass('d-none');
+                $('#branchWrapper').removeClass('d-none');
+                $('#vendorWrapper').addClass('d-none');
+                $('#vendorWrapper select').val('');
+            } else {
+                $('#driverWrapper').addClass('d-none');
+                $('#branchWrapper').addClass('d-none');
+                $('#vendorWrapper').removeClass('d-none');
+                $('#driverWrapper select, #branchWrapper select').val('');
+            }
+        });
+
+        let scannedIds = new Set();
+        let totalWeight = 0;
+        let totalColly = 0;
+
+        const updateCounter = () => {
+            const count = scannedIds.size;
+            $('#totalPackageBadge').text(`Total: ${count} Paket`);
+            $('#totalPackageBadgeAlt').text(count);
+            if (count > 0) {
+                $('#emptyRow').hide();
+                $('#btnSubmit').prop('disabled', false);
+            } else {
+                $('#emptyRow').show();
+                $('#btnSubmit').prop('disabled', true);
+            }
+
+            {% if manifest_type == 'OUTGOING' or manifest_type == 'TRANSFER' %}
+            if ($('#id_actual_weight').length) {
+                $('#id_actual_weight').val(totalWeight.toFixed(2));
+            }
+            if ($('#id_colly_cmo').length) {
+                $('#id_colly_cmo').val(totalColly);
+            }
+            {% endif %}
+
+        };
+
+        const appendToTable = (data) => {
+            if (scannedIds.has(data.id)) {
+                alert('Data sudah ada di dalam list manifest ini!');
+                return;
+            }
+
+            scannedIds.add(data.id);
+            const w = parseFloat(data.weight) || 0;
+            const c = parseInt(data.colly) || 1;
+            totalWeight += w;
+            totalColly += c;
+
+            let tr = '';
+            {% if manifest_type == 'TRANSFER' %}
+            tr = `
+                <tr id="row-${data.id}" data-weight="${w}" data-colly="${c}">
+                    <td class="ps-4">
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-remove" data-id="${data.id}">
+                            <i class="ph-bold ph-trash"></i>
+                        </button>
+                    </td>
+                    <td class="fw-bold text-primary cell-identity">${data.manifest_number}</td>
+                    <td>${data.origin}</td>
+                    <td>${data.destination}</td>
+                    <td>${data.colly}</td>
+                    <td>${data.weight} Kg</td>
+                    <td class="pe-4 text-end">${data.description}</td>
+                </tr>
+            `;
+            {% elif manifest_type == 'DELIVERY' %}
+            tr = `
+                <tr id="row-${data.id}" data-weight="${w}" data-colly="${c}">
+                    <td class="ps-4 fw-bold text-dark cell-identity">${data.resi_number}</td>
+                    <td>${data.destination}</td>
+                    <td><span class="badge bg-secondary-subtle text-secondary">${data.service}</span></td>
+                    <td>${data.tipe || '-'}</td>
+                    <td>${data.weight} Kg</td>
+                    <td>${data.colly || 1}</td>
+                    <td class="text-center pe-4">
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-remove border-0" data-id="${data.id}">
+                            <i class="ph-bold ph-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+            {% else %}
+            tr = `
+                <tr id="row-${data.id}" data-weight="${w}" data-colly="${c}">
+                    <td class="ps-4 fw-bold text-primary cell-identity">${data.resi_number}</td>
+                    <td>${data.destination}</td>
+                    <td><span class="badge bg-secondary-subtle text-secondary">${data.service}</span></td>
+                    <td>${c} Koli</td>
+                    <td>${w} Kg</td>
+                    <td class="pe-4 text-end">
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-remove" data-id="${data.id}">
+                            <i class="ph-bold ph-x"></i> Batal
+                        </button>
+                    </td>
+                </tr>
+            `;
+            {% endif %}
+            $('#scanTableBody').prepend(tr);
+
+            // Add hidden inputs for form submission
+            {% if manifest_type == 'TRANSFER' %}
+            // If it's transfer, we need to append all shipment IDs associated with the manifest
+            data.shipment_ids.forEach(shipment_id => {
+                $('#hiddenShipmentInputs').append(`<input type="hidden" name="shipments" value="${shipment_id}" id="input-${data.id}-${shipment_id}" class="manifest-inputs-${data.id}">`);
+            });
+            {% else %}
+            $('#hiddenShipmentInputs').append(`<input type="hidden" name="shipments" value="${data.id}" id="input-${data.id}">`);
+            {% endif %}
+
+            updateCounter();
+        };
+
+        const removeRow = (id) => {
+            const row = $(`#row-${id}`);
+            if (row.length) {
+                const w = parseFloat(row.data('weight')) || 0;
+                const c = parseInt(row.data('colly')) || 0;
+                totalWeight -= w;
+                totalColly -= c;
+                if (totalWeight < 0) totalWeight = 0;
+                if (totalColly < 0) totalColly = 0;
+
+            }
+
+            scannedIds.delete(parseInt(id) || id);
+            row.remove();
+            {% if manifest_type == 'TRANSFER' %}
+            $(`.manifest-inputs-${id}`).remove();
+            {% else %}
+            $(`#input-${id}`).remove();
+            {% endif %}
+            updateCounter();
+        };
+
+        {% if is_edit and manifest %}
+        // Preload existing shipments for editing
+        const preloadData = [
+            {% for shipment in manifest.shipments.all %}
+            {
+            id: "{{ shipment.id }}",
+            resi_number: "{{ shipment.resi_number }}",
+            manifest_number: "{{ shipment.resi_number }}", // mapping for transfer mode
+            origin: "{{ shipment.origin|default:'' }}",
+            destination: "{{ shipment.destination|default:'' }}",
+            service: "{{ shipment.get_service_type_display|default:'' }}",
+            weight: "{{ shipment.chargeable_weight|default:shipment.actual_weight|default:0 }}",
+            colly: "{{ shipment.total_colly|default:1 }}",
+            description: "{{ shipment.description_item|default:'' }}",
+            shipment_ids: ["{{ shipment.id }}"]
+        },
+        {% endfor %}
+        ];
+    preloadData.forEach(item => appendToTable(item));
+    {% elif preloaded_shipments %}
+    // Preload shipments passed from URL query
+    const preloadedDataQuery = [
+        {% for shipment in preloaded_shipments %}
+    {
+        id: "{{ shipment.id }}",
+            resi_number: "{{ shipment.resi_number }}",
+                manifest_number: "{{ shipment.resi_number }}", // mapping for transfer mode
+                    origin: "{{ shipment.origin|default:'' }}",
+                        destination: "{{ shipment.destination|default:'' }}",
+                            service: "{{ shipment.get_service_type_display|default:'' }}",
+                                weight: "{{ shipment.chargeable_weight|default:shipment.actual_weight|default:0 }}",
+                                    colly: "{{ shipment.total_colly|default:1 }}",
+                                        description: "{{ shipment.description_item|default:'' }}",
+                                            shipment_ids: ["{{ shipment.id }}"]
+    },
+    {% endfor %}
+        ];
+    preloadedDataQuery.forEach(item => appendToTable(item));
+    {% endif %}
+
+    const processAddScan = () => {
+        const resi = $('#addScanNo').val().trim();
+        if (!resi) return;
+        {% if manifest_type == 'OUTGOING' and mode == 'BIASA' %}
+        const expectedDestination = $('#id_destination_city').val();
+        if (!expectedDestination) {
+            alert('Error: Pilih City Destination terlebih dahulu sebelum memindai resi!');
+            return;
+        }
+        {% endif %}
+
+        $('#addScanNo').val('').prop('disabled', true);
+        const inputEl = $('#addScanNo');
+
+        let apiUrl = "{% url 'operations:api-verify-resi' %}";
+        let reqData = { resi_number: resi };
+        {% if manifest_type == 'DELIVERY' %}
+        reqData.purpose = 'delivery';
+
+        // Delivery accepts either an eligible AWB or an Incoming number.
+        // An Incoming scan expands into all eligible AWBs in that document.
+        $.ajax({
+            url: apiUrl,
+            type: "GET",
+            data: reqData,
+            success: function (res) {
+                if (res.status === 'success') {
+                    appendToTable(res.data);
+                }
+            },
+            error: function () {
+                $.ajax({
+                    url: "{% url 'operations:api-verify-incoming' %}",
+                    type: "GET",
+                    data: { inbound_number: resi },
+                    success: function (res) {
+                        if (res.status === 'success') {
+                            res.data.forEach(item => appendToTable(item));
+                        }
+                    },
+                    error: function (xhr) {
+                        const msg = xhr.responseJSON ? xhr.responseJSON.message : 'Resi atau nomor Incoming tidak valid untuk Delivery.';
+                        alert(msg);
+                    },
+                    complete: function () {
+                        inputEl.prop('disabled', false).focus();
+                    }
+                });
+            },
+            complete: function (xhr, status) {
+                // The fallback request owns the focus lifecycle when the
+                // AWB lookup fails.
+                if (status !== 'error') inputEl.prop('disabled', false).focus();
+            }
+        });
+        return;
+        {% endif %}
+
+        {% if manifest_type == 'TRANSFER' %}
+        apiUrl = "{% url 'operations:api-verify-manifest' %}";
+        reqData = { manifest_number: resi, purpose: 'transfer' };
+        {% endif %}
+
+        $.ajax({
+            url: apiUrl,
+            type: "GET",
+            data: reqData,
+            success: function (res) {
+                if (res.status === 'success') {
+                    {% if manifest_type == 'OUTGOING' and mode == 'BIASA' %}
+                    if (res.data.destination !== expectedDestination) {
+                        // Cek jika tujuannya sama (misal user pilih "SURABAYA" dan resinya "SURABAYA")
+                        // Kita panggil alert dan jangan tambahkan
+                        alert(`Error: Destinasi Tidak Sesuai! Resi tujuan ${res.data.destination}, sedangkan manifest ini tujuan ${expectedDestination}.`);
+                        return;
+                    }
+                    {% endif %}
+                    appendToTable(res.data);
+                }
+            },
+            error: function (xhr) {
+                const msg = xhr.responseJSON ? xhr.responseJSON.message : 'Terjadi kesalahan.';
+                alert(msg);
+            },
+            complete: function () {
+                inputEl.prop('disabled', false).focus();
+            }
+        });
+    };
+
+    const processDelScan = () => {
+        const resi = $('#delScanNo').val().trim();
+        if (!resi) return;
+
+        $('#delScanNo').val('');
+
+        // Find row in table based on string text
+        let foundId = null;
+        $('#scanTableBody tr').each(function () {
+            const cellIdentity = $(this).find('.cell-identity').text().trim();
+            if (cellIdentity === resi) {
+                foundId = $(this).find('.btn-remove').data('id');
+                return false; // break loop
+            }
+        });
+
+        if (foundId) {
+            removeRow(foundId);
+        } else {
+            alert('Resi tidak ditemukan di list scan ini.');
+        }
+    };
+
+    // Handle Add Scan
+    $('#addScanNo').on('keypress', function (e) {
+        if (e.which === 13) { // Enter key
+            e.preventDefault();
+            processAddScan();
+        }
+    });
+    $('#btnAddScan').on('click', function (e) {
+        e.preventDefault();
+        processAddScan();
+    });
+
+    // Handle Delete Scan
+    $('#delScanNo').on('keypress', function (e) {
+        if (e.which === 13) {
+            e.preventDefault();
+            processDelScan();
+        }
+    });
+    $('#btnDelScan').on('click', function (e) {
+        e.preventDefault();
+        processDelScan();
+    });
+
+    // Handle Click Remove
+    $(document).on('click', '.btn-remove', function () {
+        removeRow($(this).data('id'));
+    });
+
+    // Prevent form submission on enter globally
+    $(window).keydown(function (event) {
+        if (event.keyCode == 13 && event.target.tagName !== 'TEXTAREA') {
+            event.preventDefault();
+            return false;
+        }
+    });
+    });
+</script>
+<script>
+    // Auto-fill departure date with today's date
+    document.addEventListener('DOMContentLoaded', function () {
+        const dateInput = document.getElementById('id_date');
+        if (dateInput && !dateInput.value) {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            dateInput.value = `${yyyy}-${mm}-${dd}`;
+        }
+    });
+</script>
+{% endblock %}

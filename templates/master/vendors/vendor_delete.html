@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Konfirmasi Hapus Data - ERP Paketin{% endblock %}
+{% block page_title %}Konfirmasi Penghapusan{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 p-4 text-center mt-4 bg-white">
+                <div class="my-3">
+                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 72px; height: 72px; background: #fee2e2; color: #dc2626;">
+                        <i class="ph-bold ph-warning-circle" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                
+                <h5 class="fw-bold mb-2 text-dark">Hapus Data Master?</h5>
+                <p class="text-muted small mb-4">
+                    Anda akan menghapus data <strong class="text-dark">{{ object }}</strong> dari Master {{ model_name|title }}.<br>
+                    Tindakan ini bersifat permanen dan data tidak dapat dikembalikan.
+                </p>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-center gap-2">
+                        <a href="{% url cancel_url %}" class="btn btn-light px-4 border fw-semibold">Batal</a>
+                        <button type="submit" class="btn btn-danger px-4 fw-bold shadow-sm">
+                            <i class="ph-bold ph-trash me-1"></i> Ya, Hapus Data
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

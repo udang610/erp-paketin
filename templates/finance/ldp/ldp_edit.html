@@ -1,0 +1,727 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{% if is_edit %}Detail & Edit LDP {{ ldp.ldp_number }}{% else %}Form Entry LDP{% endif %} - ERP Paketin{% endblock %}
+{% block page_title %}Form Entry LDP{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12">
+        <!-- Back button above card (Matching Operational Module Form Buat Resi) -->
+        <div class="mb-3">
+            <a href="{% url 'finance:ldp_list' %}" class="btn btn-outline-secondary btn-sm px-3 shadow-sm">
+                <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+            </a>
+        </div>
+
+        <!-- Main Card Structure -->
+        <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+            <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h5 class="mb-0 fw-bold text-dark">
+                        <i class="ph-duotone ph-file-text me-2 text-danger"></i>{% if is_edit %}Detail & Edit LDP <span class="badge bg-danger ms-2">{{ ldp.ldp_number }}</span>{% else %}Form Entry LDP{% endif %}
+                    </h5>
+                    <!-- Right Actions (Print / Create Invoice for Edit mode) -->
+                    {% if is_edit %}
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'finance:ldp_print' ldp.id %}" target="_blank" class="btn btn-outline-dark bg-white px-3 fw-semibold btn-sm shadow-sm">
+                            <i class="ph-bold ph-printer me-1"></i> Cetak LDP
+                        </a>
+                        {% if ldp.status != 'INVOICED' %}
+                        <form method="post" action="{% url 'finance:ldp_to_invoice' ldp.id %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger px-3 fw-bold btn-sm shadow-sm">
+                                <i class="ph-bold ph-receipt me-1"></i> Buat Invoice
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card-body p-4 bg-light mt-3 border-top">
+                <!-- 1. Konfigurasi / Filter Pengiriman Box (Includes Scan Barcode AWB inside) -->
+                <div class="p-3 rounded mb-4 shadow-sm" style="background-color: #fff; border: 1px solid #dee2e6;">
+                    <h6 class="fw-bold mb-3 text-dark"><i class="ph-duotone ph-funnel me-2 text-danger"></i>Konfigurasi Filter Pengiriman:</h6>
+                    <form method="get" id="formFilterShipments" class="row g-3 align-items-end mt-0">
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-semibold">Customer <span class="text-danger">*</span></label>
+                            <select name="customer" class="form-select select2" required>
+                                <option value="">type customer name or code</option>
+                                {% for c in customers %}
+                                <option value="{{ c.id }}" {% if customer_id == c.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ c.name }} {% if c.customer_code %}({{ c.customer_code }}){% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-muted small fw-semibold">From <span class="text-danger">*</span></label>
+                            <input type="text" name="date_from" value="{{ date_from|default:'' }}" class="form-control flatpickr-empty-date" placeholder="dd/mm/yyyy" autocomplete="off" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-muted small fw-semibold">End <span class="text-danger">*</span></label>
+                            <input type="text" name="date_to" value="{{ date_to|default:'' }}" class="form-control flatpickr-empty-date" placeholder="dd/mm/yyyy" autocomplete="off" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-muted small fw-semibold">Status <span class="text-danger">*</span></label>
+                            <select name="status" class="form-select">
+                                <option value="ALL" {% if status_filter == 'ALL' %}selected{% endif %}>All</option>
+                                <option value="POD" {% if status_filter == 'POD' %}selected{% endif %}>POD (Terkirim)</option>
+                                <option value="POD_BALIK" {% if status_filter == 'POD_BALIK' %}selected{% endif %}>POD Balik (DO Balik)</option>
+                                <option value="DELIVERY" {% if status_filter == 'DELIVERY' %}selected{% endif %}>Delivery</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex gap-2">
+                            <a href="{% if is_edit %}{% url 'finance:ldp_detail' ldp.id %}{% else %}{% url 'finance:ldp_create' %}{% endif %}" class="btn btn-light border btn-sm shadow-sm text-secondary" title="Reset Filter" style="width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                <i class="ph-bold ph-arrow-counter-clockwise fs-6"></i>
+                            </a>
+                            <button type="submit" class="btn btn-danger btn-sm shadow-sm" title="Cari / Search" style="width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                <i class="ph-bold ph-magnifying-glass fs-6"></i>
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Scan Barcode AWB Inside Card Konfigurasi -->
+                    <div class="mt-3 pt-3 border-top">
+                        <button class="btn btn-light bg-light w-100 border text-secondary fw-semibold py-1 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseScanBarcode" style="border-radius: 6px; height: 32px; font-size: 0.82rem; display: flex; align-items: center; justify-content: center;" id="btnAccordionScan">
+                            <i class="ph-bold ph-caret-down me-1" id="iconAccordionScan"></i> Scan Barcode AWB
+                        </button>
+                        <div id="collapseScanBarcode" class="collapse">
+                            <div class="pt-3">
+                                <div class="p-3 bg-light rounded-3 border" style="border-color: #cfd4dc !important;">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label text-muted small fw-semibold">Scan Barcode (Add Scan Awb No)</label>
+                                            <div class="input-group shadow-sm">
+                                                <span class="input-group-text bg-white border-end-0"><i class="ph-bold ph-scan text-success"></i></span>
+                                                <input type="text" id="inputScanAdd" class="form-control border-start-0 ps-0 bg-white" placeholder="Arahkan Barcode Scanner kesini..." autocomplete="off" onkeypress="handleScanAdd(event)">
+                                                <button class="btn btn-success px-3" type="button" id="btnAddScan" onclick="triggerManualScanAdd()">Scan & Tambah</button>
+                                            </div>
+                                            <small class="text-muted mt-1 d-block" style="font-size: 0.72rem;">Tekan <b>Enter</b> pada scanner untuk scan berulang.</small>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label text-muted small fw-semibold">Hapus dari Antrean (Deleted Scan Awb No)</label>
+                                            <div class="input-group shadow-sm">
+                                                <span class="input-group-text bg-white border-end-0"><i class="ph-bold ph-trash text-dark"></i></span>
+                                                <input type="text" id="inputScanDelete" class="form-control border-start-0 ps-0 bg-white" placeholder="Scan untuk membatalkan..." autocomplete="off" onkeypress="handleScanDelete(event)">
+                                                <button class="btn btn-danger px-3" type="button" id="btnDelScan" onclick="triggerManualScanDelete()">Hapus</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Action Sub-Header Bar with Pricing Mode Switcher -->
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 bg-white p-3 rounded-3 border shadow-xs">
+                    <div class="d-flex align-items-center gap-2">
+                        <h6 class="fw-bold text-dark mb-0">List Awb OnProcess LDP</h6>
+                        <span class="badge bg-danger rounded-pill px-3 py-1">Total Awb : <span id="displayTotalAwb">0</span></span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted small fw-semibold d-none d-md-inline"><i class="ph-bold ph-coins me-1 text-danger"></i>Opsi Harga:</span>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-sm btn-outline-danger active px-3 py-1 fw-semibold shadow-xs" id="btnModeAuto" onclick="switchPricingMode('AUTO')">
+                                <i class="ph-bold ph-magic-wand me-1"></i> Otomatis (Master Rate)
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary px-3 py-1 fw-semibold ms-1 shadow-xs" id="btnModeManual" onclick="switchPricingMode('MANUAL')">
+                                <i class="ph-bold ph-pencil-simple me-1"></i> Manual (Bypass Master)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Form for Submitting LDP Table -->
+                <form method="post" id="formActualLDP">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_action" value="{% if is_edit %}update_ldp{% else %}create_ldp{% endif %}">
+                    <input type="hidden" name="customer" value="{{ customer_id }}">
+                    <input type="hidden" name="date_from" value="{{ date_from }}">
+                    <input type="hidden" name="date_to" value="{{ date_to }}">
+
+                    <style>
+                        .table-ldp-outline {
+                            border-collapse: separate;
+                            border-spacing: 0;
+                            width: 100%;
+                            font-size: 0.82rem;
+                        }
+                        .table-ldp-outline thead th {
+                            background-color: #f8f9fa !important;
+                            color: #6c757d !important;
+                            font-weight: 600;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                            padding: 10px 12px;
+                            border-bottom: 2px solid #e9ecef !important;
+                            border-top: 1px solid #e9ecef !important;
+                            white-space: nowrap;
+                            font-size: 0.74rem;
+                        }
+                        .table-ldp-outline tbody td {
+                            padding: 8px 10px;
+                            border-bottom: 1px solid #f1f5f9;
+                            white-space: nowrap;
+                            vertical-align: middle;
+                        }
+                        .table-input-num {
+                            padding: 3px 6px;
+                            font-size: 0.8rem;
+                            font-weight: 500;
+                            border-radius: 6px;
+                            border: 1px solid #cbd5e1;
+                            background-color: #ffffff;
+                            transition: all 0.2s ease;
+                        }
+                        .table-input-num:focus {
+                            background-color: #ffffff;
+                            border-color: #dc3545;
+                            box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.15);
+                            outline: none;
+                        }
+                        .table-input-num:hover {
+                            border-color: #94a3b8;
+                        }
+                        .row-custom-rate {
+                            background-color: #fffdf5 !important;
+                        }
+                    </style>
+
+                    <div class="table-responsive bg-white rounded-3 shadow-sm border mb-4" style="border-color: #e2e8f0 !important;">
+                        <table class="table table-hover align-middle mb-0 table-ldp-outline" id="tableOnProcess">
+                            <thead>
+                                <tr>
+                                    <th class="ps-3">Awb No</th>
+                                    <th>Created At</th>
+                                    <th>Origin</th>
+                                    <th>Dest.</th>
+                                    <th class="text-center">Servis</th>
+                                    <th class="text-end">Berat (Kg)</th>
+                                    <th class="text-end text-success">Total Biaya Kirim (NETTO)</th>
+                                    <th class="text-end text-muted">Biaya Kirim By Sistem</th>
+                                    <th class="text-end">Biaya Kirim</th>
+                                    <th class="text-end">Biaya Kirim / Kg</th>
+                                    <th class="text-end text-danger">Diskon</th>
+                                    <th class="text-end">Packing</th>
+                                    <th class="text-end">Asuransi</th>
+                                    <th class="text-end">Handling & Surcharge</th>
+                                    <th class="text-center pe-3">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyOnProcess">
+                                {% if is_edit %}
+                                    {% for item in items %}
+                                    <tr id="row-shipment-{{ item.shipment_id|default:item.id }}" 
+                                        data-resi="{{ item.awb_number }}"
+                                        data-weight="{{ item.chargeable_weight|stringformat:'.2f' }}"
+                                        data-master-pkg="{{ item.price_per_kg|stringformat:'.2f' }}"
+                                        data-master-freight="{{ item.freight_charge|stringformat:'.2f' }}"
+                                        data-master-packing="{{ item.packing_fee|stringformat:'.2f' }}"
+                                        data-master-insurance="{{ item.insurance_fee|stringformat:'.2f' }}"
+                                        data-master-handling="{{ item.handling_fee|stringformat:'.2f' }}"
+                                        data-master-discount="0">
+                                        <td class="ps-3 fw-bold text-dark">
+                                            <input type="hidden" name="selected_shipments" value="{{ item.shipment_id|default:item.id }}">
+                                            {{ item.awb_number }}
+                                        </td>
+                                        <td>{{ item.shipment_date|date:"d/m/Y"|default:"-" }}</td>
+                                        <td>{{ item.origin_display|default:item.origin|default:"-" }}</td>
+                                        <td>{{ item.destination_display|default:item.destination|default:"-" }}</td>
+                                        <td class="text-center"><span class="badge bg-light text-dark border">{{ item.service_type }}</span></td>
+                                        <td class="text-end fw-semibold">{{ item.chargeable_weight|floatformat:1 }}</td>
+                                        <td class="text-end fw-bold text-success display-netto" id="netto-display-{{ item.shipment_id|default:item.id }}">
+                                            Rp {{ item.subtotal|floatformat:0|intcomma }}
+                                        </td>
+                                        <td class="text-end text-muted display-system-freight">Rp {{ item.freight_charge|floatformat:0|intcomma }}</td>
+                                        <td class="text-end">
+                                            <input type="number" step="any" name="freight_charge_{{ item.shipment_id|default:item.id }}" class="form-control form-control-sm text-end table-input-num input-freight fw-semibold text-dark" style="width: 110px;" value="{{ item.freight_charge|floatformat:0 }}" oninput="recalcFromFreight(this)">
+                                        </td>
+                                        <td class="text-end">
+                                            <input type="number" step="any" name="price_per_kg_{{ item.shipment_id|default:item.id }}" class="form-control form-control-sm text-end table-input-num input-pkg" style="width: 100px;" value="{{ item.price_per_kg|floatformat:0 }}" oninput="recalcFromPkg(this)">
+                                        </td>
+                                        <td class="text-end">
+                                            <input type="number" step="any" name="discount_{{ item.shipment_id|default:item.id }}" class="form-control form-control-sm text-end table-input-num input-discount text-danger" style="width: 90px;" value="{{ item.discount|floatformat:0 }}" oninput="recalcNettoOnly(this)">
+                                        </td>
+                                        <td class="text-end">
+                                            <input type="number" step="any" name="packing_fee_{{ item.shipment_id|default:item.id }}" class="form-control form-control-sm text-end table-input-num input-packing" style="width: 85px;" value="{{ item.packing_fee|floatformat:0 }}" oninput="recalcNettoOnly(this)">
+                                        </td>
+                                        <td class="text-end">
+                                            <input type="number" step="any" name="insurance_fee_{{ item.shipment_id|default:item.id }}" class="form-control form-control-sm text-end table-input-num input-insurance" style="width: 85px;" value="{{ item.insurance_fee|floatformat:0 }}" oninput="recalcNettoOnly(this)">
+                                        </td>
+                                        <td class="text-end">
+                                            <input type="number" step="any" name="handling_fee_{{ item.shipment_id|default:item.id }}" class="form-control form-control-sm text-end table-input-num input-handling" style="width: 85px;" value="{{ item.handling_fee|floatformat:0 }}" oninput="recalcNettoOnly(this)">
+                                        </td>
+                                        <td class="pe-3 text-center">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary p-0 rounded-circle d-inline-flex align-items-center justify-content-center me-1" style="width: 28px; height: 28px;" title="Reset ke Tarif Master" onclick="resetRowToMaster('{{ item.shipment_id|default:item.id }}')">
+                                                <i class="ph-bold ph-arrow-counter-clockwise fs-6"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger p-0 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 28px; height: 28px;" title="Hapus AWB" onclick="removeRow('row-shipment-{{ item.shipment_id|default:item.id }}')">
+                                                <i class="ph-bold ph-trash fs-6"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr id="rowEmpty">
+                                        <td colspan="15" class="text-center py-5 text-muted small">
+                                            Belum ada AWB dalam proses LDP. Masukkan Customer & Tanggal lalu klik ikon cari, atau gunakan Scan Barcode.
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    {% for s in shipments %}
+                                    <tr id="row-shipment-{{ s.id }}" 
+                                        data-resi="{{ s.resi_number }}"
+                                        data-weight="{{ s.chargeable_weight|default:s.weight|default:1|stringformat:'.2f' }}"
+                                        data-master-pkg="{{ s.price_per_kg|default:0|stringformat:'.2f' }}"
+                                        data-master-freight="{{ s.price|default:0|stringformat:'.2f' }}"
+                                        data-master-packing="{{ s.packing_cost|default:0|stringformat:'.2f' }}"
+                                        data-master-insurance="{{ s.insurance_amount|default:0|stringformat:'.2f' }}"
+                                        data-master-handling="{{ s.other_cost|default:0|stringformat:'.2f' }}"
+                                        data-master-discount="0">
+                                        <td class="ps-3 fw-bold text-dark">
+                                            <input type="hidden" name="selected_shipments" value="{{ s.id }}">
+                                            {{ s.resi_number }}
+                                        </td>
+                                        <td>{{ s.created_at|date:"d/m/Y"|default:"-" }}</td>
+                                        <td>{{ s.origin_clean }}</td>
+                                        <td>{{ s.destination_clean }}</td>
+                                        <td class="text-center"><span class="badge bg-light text-dark border">{{ s.service_type }}</span></td>
+                                        <td class="text-end fw-semibold">{{ s.chargeable_weight|default:s.weight|default:0|floatformat:1 }}</td>
+                                        <td class="text-end fw-bold text-success display-netto" id="netto-display-{{ s.id }}">
+                                            Rp {{ s.total_amount|default:s.price|default:0|floatformat:0|intcomma }}
+                                        </td>
+                                        <td class="text-end text-muted display-system-freight">Rp {{ s.price|default:0|floatformat:0|intcomma }}</td>
+                                        <td class="text-end">
+                                            <input type="number" step="any" name="freight_charge_{{ s.id }}" class="form-control form-control-sm text-end table-input-num input-freight fw-semibold text-dark" style="width: 110px;" value="{{ s.price|default:0|floatformat:0 }}" oninput="recalcFromFreight(this)">
+                                        </td>
+                                        <td class="text-end">
+                                            <input type="number" step="any" name="price_per_kg_{{ s.id }}" class="form-control form-control-sm text-end table-input-num input-pkg" style="width: 100px;" value="{{ s.price_per_kg|default:0|floatformat:0 }}" oninput="recalcFromPkg(this)">
+                                        </td>
+                                        <td class="text-end">
+                                            <input type="number" step="any" name="discount_{{ s.id }}" class="form-control form-control-sm text-end table-input-num input-discount text-danger" style="width: 90px;" value="0" oninput="recalcNettoOnly(this)">
+                                        </td>
+                                        <td class="text-end">
+                                            <input type="number" step="any" name="packing_fee_{{ s.id }}" class="form-control form-control-sm text-end table-input-num input-packing" style="width: 85px;" value="{{ s.packing_cost|default:0|floatformat:0 }}" oninput="recalcNettoOnly(this)">
+                                        </td>
+                                        <td class="text-end">
+                                            <input type="number" step="any" name="insurance_fee_{{ s.id }}" class="form-control form-control-sm text-end table-input-num input-insurance" style="width: 85px;" value="{{ s.insurance_amount|default:0|floatformat:0 }}" oninput="recalcNettoOnly(this)">
+                                        </td>
+                                        <td class="text-end">
+                                            <input type="number" step="any" name="handling_fee_{{ s.id }}" class="form-control form-control-sm text-end table-input-num input-handling" style="width: 85px;" value="{{ s.other_cost|default:0|floatformat:0 }}" oninput="recalcNettoOnly(this)">
+                                        </td>
+                                        <td class="pe-3 text-center">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary p-0 rounded-circle d-inline-flex align-items-center justify-content-center me-1" style="width: 28px; height: 28px;" title="Reset ke Tarif Master" onclick="resetRowToMaster('{{ s.id }}')">
+                                                <i class="ph-bold ph-arrow-counter-clockwise fs-6"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger p-0 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 28px; height: 28px;" title="Hapus AWB" onclick="removeRow('row-shipment-{{ s.id }}')">
+                                                <i class="ph-bold ph-trash fs-6"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr id="rowEmpty">
+                                        <td colspan="15" class="text-center py-5 text-muted small">
+                                            Belum ada AWB dalam proses LDP. Masukkan Customer & Tanggal lalu klik ikon cari, atau gunakan Scan Barcode.
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Bottom Summary & Action Bar -->
+                    <div class="card bg-white border p-3 rounded-3 shadow-xs mb-3">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                            <div class="d-flex align-items-center gap-4">
+                                <div>
+                                    <span class="text-muted small d-block">Total Berat:</span>
+                                    <span class="fw-bold fs-6 text-dark" id="summaryTotalWeight">0.0 Kg</span>
+                                </div>
+                                <div>
+                                    <span class="text-muted small d-block">Total Freight:</span>
+                                    <span class="fw-bold fs-6 text-dark" id="summaryTotalFreight">Rp 0</span>
+                                </div>
+                                <div>
+                                    <span class="text-muted small d-block">Total Diskon:</span>
+                                    <span class="fw-bold fs-6 text-danger" id="summaryTotalDiscount">Rp 0</span>
+                                </div>
+                                <div>
+                                    <span class="text-muted small d-block">Total Nilai LDP (NETTO):</span>
+                                    <span class="fw-bold fs-5 text-success" id="summaryTotalNetto">Rp 0</span>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'finance:ldp_list' %}" class="btn btn-light btn-sm border px-3 shadow-sm">Batal</a>
+                                <button type="button" class="btn btn-danger btn-sm px-4 fw-bold shadow-sm" onclick="submitLDPForm()">
+                                    <i class="ph-bold ph-check-circle me-1"></i> {% if is_edit %}UPDATE LDP{% else %}CREATE LDP{% endif %}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+var currentPricingMode = 'AUTO';
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateTotalCount();
+    updateOverallSummary();
+    
+    if (typeof flatpickr !== 'undefined') {
+        flatpickr('.flatpickr-empty-date', {
+            dateFormat: "Y-m-d",
+            altInput: true,
+            altFormat: "d/m/Y",
+            allowInput: true,
+            defaultDate: null
+        });
+    }
+
+    var collapseScan = document.getElementById('collapseScanBarcode');
+    if (collapseScan) {
+        collapseScan.addEventListener('shown.bs.collapse', function () {
+            var icon = document.getElementById('iconAccordionScan');
+            if (icon) icon.className = 'ph-bold ph-caret-up me-1';
+            var inp = document.getElementById('inputScanAdd');
+            if (inp) inp.focus();
+        });
+        collapseScan.addEventListener('hidden.bs.collapse', function () {
+            var icon = document.getElementById('iconAccordionScan');
+            if (icon) icon.className = 'ph-bold ph-caret-down me-1';
+        });
+    }
+});
+
+function switchPricingMode(mode) {
+    currentPricingMode = mode;
+    var btnAuto = document.getElementById('btnModeAuto');
+    var btnManual = document.getElementById('btnModeManual');
+    
+    if (mode === 'AUTO') {
+        btnAuto.className ='btn btn-sm btn-outline-danger active px-3 py-1 fw-semibold shadow-xs';
+        btnManual.className ='btn btn-sm btn-outline-secondary px-3 py-1 fw-semibold ms-1 shadow-xs';
+    } else {
+        btnManual.className ='btn btn-sm btn-outline-danger active px-3 py-1 fw-semibold ms-1 shadow-xs';
+        btnAuto.className ='btn btn-sm btn-outline-secondary px-3 py-1 fw-semibold shadow-xs';
+    }
+}
+
+// When editing Tarif / Kg -> updates Biaya Kirim and NETTO
+function recalcFromPkg(elem) {
+    var tr = elem.closest('tr');
+    if (!tr) return;
+
+    var weight = parseFloat(tr.getAttribute('data-weight') || '1') || 1;
+    var pkgInput = tr.querySelector('.input-pkg');
+    var freightInput = tr.querySelector('.input-freight');
+
+    var pkg = parseFloat(pkgInput ? pkgInput.value : '0') || 0;
+    var freight = Math.round(weight * pkg);
+
+    if (freightInput) {
+        freightInput.value = freight;
+    }
+
+    recalcNettoOnly(elem);
+}
+
+// When editing Biaya Kirim directly (Flat rate / Borongan / Bypass) -> updates Tarif/Kg and NETTO
+function recalcFromFreight(elem) {
+    var tr = elem.closest('tr');
+    if (!tr) return;
+
+    var weight = parseFloat(tr.getAttribute('data-weight') || '1') || 1;
+    var pkgInput = tr.querySelector('.input-pkg');
+    var freightInput = tr.querySelector('.input-freight');
+
+    var freight = parseFloat(freightInput ? freightInput.value : '0') || 0;
+    var pkg = (weight > 0) ? Math.round(freight / weight) : 0;
+
+    if (pkgInput) {
+        pkgInput.value = pkg;
+    }
+
+    recalcNettoOnly(elem);
+}
+
+// Recalculates Netto from all current inputs
+function recalcNettoOnly(elem) {
+    var tr = elem.closest('tr');
+    if (!tr) return;
+
+    var freightInput = tr.querySelector('.input-freight');
+    var discountInput = tr.querySelector('.input-discount');
+    var packingInput = tr.querySelector('.input-packing');
+    var insInput = tr.querySelector('.input-insurance');
+    var handlingInput = tr.querySelector('.input-handling');
+
+    var freight = parseFloat(freightInput ? freightInput.value : '0') || 0;
+    var discount = parseFloat(discountInput ? discountInput.value : '0') || 0;
+    var packing = parseFloat(packingInput ? packingInput.value : '0') || 0;
+    var ins = parseFloat(insInput ? insInput.value : '0') || 0;
+    var handling = parseFloat(handlingInput ? handlingInput.value : '0') || 0;
+
+    var surcharges = packing + ins + handling;
+    var netto = Math.max(0, freight + surcharges - discount);
+
+    var nettoDisplay = tr.querySelector('.display-netto');
+    if (nettoDisplay) {
+        nettoDisplay.textContent = 'Rp ' + netto.toLocaleString();
+    }
+
+    // Check if custom from master
+    var masterFreight = parseFloat(tr.getAttribute('data-master-freight') || '0') || 0;
+    var masterDiscount = parseFloat(tr.getAttribute('data-master-discount') || '0') || 0;
+    if (freight !== masterFreight || discount !== masterDiscount) {
+        tr.classList.add('row-custom-rate');
+    } else {
+        tr.classList.remove('row-custom-rate');
+    }
+
+    updateOverallSummary();
+}
+
+function resetRowToMaster(id) {
+    var tr = document.getElementById('row-shipment-' + id);
+    if (!tr) return;
+
+    var masterPkg = parseFloat(tr.getAttribute('data-master-pkg') || '0') || 0;
+    var masterFreight = parseFloat(tr.getAttribute('data-master-freight') || '0') || 0;
+    var masterPacking = parseFloat(tr.getAttribute('data-master-packing') || '0') || 0;
+    var masterInsurance = parseFloat(tr.getAttribute('data-master-insurance') || '0') || 0;
+    var masterHandling = parseFloat(tr.getAttribute('data-master-handling') || '0') || 0;
+
+    var pkgInput = tr.querySelector('.input-pkg');
+    if (pkgInput) pkgInput.value = Math.round(masterPkg);
+
+    var freightInput = tr.querySelector('.input-freight');
+    if (freightInput) freightInput.value = Math.round(masterFreight);
+
+    var discountInput = tr.querySelector('.input-discount');
+    if (discountInput) discountInput.value = 0;
+
+    var packingInput = tr.querySelector('.input-packing');
+    if (packingInput) packingInput.value = Math.round(masterPacking);
+
+    var insInput = tr.querySelector('.input-insurance');
+    if (insInput) insInput.value = Math.round(masterInsurance);
+
+    var handlingInput = tr.querySelector('.input-handling');
+    if (handlingInput) handlingInput.value = Math.round(masterHandling);
+
+    tr.classList.remove('row-custom-rate');
+    recalcNettoOnly(pkgInput || tr);
+}
+
+function updateOverallSummary() {
+    var rows = document.querySelectorAll('#tbodyOnProcess tr[id^="row-shipment-"]');
+    var totalWeight = 0;
+    var totalFreight = 0;
+    var totalDiscount = 0;
+    var totalNetto = 0;
+
+    rows.forEach(function(tr) {
+        var w = parseFloat(tr.getAttribute('data-weight') || '0') || 0;
+        var freight = parseFloat(tr.querySelector('.input-freight') ? tr.querySelector('.input-freight').value : '0') || 0;
+        var discount = parseFloat(tr.querySelector('.input-discount') ? tr.querySelector('.input-discount').value : '0') || 0;
+        var packing = parseFloat(tr.querySelector('.input-packing') ? tr.querySelector('.input-packing').value : '0') || 0;
+        var ins = parseFloat(tr.querySelector('.input-insurance') ? tr.querySelector('.input-insurance').value : '0') || 0;
+        var handling = parseFloat(tr.querySelector('.input-handling') ? tr.querySelector('.input-handling').value : '0') || 0;
+
+        var n = Math.max(0, freight + packing + ins + handling - discount);
+
+        totalWeight += w;
+        totalFreight += freight;
+        totalDiscount += discount;
+        totalNetto += n;
+    });
+
+    var dispWeight = document.getElementById('summaryTotalWeight');
+    if (dispWeight) dispWeight.textContent = totalWeight.toFixed(1) + ' Kg';
+
+    var dispFreight = document.getElementById('summaryTotalFreight');
+    if (dispFreight) dispFreight.textContent = 'Rp ' + totalFreight.toLocaleString();
+
+    var dispDiscount = document.getElementById('summaryTotalDiscount');
+    if (dispDiscount) dispDiscount.textContent = 'Rp ' + totalDiscount.toLocaleString();
+
+    var dispNetto = document.getElementById('summaryTotalNetto');
+    if (dispNetto) dispNetto.textContent = 'Rp ' + totalNetto.toLocaleString();
+}
+
+function updateTotalCount() {
+    var rows = document.querySelectorAll('#tbodyOnProcess tr[id^="row-shipment-"]');
+    var display = document.getElementById('displayTotalAwb');
+    if (display) {
+        display.textContent = rows.length;
+    }
+}
+
+function removeRow(rowId) {
+    var row = document.getElementById(rowId);
+    if (row) {
+        row.remove();
+        updateTotalCount();
+        updateOverallSummary();
+        checkEmptyTable();
+    }
+}
+
+function checkEmptyTable() {
+    var tbody = document.getElementById('tbodyOnProcess');
+    var rows = tbody.querySelectorAll('tr[id^="row-shipment-"]');
+    if (rows.length === 0 && !document.getElementById('rowEmpty')) {
+        tbody.innerHTML = `
+            <tr id="rowEmpty">
+                <td colspan="15" class="text-center py-5 text-muted small">
+                    Belum ada AWB dalam proses LDP. Masukkan Customer & Tanggal lalu klik ikon cari, atau gunakan Scan Barcode.
+                </td>
+            </tr>
+        `;
+    }
+}
+
+function submitLDPForm() {
+    var rows = document.querySelectorAll('#tbodyOnProcess tr[id^="row-shipment-"]');
+    if (rows.length === 0) {
+        alert("Minimal harus ada 1 AWB dalam daftar untuk memproses LDP.");
+        return;
+    }
+    document.getElementById('formActualLDP').submit();
+}
+
+function triggerManualScanAdd() {
+    var e = new KeyboardEvent('keypress', {'key': 'Enter'});
+    handleScanAdd(e);
+}
+
+function triggerManualScanDelete() {
+    var e = new KeyboardEvent('keypress', {'key': 'Enter'});
+    handleScanDelete(e);
+}
+
+function handleScanAdd(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        var inputEl = document.getElementById('inputScanAdd');
+        var resi = inputEl.value.trim();
+        if (!resi) return;
+
+        var existing = document.querySelector('tr[data-resi="' + resi + '"]');
+        if (existing) {
+            alert('Resi ' + resi + ' sudah ada di dalam tabel antrean LDP saat ini.');
+            inputEl.value = '';
+            inputEl.focus();
+            return;
+        }
+
+        var lookupUrl = '/finance/ldp/api/lookup/?resi=' + encodeURIComponent(resi) + '{% if is_edit and ldp %}&ldp_id={{ ldp.id }}{% endif %}';
+
+        fetch(lookupUrl)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    var emptyRow = document.getElementById('rowEmpty');
+                    if (emptyRow) emptyRow.remove();
+
+                    var tbody = document.getElementById('tbodyOnProcess');
+                    var tr = document.createElement('tr');
+                    tr.id = 'row-shipment-' + data.id;
+                    tr.setAttribute('data-resi', data.resi_number);
+                    tr.setAttribute('data-weight', data.chargeable_weight.toFixed(2));
+                    tr.setAttribute('data-master-pkg', data.price_per_kg.toFixed(2));
+                    tr.setAttribute('data-master-freight', data.freight.toFixed(2));
+                    tr.setAttribute('data-master-packing', data.packing.toFixed(2));
+                    tr.setAttribute('data-master-insurance', data.insurance.toFixed(2));
+                    tr.setAttribute('data-master-handling', data.other_cost.toFixed(2));
+                    tr.setAttribute('data-master-discount', '0');
+
+                    tr.innerHTML = `
+                        <td class="ps-3 fw-bold text-dark">
+                            <input type="hidden" name="selected_shipments" value="${data.id}">
+                            ${data.resi_number}
+                        </td>
+                        <td>${data.created_at}</td>
+                        <td>${data.origin}</td>
+                        <td>${data.destination}</td>
+                        <td class="text-center"><span class="badge bg-light text-dark border">${data.service_type}</span></td>
+                        <td class="text-end fw-semibold">${data.chargeable_weight.toFixed(1)}</td>
+                        <td class="text-end fw-bold text-success display-netto" id="netto-display-${data.id}">
+                            Rp ${Math.round(data.subtotal).toLocaleString()}
+                        </td>
+                        <td class="text-end text-muted display-system-freight">Rp ${Math.round(data.freight).toLocaleString()}</td>
+                        <td class="text-end">
+                            <input type="number" step="any" name="freight_charge_${data.id}" class="form-control form-control-sm text-end table-input-num input-freight fw-semibold text-dark" style="width: 110px;" value="${Math.round(data.freight)}" oninput="recalcFromFreight(this)">
+                        </td>
+                        <td class="text-end">
+                            <input type="number" step="any" name="price_per_kg_${data.id}" class="form-control form-control-sm text-end table-input-num input-pkg" style="width: 100px;" value="${Math.round(data.price_per_kg)}" oninput="recalcFromPkg(this)">
+                        </td>
+                        <td class="text-end">
+                            <input type="number" step="any" name="discount_${data.id}" class="form-control form-control-sm text-end table-input-num input-discount text-danger" style="width: 90px;" value="0" oninput="recalcNettoOnly(this)">
+                        </td>
+                        <td class="text-end">
+                            <input type="number" step="any" name="packing_fee_${data.id}" class="form-control form-control-sm text-end table-input-num input-packing" style="width: 85px;" value="${Math.round(data.packing)}" oninput="recalcNettoOnly(this)">
+                        </td>
+                        <td class="text-end">
+                            <input type="number" step="any" name="insurance_fee_${data.id}" class="form-control form-control-sm text-end table-input-num input-insurance" style="width: 85px;" value="${Math.round(data.insurance)}" oninput="recalcNettoOnly(this)">
+                        </td>
+                        <td class="text-end">
+                            <input type="number" step="any" name="handling_fee_${data.id}" class="form-control form-control-sm text-end table-input-num input-handling" style="width: 85px;" value="${Math.round(data.other_cost)}" oninput="recalcNettoOnly(this)">
+                        </td>
+                        <td class="pe-3 text-center">
+                            <button type="button" class="btn btn-sm btn-outline-secondary p-0 rounded-circle d-inline-flex align-items-center justify-content-center me-1" style="width: 28px; height: 28px;" title="Reset ke Tarif Master" onclick="resetRowToMaster('${data.id}')">
+                                <i class="ph-bold ph-arrow-counter-clockwise fs-6"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger p-0 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 28px; height: 28px;" title="Hapus AWB" onclick="removeRow('row-shipment-${data.id}')">
+                                <i class="ph-bold ph-trash fs-6"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.insertBefore(tr, tbody.firstChild);
+                    inputEl.value = '';
+                    inputEl.focus();
+                    updateTotalCount();
+                    updateOverallSummary();
+                } else {
+                    alert(data.message || 'Resi tidak dapat ditambahkan.');
+                    inputEl.value = '';
+                    inputEl.focus();
+                }
+            })
+            .catch(err => {
+                alert('Gagal memuat data resi: ' + err);
+                inputEl.value = '';
+                inputEl.focus();
+            });
+    }
+}
+
+function handleScanDelete(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        var resi = document.getElementById('inputScanDelete').value.trim();
+        if (!resi) return;
+
+        var existing = document.querySelector('tr[data-resi="' + resi + '"]');
+        if (existing) {
+            existing.remove();
+            document.getElementById('inputScanDelete').value = '';
+            updateTotalCount();
+            updateOverallSummary();
+            checkEmptyTable();
+        } else {
+            alert('Resi ' + resi + ' tidak ada dalam daftar tabel saat ini.');
+        }
+    }
+}
+</script>
+{% endblock %}

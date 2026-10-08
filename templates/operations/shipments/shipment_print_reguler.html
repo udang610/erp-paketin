@@ -1,0 +1,251 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Resi {{ shipment.resi_number }}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Libre+Barcode+39&display=swap');
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            font-size: 11px;
+            margin: 0;
+            padding: 20px 0;
+            color: #000;
+            background-color: #525659;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .print-container {
+            width: 100%;
+            max-width: 210mm; /* A4 width */
+            margin: 0 auto;
+            border: 1px solid #000;
+            box-sizing: border-box;
+            background-color: #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        .header-grid {
+            display: grid;
+            grid-template-columns: 200px repeat(6, 1fr);
+            border-bottom: 1px solid #000;
+            font-size: 10px;
+        }
+
+        .header-cell {
+            padding: 4px;
+            border-right: 1px solid #000;
+        }
+        .header-cell:last-child { border-right: none; }
+        
+        .header-label { font-size: 9px; margin-bottom: 2px; }
+        .header-value { font-weight: bold; font-size: 11px; }
+
+        .barcode-section {
+            text-align: center;
+            padding: 10px;
+            border-bottom: 1px solid #000;
+            position: relative;
+        }
+
+        .barcode {
+            font-family: 'Libre Barcode 39', cursive;
+            font-size: 48px;
+            line-height: 1;
+            margin-bottom: 5px;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .left-col {
+            border-right: 1px solid #000;
+            padding: 10px;
+        }
+
+        .right-col {
+            padding: 10px;
+        }
+
+        .table-custom {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 10px;
+        }
+        .table-custom th, .table-custom td {
+            border: 1px solid #000;
+            padding: 4px;
+            text-align: left;
+        }
+        
+        .fw-bold { font-weight: bold; }
+        .text-center { text-align: center; }
+        
+        @media print {
+            body { padding: 0; background-color: #fff; display: block; }
+            .print-container { border: none; max-width: 100%; box-shadow: none; margin: 0; }
+        }
+    </style>
+</head>
+<body onload="window.print()">
+    {% for i in '123'|make_list %}
+    <div class="print-container">
+        <!-- Header -->
+        <div class="header-grid">
+            <div class="header-cell" style="padding-top: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <img src="{% static 'img/logo-surat.webp' %}" alt="Paketin Cargo" style="height: 30px;">
+                </div>
+                <div style="font-size: 8px; margin-top: 5px;">www.paketincargo.com</div>
+                <div style="font-size: 9px; margin-top: 5px;" class="fw-bold">
+                    {{ shipment.client.company_name|default:shipment.sender_name|default:"-" }}
+                </div>
+            </div>
+            
+            <div class="header-cell">
+                <div class="header-label">Asal</div>
+                <div class="header-value">{{ shipment.get_tlc_origin }} - {{ shipment.get_city_origin }}</div>
+                <div class="header-label" style="margin-top: 5px;">Jumlah</div>
+                <div class="header-value">{{ shipment.total_colly|default:"1" }} Koli</div>
+            </div>
+            <div class="header-cell">
+                <div class="header-label">Tujuan</div>
+                <div class="header-value">{{ shipment.get_tlc_dest }} - {{ shipment.get_city_dest }}</div>
+                <div class="header-label" style="margin-top: 5px;">Berat</div>
+                <div class="header-value">{{ shipment.weight|default:"0" }} kg</div>
+            </div>
+            <div class="header-cell">
+                <div class="header-label">Pembayaran</div>
+                <div class="header-value">{{ shipment.get_payment_type_display|upper|default:"KREDIT" }}</div>
+                <div class="header-label" style="margin-top: 5px;">Layanan</div>
+                <div class="header-value">{{ shipment.get_service_type_display|upper|default:"REGULER" }}</div>
+            </div>
+            <div class="header-cell">
+                <div class="header-label">Penanganan</div>
+                <div class="header-value">GENERAL CARGO</div>
+                <div class="header-label" style="margin-top: 5px;">Non / COD</div>
+                <div class="header-value">NON COD</div>
+            </div>
+            <div class="header-cell">
+                <div class="header-label">Asuransi</div>
+                <div class="header-value">{% if shipment.insurance %}Ya{% else %}Tidak{% endif %}</div>
+                <div class="header-label" style="margin-top: 5px;">Nilai COD</div>
+                <div class="header-value">-</div>
+            </div>
+            <div class="header-cell">
+                <div class="header-label">Paking</div>
+                <div class="header-value">{% if shipment.packing %}Ya{% else %}Tidak{% endif %}</div>
+                <div class="header-label" style="margin-top: 5px;">Tipe Kiriman</div>
+                <div class="header-value">{{ shipment.shipment_type_detail|upper|default:"PAKET" }}</div>
+            </div>
+        </div>
+
+        <!-- Barcode -->
+        <div class="barcode-section">
+            <div style="font-size: 10px; margin-bottom: 2px;">Resi No :</div>
+            <div class="barcode">*{{ shipment.resi_number }}*</div>
+            <div class="fw-bold">{{ shipment.resi_number }}</div>
+        </div>
+
+        <!-- Content -->
+        <div class="content-grid">
+            <div class="left-col">
+                <div style="margin-bottom: 15px;">
+                    <div style="font-size: 10px;">Pengirim :</div>
+                    <div class="fw-bold" style="font-size: 14px; margin-top: 5px;">
+                        {{ shipment.client.company_name|default:shipment.sender_name|default:"-" }}
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <div class="fw-bold" style="font-size: 10px;">PIC : {{ shipment.sender_name|default:"-" }}</div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <div style="font-size: 10px;">Deskripsi Barang :</div>
+                    <div style="font-size: 10px; margin-top: 2px;">{{ shipment.description_item|default:"-" }}</div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <div style="font-size: 10px;">Instruksi Khusus :</div>
+                    <div style="font-size: 10px; margin-top: 2px;">AWB DAN DO KEMBALI</div>
+                </div>
+            </div>
+
+            <div class="right-col">
+                <div style="margin-bottom: 15px;">
+                    <div style="font-size: 10px;">Penerima :</div>
+                    <div class="fw-bold" style="font-size: 14px; margin-top: 5px;">
+                        {{ shipment.receiver_name|default:"-" }}
+                    </div>
+                    <div style="font-size: 10px; margin-top: 5px;">
+                        {{ shipment.receiver_address|default:"-" }}<br>
+                        Telp: {{ shipment.receiver_phone|default:"-" }}
+                    </div>
+                </div>
+
+                <table class="table-custom">
+                    <tr>
+                        <th>Berat</th>
+                        <th>Berat Aktual</th>
+                        <th>Berat Volumetrik</th>
+                        <th>Dimensi</th>
+                    </tr>
+                    <tr>
+                        <td>{{ shipment.weight|default:"0" }} Kg</td>
+                        <td>{{ shipment.weight|default:"0" }} Kg</td>
+                        <td>{{ shipment.volume_weight|default:"0" }} Kg</td>
+                        <td>-</td>
+                    </tr>
+                </table>
+
+                <table class="table-custom">
+                    <tr>
+                        <td>Biaya Kirim</td>
+                        <td>Rp {{ shipment.price|default:"0" }}</td>
+                    </tr>
+                    <tr>
+                        <td>Biaya Lain Lain</td>
+                        <td>Rp 0,00</td>
+                    </tr>
+                    <tr>
+                        <td>Asuransi</td>
+                        <td>Rp 0,00</td>
+                    </tr>
+                    <tr>
+                        <td>Biaya Packing</td>
+                        <td>Rp 0,00</td>
+                    </tr>
+                    <tr>
+                        <td>Potongan</td>
+                        <td>Rp 0,00</td>
+                    </tr>
+                    <tr>
+                        <td>PPN 0</td>
+                        <td>Rp 0,00</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold" style="font-size: 12px;">Total Biaya</td>
+                        <td class="fw-bold" style="font-size: 12px;">Rp {{ shipment.price|default:"0" }}</td>
+                    </tr>
+                </table>
+                
+                <div style="font-size: 8px; margin-top: 5px; text-align: right;">
+                    Entry Date : {{ shipment.created_at|date:"Y-m-d H:i:s" }} by {{ shipment.created_by.username|default:"Sistem" }}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% if not forloop.last %}
+    <div style="border-bottom: 1px dashed #ccc; margin: 15px 0;"></div>
+    {% endif %}
+    {% endfor %}
+</body>
+</html>

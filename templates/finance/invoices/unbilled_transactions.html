@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Transaksi Belum Ditagih - ERP Paketin{% endblock %}
+{% block page_title %}Transaksi Belum Ditagih (Unbilled){% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <a href="{% url 'finance:invoice_list' %}" class="btn btn-outline-secondary btn-sm px-3">
+                    <i class="ph-bold ph-arrow-left me-1"></i> Kembali ke Invoice &amp; Billing
+                </a>
+                <span class="text-muted small">|</span>
+                <span class="text-muted small fw-semibold">Transaksi Unbilled</span>
+            </div>
+            <h4 class="mb-1 fw-bold text-dark">Transaksi Belum Ditagih (Unbilled)</h4>
+            <p class="text-muted small mb-0">Pilih transaksi pengiriman yang sudah selesai untuk dibentuk menjadi Draft Invoice baru.</p>
+        </div>
+        <div>
+            <button type="submit" form="generateInvoiceForm" class="btn btn-danger px-4 fw-bold shadow-sm" id="btnGenerateSubmit">
+                <i class="ph-bold ph-receipt me-1"></i> Generate Draft Invoice
+            </button>
+        </div>
+    </div>
+
+    <!-- Filter & Filter Bar -->
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-3 mb-3 border">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label text-muted fw-semibold small mb-1">Pilih Kustomer / Klien</label>
+                <select name="client_id" class="form-select form-select-sm" id="filterClientSelect">
+                    <option value="">-- Semua Klien --</option>
+                    {% for c in clients %}
+                        <option value="{{ c.id }}" {% if selected_client|stringformat:"s" == c.id|stringformat:"s" %}selected{% endif %}>
+                            {{ c.name|default:c.company_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted fw-semibold small mb-1">Periode Awal</label>
+                <input type="date" name="periode_awal" class="form-control form-control-sm" value="{{ periode_awal }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted fw-semibold small mb-1">Periode Akhir</label>
+                <input type="date" name="periode_akhir" class="form-control form-control-sm" value="{{ periode_akhir }}">
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-sm btn-primary w-100 fw-semibold shadow-sm">
+                    <i class="ph-bold ph-funnel me-1"></i> Filter
+                </button>
+                <a href="{% url 'finance:unbilled_transactions' %}" class="btn btn-sm btn-light border fw-semibold">Reset</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Summary KPI Strip -->
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-muted small fw-semibold text-uppercase d-block" style="font-size: 0.7rem;">Total Transaksi Unbilled</span>
+                        <h4 class="fw-bold text-dark mb-0 mt-1">{{ rows|length }} <small class="text-muted fs-6 fw-normal">Resi</small></h4>
+                    </div>
+                    <div class="rounded-circle bg-primary-subtle text-primary p-3">
+                        <i class="ph-duotone ph-receipt fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-muted small fw-semibold text-uppercase d-block" style="font-size: 0.7rem;">Estimasi Total Penjualan</span>
+                        <h4 class="fw-bold text-success mb-0 mt-1">Rp {{ total_penjualan|floatformat:0|intcomma }}</h4>
+                    </div>
+                    <div class="rounded-circle bg-success-subtle text-success p-3">
+                        <i class="ph-duotone ph-currency-circle-dollar fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-muted small fw-semibold text-uppercase d-block" style="font-size: 0.7rem;">Transaksi Terpilih</span>
+                        <h4 class="fw-bold text-danger mb-0 mt-1"><span id="selectedCount">0</span> <small class="text-muted fs-6 fw-normal">Item dipilih</small></h4>
+                    </div>
+                    <div class="rounded-circle bg-danger-subtle text-danger p-3">
+                        <i class="ph-duotone ph-check-square-offset fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Table Form for Invoicing -->
+    <form method="post" action="{% url 'finance:generate_invoice' %}" id="generateInvoiceForm">
+        {% csrf_token %}
+        <input type="hidden" name="client_id" value="{{ selected_client }}" id="formClientId">
+        <input type="hidden" name="periode_awal" value="{{ periode_awal }}">
+        <input type="hidden" name="periode_akhir" value="{{ periode_akhir }}">
+
+        <div class="table-responsive shadow-sm rounded-4 bg-white border">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.82rem;">
+                <thead class="table-light text-muted">
+                    <tr>
+                        <th class="ps-3" style="width: 40px;">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="selectAllRows">
+                            </div>
+                        </th>
+                        <th>No. Resi / AWB</th>
+                        <th>Tanggal</th>
+                        <th>Klien / Pengirim</th>
+                        <th>Rute (Asal &rarr; Tujuan)</th>
+                        <th class="text-center" style="width: 60px;">Koli</th>
+                        <th class="text-center" style="width: 80px;">Berat</th>
+                        <th class="text-end" style="width: 130px;">Penjualan (Rp)</th>
+                        <th class="text-end" style="width: 100px;">Asuransi</th>
+                        <th class="text-center pe-3" style="width: 100px;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                    <tr>
+                        <td class="ps-3">
+                            <div class="form-check">
+                                <input class="form-check-input row-check" type="checkbox" name="row_ids" value="{{ row.id }}" data-client="{{ row.shipment.client_id }}" onchange="updateSelectedCounter()">
+                            </div>
+                        </td>
+                        <td>
+                            <strong class="font-monospace text-dark">{{ row.shipment.resi_number|default:row.awb|default:"-" }}</strong>
+                        </td>
+                        <td class="text-muted small">
+                            {{ row.tanggal_pickup|date:"d/m/Y"|default:"-" }}
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-dark">{{ row.shipment.client.name|default:row.shipment.client.company_name|default:row.pengirim|default:row.nama|default:"-" }}</div>
+                        </td>
+                        <td>
+                            <span class="text-secondary">{{ row.asal_pickup|default:row.shipment.get_city_origin|default:"-" }}</span>
+                            <i class="ph-bold ph-arrow-right text-muted mx-1" style="font-size: 0.7rem;"></i>
+                            <span class="text-dark fw-semibold">{{ row.tujuan|default:row.shipment.get_city_dest|default:"-" }}</span>
+                        </td>
+                        <td class="text-center">{{ row.koli|default:row.shipment.total_colly|default:"1" }}</td>
+                        <td class="text-center">{{ row.kg|default:row.shipment.chargeable_weight|default:"0" }} kg</td>
+                        <td class="text-end fw-bold text-dark">
+                            Rp {{ row.penjualan|floatformat:0|intcomma }}
+                        </td>
+                        <td class="text-end text-muted">
+                            Rp {{ row.asuransi|default:0|floatformat:0|intcomma }}
+                        </td>
+                        <td class="text-center pe-3">
+                            <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2 py-1" style="font-size: 0.7rem;">
+                                {{ row.get_row_status_display|default:row.row_status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="10" class="text-center py-5 text-muted">
+                            <i class="ph-duotone ph-check-circle fs-1 d-block mb-2 text-success opacity-75"></i>
+                            Tidak ada transaksi unbilled yang perlu ditagih saat ini.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAll = document.getElementById('selectAllRows');
+    const rowChecks = document.querySelectorAll('.row-check');
+
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            rowChecks.forEach(cb => {
+                cb.checked = selectAll.checked;
+            });
+            updateSelectedCounter();
+        });
+    }
+
+    const generateForm = document.getElementById('generateInvoiceForm');
+    if (generateForm) {
+        generateForm.addEventListener('submit', function(e) {
+            const checked = document.querySelectorAll('.row-check:checked');
+            if (checked.length === 0) {
+                e.preventDefault();
+                alert('Pilih minimal 1 transaksi untuk membuat draft invoice.');
+                return false;
+            }
+
+            const clientSelect = document.getElementById('filterClientSelect');
+            const formClientId = document.getElementById('formClientId');
+            if (!formClientId.value && clientSelect && clientSelect.value) {
+                formClientId.value = clientSelect.value;
+            }
+
+            if (!formClientId.value) {
+                // Get client id from first selected row
+                const firstClient = checked[0].dataset.client;
+                if (firstClient) {
+                    formClientId.value = firstClient;
+                } else {
+                    e.preventDefault();
+                    alert('Harap pilih filter Klien terlebih dahulu sebelum generate invoice.');
+                    return false;
+                }
+            }
+        });
+    }
+});
+
+function updateSelectedCounter() {
+    const checked = document.querySelectorAll('.row-check:checked');
+    const counterEl = document.getElementById('selectedCount');
+    if (counterEl) {
+        counterEl.innerText = checked.length;
+    }
+}
+</script>
+{% endblock %}

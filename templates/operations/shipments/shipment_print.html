@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Resi {{ shipment.resi_number }}</title>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            margin: 0;
+            padding: 20px 0;
+            color: #000;
+            background-color: #525659;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .print-container {
+            width: 80mm; /* Standard thermal printer width */
+            padding: 10px;
+            background-color: #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            box-sizing: border-box;
+        }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .font-bold { font-weight: bold; }
+        .border-bottom { border-bottom: 1px dashed #000; margin-bottom: 5px; padding-bottom: 5px; }
+        .border-top { border-top: 1px dashed #000; margin-top: 5px; padding-top: 5px; }
+        .mb-1 { margin-bottom: 5px; }
+        .mb-2 { margin-bottom: 10px; }
+        .mt-1 { margin-top: 5px; }
+        .mt-2 { margin-top: 10px; }
+        .barcode {
+            font-family: 'Libre Barcode 39', cursive; /* Alternatively, we can just display the text clearly */
+            font-size: 24px;
+            text-align: center;
+            margin: 10px 0;
+            letter-spacing: 2px;
+        }
+        table { width: 100%; border-collapse: collapse; }
+        td { vertical-align: top; padding: 2px 0; }
+        
+        @media print {
+            body { margin: 0; padding: 0; background-color: #fff; display: block; }
+            .print-container { box-shadow: none; margin: 0; padding: 0; width: 80mm; }
+            @page { margin: 0; }
+        }
+    </style>
+</head>
+<body onload="window.print()">
+    <div class="print-container">
+    <div class="text-center border-bottom mb-2">
+        <h2 class="mb-1 mt-0" style="font-size: 18px;">PAKETIN CARGO</h2>
+        <div style="font-size: 11px;">ERP Logistics Solutions</div>
+        <div style="font-size: 10px;">{{ shipment.created_at|date:"d M Y H:i" }}</div>
+    </div>
+
+    <div class="text-center mb-2">
+        <div class="font-bold" style="font-size: 16px;">{{ shipment.resi_number }}</div>
+    </div>
+
+    <div class="border-bottom mb-2">
+        <div class="font-bold">PENGIRIM:</div>
+        <div>{% if shipment.client %}{{ shipment.client.company_name }}{% else %}{{ shipment.sender_name }}{% endif %}</div>
+        <div>{{ shipment.sender_phone|default:"-" }}</div>
+        <div>{{ shipment.get_tlc_origin }} - {{ shipment.get_city_origin }}</div>
+    </div>
+
+    <div class="border-bottom mb-2">
+        <div class="font-bold">PENERIMA:</div>
+        <div>{{ shipment.receiver_name }}</div>
+        <div>{{ shipment.receiver_phone }}</div>
+        <div style="font-size: 11px;">{{ shipment.receiver_address }}</div>
+        <div class="font-bold mt-1">{{ shipment.get_tlc_dest }} - {{ shipment.get_city_dest }}</div>
+    </div>
+
+    <div class="border-bottom mb-2">
+        <table>
+            <tr>
+                <td>Layanan:</td>
+                <td class="text-right font-bold">{{ shipment.get_service_type_display }}</td>
+            </tr>
+            <tr>
+                <td>Bayar:</td>
+                <td class="text-right">{{ shipment.get_payment_type_display }}</td>
+            </tr>
+            <tr>
+                <td>Berat:</td>
+                <td class="text-right">{{ shipment.weight }} Kg</td>
+            </tr>
+            <tr>
+                <td>Vol:</td>
+                <td class="text-right">{{ shipment.volume_weight }} Kg</td>
+            </tr>
+            <tr class="font-bold mt-1" style="font-size: 14px;">
+                <td class="border-top">Total:</td>
+                <td class="text-right border-top">Rp {{ shipment.price|floatformat:"0" }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="text-center mt-2" style="font-size: 10px;">
+        Terima kasih telah menggunakan<br>layanan kami.
+    </div>
+    </div>
+</body>
+</html>

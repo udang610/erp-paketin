@@ -1,0 +1,487 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Detail Invoice - {{ invoice.invoice_number }}{% endblock %}
+{% block page_title %}Detail Invoice{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <style>
+        .table-custom-detail {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+        }
+        .table-custom-detail thead th {
+            background-color: #f8fafc !important;
+            color: #475569;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+            border-bottom: 1px solid #eaedf1 !important;
+            padding: 10px 14px;
+            vertical-align: middle;
+        }
+        .table-custom-detail tbody td {
+            padding: 10px 14px;
+            vertical-align: middle;
+            border-top: 1px solid #f1f5f9;
+            font-size: 13px;
+            color: #1e293b;
+        }
+        .table-custom-detail tbody tr:first-child td {
+            border-top: none;
+        }
+    </style>
+
+    <!-- Top Action Header: Standard Back Button (Matching other Finance Menus) -->
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+            <a href="{% url 'finance:invoice_list' %}" class="btn btn-outline-secondary btn-sm px-3 shadow-sm">
+                <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+            </a>
+        </div>
+        <div class="d-flex gap-2">
+            <!-- Modal Trigger: Preview PDF Surat Invoice -->
+            <button type="button" class="btn btn-sm btn-outline-secondary px-3 fw-semibold bg-white shadow-sm" data-bs-toggle="modal" data-bs-target="#pdfPreviewModal">
+                <i class="ph-bold ph-file-pdf me-1"></i> Preview Surat Invoice
+            </button>
+            <a href="{% url 'finance:invoice_pdf' invoice.id %}" target="_blank" class="btn btn-sm btn-outline-secondary px-3 fw-semibold bg-white shadow-sm">
+                <i class="ph-bold ph-printer me-1"></i> Cetak PDF
+            </a>
+            {% if invoice.status == 'DRAFT' %}
+            <form method="POST" action="{% url 'finance:close_invoice' invoice.id %}" class="d-inline" id="closeInvoiceForm">
+                {% csrf_token %}
+                <button type="button" class="btn btn-sm btn-success px-3 fw-bold shadow-sm" onclick="PaketinModal.confirm({ title: 'Tutup & Terbitkan Invoice?', description: 'Invoice {{ invoice.invoice_number }} akan diterbitkan resmi. Data tagihan dan rincian resi akan dikunci dan tidak dapat diubah.', theme: 'success', confirmText: 'Ya, Terbitkan', cancelText: 'Batal', icon: 'ph-seal-check', form: document.getElementById('closeInvoiceForm') })">
+                    <i class="ph-bold ph-seal-check me-1"></i> Tutup & Terbitkan
+                </button>
+            </form>
+            {% elif invoice.status != 'PAID' and invoice.status != 'VOID' %}
+            <button class="btn btn-sm btn-success px-3 fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#paymentModal">
+                <i class="ph-bold ph-wallet me-1"></i> Input Pembayaran
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Main Detail Card -->
+    <div class="card border shadow-sm rounded-4 mb-4" style="background-color: #ffffff; border-color: #eaedf1 !important;">
+        <div class="card-body p-4">
+            
+            <!-- Periode Invoice -->
+            <div class="mb-4">
+                <span class="fw-bold text-dark" style="font-size: 1.05rem;">
+                    Periode Invoice : 
+                    {% if invoice.periode_awal and invoice.periode_akhir %}
+                        {{ invoice.periode_awal|date:"d M Y" }} to {{ invoice.periode_akhir|date:"d M Y" }}
+                    {% else %}
+                        {{ invoice.created_at|date:"d M Y" }} to {{ invoice.created_at|date:"d M Y" }}
+                    {% endif %}
+                </span>
+            </div>
+
+            <!-- 3-Row, 5-Column Metadata Grid (Clean Text Styling without excessive badges, Status inline) -->
+            <div class="metadata-grid mb-4 pb-3 border-bottom" style="font-size: 0.88rem; color: #475569;">
+                <!-- Row 1 -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-2" style="flex: 0 0 20%; max-width: 20%;">
+                        <div class="text-muted mb-1">Invoice No : <span class="text-dark fw-semibold">{{ invoice.invoice_number }}</span></div>
+                    </div>
+                    <div class="col-md-3" style="flex: 0 0 28%; max-width: 28%;">
+                        <div class="text-muted mb-1">Customer : <span class="text-dark fw-semibold">{{ invoice.kode_pelanggan }}{% if invoice.kode_pelanggan and invoice.client_name %} - {% endif %}{{ invoice.client_name }}</span></div>
+                    </div>
+                    <div class="col-md-2" style="flex: 0 0 16%; max-width: 16%;">
+                        <div class="text-muted mb-1">Total Awb : <span class="text-dark fw-semibold">{{ invoice.total_awb_count }} AWB</span></div>
+                    </div>
+                    <div class="col-md-2" style="flex: 0 0 16%; max-width: 16%;">
+                        <div class="text-muted mb-1">User Inp : <span class="text-dark fw-semibold">{{ invoice.ldps.first.created_by.username|default:request.user.username|upper }}</span></div>
+                    </div>
+                    <div class="col-md-3" style="flex: 0 0 20%; max-width: 20%;">
+                        <div class="text-muted mb-1">Created At : <span class="text-dark fw-semibold">{{ invoice.created_at|date:"d M Y" }}</span></div>
+                    </div>
+                </div>
+
+                <!-- Row 2 -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-2" style="flex: 0 0 20%; max-width: 20%;">
+                        <div class="text-muted mb-1">Approval Client by : <span class="text-dark fw-semibold">{{ invoice.client_name }}</span></div>
+                        <div class="text-muted small">Date : {{ invoice.date_issued|date:"d M Y" }}</div>
+                    </div>
+                    <div class="col-md-3" style="flex: 0 0 28%; max-width: 28%;">
+                        <div class="text-muted mb-1">Sales : <span class="text-dark fw-semibold">{{ invoice.sales_ae|default:"BUDI BDJ" }}</span></div>
+                    </div>
+                    <div class="col-md-2" style="flex: 0 0 16%; max-width: 16%;">
+                        <div class="text-muted mb-1">
+                            Status : 
+                            <span class="fw-semibold {% if invoice.status == 'DRAFT' %}text-secondary{% elif invoice.status == 'SENT' %}text-success{% elif invoice.status == 'PAID' %}text-success{% elif invoice.status == 'PARTIAL' %}text-warning{% else %}text-dark{% endif %}">
+                                {% if invoice.status == 'DRAFT' %}Draft{% elif invoice.status == 'SENT' %}Approve By Customer{% elif invoice.status == 'PAID' %}Lunas{% elif invoice.status == 'PARTIAL' %}Sebagian{% else %}{{ invoice.get_status_display }}{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-2" style="flex: 0 0 16%; max-width: 16%;">
+                        <div class="text-muted mb-1">Materai : <span class="text-dark fw-semibold">{% if invoice.materai > 0 %}Yes, Rp {{ invoice.materai|floatformat:0|intcomma }}{% else %}No, Rp 0{% endif %}</span></div>
+                    </div>
+                    <div class="col-md-3" style="flex: 0 0 20%; max-width: 20%;">
+                        <div class="text-muted mb-1">PPN : <span class="text-dark fw-semibold">{% if invoice.tax > 0 %}1.1 %{% else %}0 %{% endif %}</span> &nbsp; PPH 23 : <span class="text-dark fw-semibold">Tidak</span></div>
+                    </div>
+                </div>
+
+                <!-- Row 3 -->
+                <div class="row g-3">
+                    <div class="col-md-2" style="flex: 0 0 20%; max-width: 20%;">
+                        <div class="text-muted mb-1">
+                            term overdue : 
+                            <span class="text-danger fw-bold ms-1">
+                                {% if invoice.due_date %}{{ invoice.due_date|date:"d M Y" }}{% else %}{{ invoice.created_at|date:"d M Y" }}{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-3" style="flex: 0 0 28%; max-width: 28%;">
+                        <div class="text-muted mb-1">payment invoice date : <span class="text-dark fw-semibold">{{ invoice.latest_reconciliation.payment_date|date:"d M Y"|default:"-" }}</span></div>
+                    </div>
+                    <div class="col-md-2" style="flex: 0 0 16%; max-width: 16%;">
+                        <div class="text-muted mb-1">Signature Name : <span class="text-dark fw-semibold">{{ invoice.pic_invoice|default:"Finance Admin" }}</span></div>
+                    </div>
+                    <div class="col-md-2" style="flex: 0 0 16%; max-width: 16%;">
+                        <div class="text-muted mb-1">User Update : <span class="text-dark fw-semibold">{{ invoice.ldps.first.created_by.username|default:request.user.username|upper }}</span></div>
+                    </div>
+                    <div class="col-md-3" style="flex: 0 0 20%; max-width: 20%;">
+                        <div class="text-muted mb-1">Update At : <span class="text-dark fw-semibold">{{ invoice.updated_at|date:"Y-m-d H:i:s" }}</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- List LDP Invoice Section (Zero extra gap, clean grey header) -->
+            <div class="mb-4">
+                <h6 class="fw-bold text-muted mb-2" style="font-size: 0.92rem;">List LDP Invoice :</h6>
+                <div class="table-responsive" style="border: 1px solid #eaedf1; border-radius: 8px; min-height: auto !important;">
+                    <table class="table table-custom-detail align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">LDP NO</th>
+                                <th>TOTAL AWB</th>
+                                <th>CUSTOMER</th>
+                                <th>USER INP</th>
+                                <th class="pe-3">CREATED AT</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ldp in ldps %}
+                            <tr>
+                                <td class="ps-3 fw-semibold text-dark">{{ ldp.ldp_number }}</td>
+                                <td class="text-dark">{{ ldp.items.count }} AWB</td>
+                                <td class="text-dark">{{ invoice.kode_pelanggan }}{% if invoice.kode_pelanggan and ldp.client_name %} - {% endif %}{{ ldp.client_name }}</td>
+                                <td class="text-dark">{{ ldp.created_by.username|default:"ADMIN"|upper }}</td>
+                                <td class="pe-3 text-dark">{{ ldp.created_at|date:"d M Y" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-3">Tidak ada data LDP yang terhubung.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- List Awb Invoice Section (Clean grey header matching other menus) -->
+            <div class="mt-4">
+                <h6 class="fw-bold text-muted mb-2" style="font-size: 0.92rem;">List Awb Invoice :</h6>
+
+                <!-- Table AWB List -->
+                <div class="table-responsive" style="border: 1px solid #eaedf1; border-radius: 8px; min-height: auto !important;">
+                    <table class="table table-custom-detail align-middle mb-0" id="awbInvoiceTable" style="white-space: nowrap;">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">LDP NO</th>
+                                <th>AWB NO</th>
+                                <th>REFF</th>
+                                <th>ORIGIN</th>
+                                <th>DEST.</th>
+                                <th>SERVICE</th>
+                                <th>WEIGHT</th>
+                                <th style="color: #ef4444 !important;">COST</th>
+                                <th>COST (UOM)</th>
+                                <th>DISCOUNT</th>
+                                <th>PACKING COST</th>
+                                <th>INSURANCE COST</th>
+                                <th class="pe-3">HANDLING &amp; SURCHARGE COST</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in awb_items %}
+                            <tr>
+                                <td class="ps-3 text-muted">{{ item.ldp.ldp_number|default:"-" }}</td>
+                                <td class="fw-semibold text-dark">{{ item.awb_number }}</td>
+                                <td class="text-muted">{{ item.shipment.reference_number|default:"-" }}</td>
+                                <td class="text-dark">{{ item.origin_display|default:item.origin|default:"-" }}</td>
+                                <td class="text-dark">{{ item.destination_display|default:item.destination|default:"-" }}</td>
+                                <td class="text-dark">{{ item.service_type|default:"REG" }}</td>
+                                <td class="text-dark">{{ item.chargeable_weight|floatformat:0 }}</td>
+                                <td class="fw-bold" style="color: #ef4444;">{{ item.freight_charge|floatformat:0|intcomma }}</td>
+                                <td class="text-dark">{{ item.price_per_kg|floatformat:0|intcomma }}</td>
+                                <td class="text-dark">{{ item.discount|floatformat:0|intcomma }}</td>
+                                <td class="text-dark">{{ item.packing_fee|floatformat:0|intcomma }}</td>
+                                <td class="text-dark">{{ item.insurance_fee|floatformat:0|intcomma }}</td>
+                                <td class="pe-3 text-dark">{{ item.surcharges|floatformat:0|intcomma }}</td>
+                            </tr>
+                            {% empty %}
+                                {% for shp in invoice.shipments.all %}
+                                <tr>
+                                    <td class="ps-3 text-muted">-</td>
+                                    <td class="fw-semibold text-dark">{{ shp.resi_number }}</td>
+                                    <td class="text-muted">{{ shp.reference_number|default:"-" }}</td>
+                                    <td class="text-dark">{{ shp.origin_clean|default:shp.origin|default:"-" }}</td>
+                                    <td class="text-dark">{{ shp.destination_clean|default:shp.destination|default:"-" }}</td>
+                                    <td class="text-dark">{{ shp.service_type|default:"REG" }}</td>
+                                    <td class="text-dark">{{ shp.chargeable_weight|default:shp.actual_weight|default:1|floatformat:0 }}</td>
+                                    <td class="fw-bold" style="color: #ef4444;">{{ shp.price|floatformat:0|intcomma }}</td>
+                                    <td class="text-dark">-</td>
+                                    <td class="text-dark">0</td>
+                                    <td class="text-dark">0</td>
+                                    <td class="text-dark">0</td>
+                                    <td class="pe-3 text-dark">0</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="13" class="text-center text-muted py-4">Belum ada daftar AWB dalam invoice ini.</td>
+                                </tr>
+                                {% endfor %}
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light fw-bold" style="border-top: 2px solid #cbd5e1;">
+                            <tr>
+                                <td colspan="6" class="ps-3 text-dark">Total ({{ awb_items.count|default:invoice.total_awb_count }} AWB)</td>
+                                <td class="text-dark">
+                                    {% if awb_items %}
+                                        {% with total_w=0 %}
+                                            {# Rendered dynamically or calculated #}
+                                        {% endwith %}
+                                    {% endif %}
+                                    -
+                                </td>
+                                <td class="fw-bold" style="color: #ef4444;">{{ invoice.biaya_kirim|floatformat:0|intcomma }}</td>
+                                <td class="text-dark">-</td>
+                                <td class="text-dark">{{ invoice.diskon|floatformat:0|intcomma }}</td>
+                                <td class="text-dark">{{ invoice.biaya_kemasan|floatformat:0|intcomma }}</td>
+                                <td class="text-dark">{{ invoice.premi_asuransi|floatformat:0|intcomma }}</td>
+                                <td class="pe-3 text-dark">{{ invoice.biaya_tambahan|floatformat:0|intcomma }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Kalkulasi Total & Rincian Perhitungan Biaya & Pajak (Invoice Calculation & Summary) -->
+            <div class="row g-4 mt-3">
+                <!-- Sisi Kiri: Box Terbilang & Info Pembayaran -->
+                <div class="col-lg-6">
+                    <div class="p-3 bg-light rounded-3 border mb-3">
+                        <div class="text-muted small fw-bold text-uppercase mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Terbilang :</div>
+                        <div class="fw-bold text-dark fst-italic" style="font-size: 0.95rem; line-height: 1.4;">
+                            # {{ invoice.terbilang }} #
+                        </div>
+                    </div>
+
+                    <div class="card border rounded-3 p-3 bg-white shadow-none">
+                        <h6 class="fw-bold text-dark mb-3" style="font-size: 0.88rem;"><i class="ph-bold ph-credit-card me-1 text-primary"></i> Status &amp; Rekonsiliasi Pembayaran</h6>
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <span class="text-muted small">Status Tagihan:</span>
+                            <span class="badge {% if invoice.status == 'PAID' %}bg-success{% elif invoice.status == 'PARTIAL' %}bg-warning text-dark{% elif invoice.status == 'SENT' %}bg-info text-white{% else %}bg-secondary{% endif %} px-2 py-1">
+                                {% if invoice.status == 'PAID' %}LUNAS{% elif invoice.status == 'SENT' %}TERKIRIM (BELUM LUNAS){% elif invoice.status == 'PARTIAL' %}DIBAYAR SEBAGIAN{% elif invoice.status == 'DRAFT' %}DRAFT{% else %}{{ invoice.get_status_display }}{% endif %}
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <span class="text-muted small">Total Tagihan (Grand Total):</span>
+                            <span class="fw-bold text-dark">Rp {{ invoice.total_amount|floatformat:0|intcomma }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <span class="text-muted small">Total Terbayar:</span>
+                            <span class="fw-semibold text-success">Rp {{ invoice.amount_paid|floatformat:0|intcomma }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center pt-2">
+                            <span class="text-muted small fw-bold">Sisa Piutang / Tagihan:</span>
+                            <span class="fw-bold {% if sisa_tagihan > 0 %}text-danger{% else %}text-muted{% endif %} fs-6">Rp {{ sisa_tagihan|floatformat:0|intcomma }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sisi Kanan: Rincian Lengkap Kalkulasi Biaya & Pajak -->
+                <div class="col-lg-6">
+                    <div class="card border rounded-3 p-3 bg-white shadow-none">
+                        <h6 class="fw-bold text-dark mb-3" style="font-size: 0.88rem;"><i class="ph-bold ph-calculator me-1 text-danger"></i> Rincian Perhitungan Tagihan &amp; Pajak</h6>
+                        
+                        <table class="table table-sm table-borderless mb-0 align-middle" style="font-size: 0.88rem;">
+                            <tbody>
+                                <tr>
+                                    <td class="text-muted py-1">Biaya Kirim (Freight Cost)</td>
+                                    <td class="text-end fw-semibold text-dark py-1">Rp {{ invoice.biaya_kirim|floatformat:0|intcomma }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted py-1">Diskon (Discount)</td>
+                                    <td class="text-end text-success py-1">{% if invoice.diskon > 0 %}- Rp {{ invoice.diskon|floatformat:0|intcomma }}{% else %}Rp 0{% endif %}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted py-1">Biaya Tambahan (Surcharge &amp; Handling)</td>
+                                    <td class="text-end text-dark py-1">Rp {{ invoice.biaya_tambahan|floatformat:0|intcomma }}</td>
+                                </tr>
+                                <tr class="border-top">
+                                    <td class="fw-semibold text-dark py-1 ps-2" style="background-color: #f8fafc;">Subtotal Biaya Kirim</td>
+                                    <td class="text-end fw-bold text-dark py-1 pe-2" style="background-color: #f8fafc;">Rp {{ invoice.sub_total_biaya_kirim|floatformat:0|intcomma }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted py-1">Biaya Kemasan (Packing Cost)</td>
+                                    <td class="text-end text-dark py-1">Rp {{ invoice.biaya_kemasan|floatformat:0|intcomma }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted py-1">Biaya Lain (Other Charges)</td>
+                                    <td class="text-end text-dark py-1">Rp {{ invoice.biaya_lain|floatformat:0|intcomma }}</td>
+                                </tr>
+                                <tr class="border-top">
+                                    <td class="fw-semibold text-dark py-1 ps-2" style="background-color: #f8fafc;">Total Biaya Kirim &amp; Biaya Lain</td>
+                                    <td class="text-end fw-bold text-dark py-1 pe-2" style="background-color: #f8fafc;">Rp {{ invoice.subtotal|floatformat:0|intcomma }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted py-1">PPN ({% if invoice.tax > 0 %}1.1%{% else %}0%{% endif %})</td>
+                                    <td class="text-end text-dark py-1">Rp {{ invoice.tax|floatformat:0|intcomma }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted py-1">Premi Asuransi</td>
+                                    <td class="text-end text-dark py-1">Rp {{ invoice.premi_asuransi|floatformat:0|intcomma }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted py-1">Biaya Materai</td>
+                                    <td class="text-end text-dark py-1">Rp {{ invoice.materai|floatformat:0|intcomma }}</td>
+                                </tr>
+                                <tr class="border-top border-2" style="border-color: #0f172a !important;">
+                                    <td class="fw-bold text-dark py-2 ps-2 fs-6" style="background-color: #f1f5f9;">TOTAL TAGIHAN (GRAND TOTAL)</td>
+                                    <td class="text-end fw-bold text-danger py-2 pe-2 fs-6" style="background-color: #f1f5f9;">Rp {{ invoice.total_amount|floatformat:0|intcomma }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Modal Preview PDF Surat Invoice Draft (Adobe Acrobat / PDF Viewer) -->
+<div class="modal fade" id="pdfPreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 1000px;">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-0 pb-0 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <h5 class="modal-title fw-bold text-dark mb-0">Preview Surat Invoice</h5>
+                    <span class="text-muted small">({{ invoice.invoice_number }})</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="{% url 'finance:invoice_pdf' invoice.id %}?download=1" class="btn btn-sm btn-outline-primary px-3">
+                        <i class="ph-bold ph-download-simple me-1"></i> Download PDF
+                    </a>
+                    <a href="{% url 'finance:invoice_pdf' invoice.id %}" target="_blank" class="btn btn-sm btn-light border px-3">
+                        <i class="ph-bold ph-arrow-square-out me-1"></i> Buka di Tab Baru
+                    </a>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+            <div class="modal-body p-3">
+                <div class="bg-dark rounded-3 overflow-hidden shadow-sm" style="height: 75vh;">
+                    <iframe src="{% url 'finance:invoice_pdf' invoice.id %}#toolbar=1" width="100%" height="100%" style="border: none;"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Input Pembayaran -->
+{% if invoice.status != 'PAID' and invoice.status != 'VOID' %}
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-dark">Input Pembayaran Invoice</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{% url 'finance:invoice_detail' invoice.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="add_payment" value="1">
+                <div class="modal-body py-4">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-semibold">Nominal Pembayaran (Rp)</label>
+                        <input type="number" step="any" name="amount" class="form-control" value="{{ sisa_tagihan }}" required>
+                        <small class="text-muted">Sisa Tagihan: Rp {{ sisa_tagihan|floatformat:0|intcomma }}</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-semibold">Metode Pembayaran</label>
+                        <select name="payment_method" class="form-select">
+                            <option value="Transfer Bank">Transfer Bank</option>
+                            <option value="Cash / Tunai">Cash / Tunai</option>
+                            <option value="Giro / Cek">Giro / Cek</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-semibold">Nomor Referensi / Bukti Transfer</label>
+                        <input type="text" name="reference_number" class="form-control" placeholder="No. ref transfer / berita acara">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success px-4 fw-bold shadow-sm">Simpan Pembayaran</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+// Optional Table utility functions
+
+// Copy Table to Clipboard
+function copyAwbTable() {
+    var table = document.getElementById('awbInvoiceTable');
+    var text = '';
+    for (var i = 0; i < table.rows.length; i++) {
+        var row = table.rows[i];
+        if (row.style.display === 'none') continue;
+        var rowData = [];
+        for (var j = 0; j < row.cells.length; j++) {
+            rowData.push(row.cells[j].innerText.trim());
+        }
+        text += rowData.join('\t') + '\n';
+    }
+    navigator.clipboard.writeText(text).then(function() {
+        alert('Tabel AWB berhasil disalin ke clipboard!');
+    }).catch(function(err) {
+        alert('Gagal menyalin: ' + err);
+    });
+}
+
+// Export Table to Excel (CSV)
+function exportAwbExcel() {
+    var table = document.getElementById('awbInvoiceTable');
+    var csv = [];
+    for (var i = 0; i < table.rows.length; i++) {
+        var row = table.rows[i];
+        if (row.style.display === 'none') continue;
+        var rowData = [];
+        for (var j = 0; j < row.cells.length; j++) {
+            var cellText = row.cells[j].innerText.replace(/"/g, '""').trim();
+            rowData.push('"' + cellText + '"');
+        }
+        csv.push(rowData.join(','));
+    }
+    var csvFile = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    var downloadLink = document.createElement('a');
+    downloadLink.download = 'AWB_Invoice_{{ invoice.invoice_number }}.csv';
+    downloadLink.href = window.URL.createObjectURL(csvFile);
+    downloadLink.style.display = 'none';
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+}
+</script>
+{% endblock %}

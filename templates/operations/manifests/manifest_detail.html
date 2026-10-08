@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+
+{% block title %}Detail Manifest {{ manifest.manifest_number }} - ERP Paketin{% endblock %}
+{% block page_title %}Detail Manifest{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+        <a href="{% url 'operations:manifest-list' %}?type={{ manifest.manifest_type }}" class="btn btn-outline-secondary btn-sm">
+            <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+        </a>
+        <div class="dropdown d-inline-block">
+            <button class="btn btn-danger btn-sm shadow-sm px-3 dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="ph-bold ph-printer me-1"></i> Cetak
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                <li><a class="dropdown-item py-2" href="{% url 'operations:manifest-print' manifest.pk %}" target="_blank"><i class="ph-duotone ph-printer me-2 text-dark"></i>Print Manifest</a></li>
+                {% if manifest.manifest_type == 'OUTGOING' %}
+                <li><a class="dropdown-item py-2" href="{% url 'operations:manifest-print-bagtag' manifest.pk %}" target="_blank"><i class="ph-duotone ph-tag me-2 text-dark"></i>Print BagTag</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+                <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0 fw-bold text-dark">#{{ manifest.manifest_number }}</h5>
+                            <p class="text-muted small mb-0">Manifest Surat Jalan</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded bg-light-subtle">
+                                <h6 class="fw-semibold mb-3"><i class="ph ph-info me-2"></i>Informasi Manifest</h6>
+                                <table class="table table-borderless table-sm">
+                                    <tr>
+                                        <td class="text-muted">No Manifest</td>
+                                        <td class="fw-medium">{{ manifest.manifest_number }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Tanggal</td>
+                                        <td class="fw-medium">{{ manifest.date|date:"d M Y" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Driver</td>
+                                        <td class="fw-medium">
+                                            {% if manifest.driver %}
+                                                {{ manifest.driver.first_name|default:manifest.driver.username }}
+                                            {% elif manifest.vendor %}
+                                                {{ manifest.vendor.name }}
+                                            {% else %}
+                                                Tanpa Supir
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Kendaraan</td>
+                                        <td class="fw-medium">{{ manifest.vehicle.plate_number|default:"-" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Status</td>
+                                        <td>
+                                            {% if manifest.status == 'PREPARING' %}
+                                            <span class="badge bg-warning text-dark">Persiapan</span>
+                                            {% elif manifest.status == 'ON_THE_WAY' %}
+                                            <span class="badge bg-primary">Dalam Perjalanan</span>
+                                            {% elif manifest.status == 'COMPLETED' %}
+                                            <span class="badge bg-success">Selesai</span>
+                                            {% elif manifest.status == 'CANCELLED' %}
+                                            <span class="badge bg-dark text-white">VOID</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                </table>
+                                
+                                {% if manifest.manifest_type == 'OUTGOING' %}
+                                <hr class="my-3 opacity-25">
+                                <h6 class="fw-semibold mb-3"><i class="ph ph-airplane-tilt me-2"></i>Detail Outgoing</h6>
+                                <table class="table table-borderless table-sm">
+                                    <tr>
+                                        <td class="text-muted">Tipe Outgoing</td>
+                                        <td class="fw-medium">{% if manifest.is_bypass %}By Pass Outgoing{% else %}Reguler Outgoing{% endif %}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Tujuan (TLC)</td>
+                                        <td class="fw-medium">{{ manifest.get_tlc_dest }} - {{ manifest.get_city_dest|title }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Komoditas</td>
+                                        <td class="fw-medium">{{ manifest.commodity|default:"-" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Keterangan / Note</td>
+                                        <td class="fw-medium">{{ manifest.description|default:"-" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Total Koli</td>
+                                        <td class="fw-medium">{{ manifest.colly_cmo }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Berat Aktual</td>
+                                        <td class="fw-medium">{{ manifest.actual_weight }} Kg</td>
+                                    </tr>
+                                </table>
+
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded bg-light-subtle h-100">
+                                <h6 class="fw-semibold mb-3"><i class="ph ph-package me-2"></i>Daftar Resi ({{ manifest.shipments.count }} Resi)</h6>
+                                <table class="table table-sm table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>No Resi</th>
+
+                                            <th>Tujuan</th>
+                                            <th>Berat</th>
+                                            <th class="text-end">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for shipment in manifest.shipments.all %}
+                                        <tr>
+                                            <td class="fw-medium">{{ shipment.resi_number }}</td>
+
+                                            <td>{{ shipment.get_tlc_dest }} - {{ shipment.get_city_dest }}</td>
+                                            <td>{{ shipment.actual_weight }} Kg</td>
+                                            <td class="text-end">
+                                                <div class="dropdown d-inline-block">
+                                                    <button class="btn btn-danger btn-sm shadow-sm px-2 dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="ph-bold ph-printer me-1"></i> Cetak
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                                        <li><a class="dropdown-item py-2" href="{% url 'operations:print-awb-reguler' shipment.pk %}" target="_blank"><i class="ph-duotone ph-printer me-2 text-dark"></i>AWB Reguler</a></li>
+                                                        <li><a class="dropdown-item py-2" href="{% url 'operations:shipment-print' shipment.pk %}?type=package_id" target="_blank"><i class="ph-duotone ph-identification-badge me-2 text-dark"></i>Package ID</a></li>
+                                                        <li><a class="dropdown-item py-2" href="{% url 'operations:shipment-print' shipment.pk %}?type=reguler" target="_blank"><i class="ph-duotone ph-file-text me-2 text-dark"></i>AWB Reguler A4</a></li>
+                                                        <li><a class="dropdown-item py-2" href="{% url 'operations:shipment-print' shipment.pk %}?type=sticker_100x100" target="_blank"><i class="ph-duotone ph-sticker me-2 text-dark"></i>AWB Sticker 100x100</a></li>
+                                                        <li><a class="dropdown-item py-2" href="{% url 'operations:shipment-print' shipment.pk %}?type=sticker_100x150" target="_blank"><i class="ph-duotone ph-sticker me-2 text-dark"></i>AWB Sticker 100x150</a></li>
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li><a class="dropdown-item py-2" href="{% url 'operations:shipment-print' shipment.pk %}" target="_blank"><i class="ph-duotone ph-receipt me-2 text-dark"></i>Resi Thermal</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

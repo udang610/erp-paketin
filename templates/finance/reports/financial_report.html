@@ -1,0 +1,430 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% load static %}
+
+{% block title %}Report Keuangan & Billing - ERP Paketin{% endblock %}
+{% block page_title %}Report{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-filter-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+    }
+    .report-filter-card .form-control,
+    .report-filter-card .form-select,
+    .report-filter-card .input-group-text {
+        background-color: #ffffff !important;
+        border-color: #cbd5e1;
+    }
+    .report-filter-card .form-control:focus,
+    .report-filter-card .form-select:focus {
+        border-color: #ed1c2e;
+        box-shadow: 0 0 0 3px rgba(237, 28, 46, 0.15);
+    }
+    .table-report-wrapper {
+        overflow-x: auto;
+        max-width: 100%;
+    }
+    .table-report th {
+        font-size: 0.74rem;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        font-weight: 700;
+        color: #1e293b;
+        background-color: #f1f5f9;
+        white-space: nowrap;
+        border-bottom: 2px solid #cbd5e1;
+        padding: 9px 12px;
+        text-align: left;
+    }
+    .table-report td {
+        font-size: 0.82rem;
+        vertical-align: middle;
+        padding: 8px 12px;
+        color: #1e293b;
+        white-space: nowrap;
+    }
+    .table-report tfoot td {
+        background-color: #ffffff !important;
+        font-weight: 700;
+        font-size: 0.84rem;
+        border-top: 2px solid #94a3b8;
+        color: #1e293b;
+        white-space: nowrap;
+    }
+    .kpi-stat-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .kpi-stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-2">
+    <!-- Header Section -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+        <div>
+            <h4 class="fw-bold mb-1 text-dark">Report Keuangan &amp; Pendapatan</h4>
+            <p class="text-muted small mb-0">Filter dan pratinjau rekap data performa keuangan, omset pendapatan, biaya operasional (HPP), laba bersih, aging piutang (AR), dan rincian invoice.</p>
+        </div>
+    </div>
+
+    <!-- 1. Filter Card (Matching Operational & CRM Standard) -->
+    <div class="card report-filter-card shadow-sm mb-4">
+        <div class="card-body p-4">
+            <form method="get" id="financialReportFilterForm">
+                <div class="row g-3">
+                    <!-- Tanggal -->
+                    <div class="col-md-3 col-sm-6">
+                        <label class="form-label text-muted small fw-semibold mb-1">Dari Tanggal (Terbit)</label>
+                        <input type="text" name="start_date" class="form-control form-control-sm flatpickr-date bg-white" placeholder="dd/mm/yyyy" value="{{ start_date }}">
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <label class="form-label text-muted small fw-semibold mb-1">Sampai Tanggal (Terbit)</label>
+                        <input type="text" name="end_date" class="form-control form-control-sm flatpickr-date bg-white" placeholder="dd/mm/yyyy" value="{{ end_date }}">
+                    </div>
+
+                    <!-- Tahun & Status -->
+                    <div class="col-md-3 col-sm-6">
+                        <label class="form-label text-muted small fw-semibold mb-1">Tahun Analisis</label>
+                        <select name="year" class="form-select form-select-sm bg-white">
+                            <option value="">Semua / Sesuai Tanggal</option>
+                            <option value="2024" {% if year == '2024' %}selected{% endif %}>2024</option>
+                            <option value="2025" {% if year == '2025' %}selected{% endif %}>2025</option>
+                            <option value="2026" {% if year == '2026' %}selected{% endif %}>2026</option>
+                            <option value="2027" {% if year == '2027' %}selected{% endif %}>2027</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <label class="form-label text-muted small fw-semibold mb-1">Status Penagihan</label>
+                        <select name="status" class="form-select form-select-sm bg-white">
+                            <option value="">Semua Status</option>
+                            {% for code, label in status_choices %}
+                            <option value="{{ code }}" {% if status_filter == code %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Kustomer / Klien & Sales AE -->
+                    <div class="col-md-3 col-sm-6">
+                        <label class="form-label text-muted small fw-semibold mb-1">Kustomer / Perusahaan</label>
+                        <select name="client" class="form-select form-select-sm bg-white">
+                            <option value="">Semua Kustomer</option>
+                            {% for c in client_choices %}
+                            <option value="{{ c }}" {% if client_filter == c %}selected{% endif %}>{{ c }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <label class="form-label text-muted small fw-semibold mb-1">Sales (AE)</label>
+                        <select name="sales_ae" class="form-select form-select-sm bg-white">
+                            <option value="">Semua Sales AE</option>
+                            {% for s in sales_choices %}
+                            <option value="{{ s }}" {% if sales_filter == s %}selected{% endif %}>{{ s }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Search Input -->
+                    <div class="col-md-6 col-sm-12">
+                        <label class="form-label text-muted small fw-semibold mb-1">Cari Kata Kunci (No. Invoice / Klien / PIC / Ref)</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white text-dark"><i class="ph-bold ph-magnifying-glass"></i></span>
+                            <input type="text" name="q" class="form-control bg-white" placeholder="Ketik No. Invoice, nama kustomer, PIC, dll..." value="{{ search_query }}">
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="col-12 d-flex align-items-end justify-content-md-end gap-2 pt-1">
+                        <a href="{% url 'finance:financial_report' %}" class="btn btn-outline-secondary btn-sm px-3" title="Reset Filter">
+                            <i class="ph-bold ph-arrow-clockwise me-1"></i> Reset
+                        </a>
+                        <button type="submit" class="btn btn-danger btn-sm px-4 fw-bold shadow-sm" style="background-color: #ed1c2e; border-color: #ed1c2e;">
+                            <i class="ph-bold ph-funnel me-1"></i> Preview
+                        </button>
+                        <a href="{% url 'finance:financial_report_export_excel' %}?start_date={{ start_date }}&end_date={{ end_date }}&year={{ year }}&status={{ status_filter }}&client={{ client_filter }}&sales_ae={{ sales_filter }}&q={{ search_query }}" class="btn btn-success btn-sm px-4 fw-bold shadow-sm">
+                            <i class="ph-bold ph-file-xls me-1"></i> Export Excel
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- List Data Card (Tabel Rincian Invoice Lengkap - Standard Report Preview) -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h6 class="fw-bold mb-0 text-dark">
+                <i class="ph-bold ph-list-dashes text-dark me-2"></i>Daftar Rincian Data Laporan Keuangan &amp; Tagihan
+            </h6>
+            <span class="text-muted small fw-semibold">
+                Total: <strong class="text-dark">{{ filtered_count }}</strong> Transaksi Invoice
+            </span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-report-wrapper">
+                <table class="table table-hover table-bordered table-report align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-3 text-center" style="width: 45px;">No</th>
+                            <th>No. Invoice</th>
+                            <th>Kustomer / Perusahaan</th>
+                            <th>PIC Invoice</th>
+                            <th>Sales (AE)</th>
+                            <th>Tgl. Terbit</th>
+                            <th>Jatuh Tempo</th>
+                            <th>Periode Tagihan</th>
+                            <th class="text-end">Total Tagihan</th>
+                            <th class="text-end">Terbayar</th>
+                            <th class="text-end">Sisa Piutang</th>
+                            <th class="text-center">Status</th>
+                            <th class="pe-3 text-center" style="width: 80px;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for inv in invoices %}
+                        <tr>
+                            <td class="ps-3 text-center text-muted small">
+                                {{ forloop.counter0|add:page_obj.start_index }}
+                            </td>
+                            <td>
+                                <a href="{% url 'finance:invoice_detail' inv.id %}" class="fw-bold text-dark text-decoration-none">
+                                    {{ inv.invoice_number }}
+                                </a>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark">{{ inv.client_name }}</div>
+                            </td>
+                            <td class="text-muted small">
+                                {{ inv.pic_invoice|default:"-" }}
+                            </td>
+                            <td class="text-muted small">
+                                {{ inv.sales_ae|default:"-" }}
+                            </td>
+                            <td class="text-muted small">
+                                {{ inv.date_issued|date:"d/m/Y"|default:"-" }}
+                            </td>
+                            <td class="text-muted small">
+                                {{ inv.due_date|date:"d/m/Y"|default:"-" }}
+                            </td>
+                            <td class="text-muted small">
+                                {% if inv.periode_awal and inv.periode_akhir %}
+                                    {{ inv.periode_awal|date:"d/m/Y" }} - {{ inv.periode_akhir|date:"d/m/Y" }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="text-end fw-bold text-dark">
+                                Rp {{ inv.total_amount|floatformat:0|intcomma }}
+                            </td>
+                            <td class="text-end text-dark fw-semibold">
+                                Rp {{ inv.amount_paid|floatformat:0|intcomma }}
+                            </td>
+                            <td class="text-end fw-bold {% if inv.sisa_tagihan > 0 %}text-danger{% else %}text-muted{% endif %}">
+                                Rp {{ inv.sisa_tagihan|floatformat:0|intcomma }}
+                            </td>
+                            <td class="text-center">
+                                {% if inv.status == 'DRAFT' %}
+                                    <span class="badge bg-secondary text-white px-3 py-1 rounded-pill fw-bold" style="font-size: 0.72rem;">DRAFT</span>
+                                {% elif inv.status == 'SENT' %}
+                                    <span class="badge bg-primary text-white px-3 py-1 rounded-pill fw-bold" style="font-size: 0.72rem;">TERKIRIM</span>
+                                {% elif inv.status == 'PARTIAL' %}
+                                    <span class="badge bg-warning text-dark px-3 py-1 rounded-pill fw-bold" style="font-size: 0.72rem;">SEBAGIAN</span>
+                                {% elif inv.status == 'PAID' %}
+                                    <span class="badge bg-success text-white px-3 py-1 rounded-pill fw-bold" style="font-size: 0.72rem;">LUNAS</span>
+                                {% elif inv.status == 'VOID' %}
+                                    <span class="badge bg-dark text-white px-3 py-1 rounded-pill fw-bold" style="font-size: 0.72rem;">DIBATALKAN</span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-3 text-center">
+                                <div class="d-flex justify-content-center gap-1">
+                                    <a href="{% url 'finance:invoice_detail' inv.id %}" class="btn btn-sm btn-outline-secondary px-2 py-1" title="Detail Invoice">
+                                        <i class="ph-bold ph-eye"></i>
+                                    </a>
+                                    <a href="{% url 'finance:invoice_pdf' inv.id %}" target="_blank" class="btn btn-sm btn-outline-secondary px-2 py-1" title="Cetak PDF">
+                                        <i class="ph-bold ph-printer"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="13" class="text-center py-5 text-muted">
+                                <i class="ph-duotone ph-file-text fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                                Tidak ada data laporan keuangan/invoice sesuai filter yang dipilih.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    {% if invoices %}
+                    <tfoot>
+                        <tr>
+                            <td colspan="8" class="text-end pe-3 fw-bold">TOTAL REKAPITULASI (HALAMAN INI):</td>
+                            <td class="text-end fw-bold text-dark">Rp {{ total_invoiced|floatformat:0|intcomma }}</td>
+                            <td class="text-end fw-bold text-dark">Rp {{ total_revenue|floatformat:0|intcomma }}</td>
+                            <td class="text-end fw-bold text-danger">Rp {{ total_receivables|floatformat:0|intcomma }}</td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tfoot>
+                    {% endif %}
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <div class="d-flex justify-content-between align-items-center p-3 border-top">
+                <span class="text-muted small">Menampilkan data {{ page_obj.start_index }} - {{ page_obj.end_index }} dari {{ filtered_count }} transaksi</span>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&start_date={{ start_date }}&end_date={{ end_date }}&year={{ year }}&status={{ status_filter }}&client={{ client_filter }}&sales_ae={{ sales_filter }}&q={{ search_query }}">&laquo;</a></li>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                            <li class="page-item active"><span class="page-link" style="background-color: #ed1c2e; border-color: #ed1c2e;">{{ num }}</span></li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item"><a class="page-link" href="?page={{ num }}&start_date={{ start_date }}&end_date={{ end_date }}&year={{ year }}&status={{ status_filter }}&client={{ client_filter }}&sales_ae={{ sales_filter }}&q={{ search_query }}">{{ num }}</a></li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&start_date={{ start_date }}&end_date={{ end_date }}&year={{ year }}&status={{ status_filter }}&client={{ client_filter }}&sales_ae={{ sales_filter }}&q={{ search_query }}">&raquo;</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Flatpickr if available
+        if (typeof flatpickr !== 'undefined') {
+            flatpickr(".flatpickr-date", {
+                dateFormat: "d/m/Y",
+                allowInput: true
+            });
+        }
+
+        // Render Chart.js
+        const chartElem = document.getElementById('financialReportChart');
+        if (chartElem) {
+            const ctx = chartElem.getContext('2d');
+            const labels = {{ chart_labels|safe }};
+            const revenues = {{ revenues|safe }};
+            const costs = {{ costs|safe }};
+            const profits = {{ profits|safe }};
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Pendapatan (Kas Masuk)',
+                            data: revenues,
+                            backgroundColor: 'rgba(37, 99, 235, 0.85)',
+                            borderColor: 'rgb(37, 99, 235)',
+                            borderWidth: 1,
+                            borderRadius: 6
+                        },
+                        {
+                            label: 'Biaya HPP Operasional',
+                            data: costs,
+                            backgroundColor: 'rgba(239, 68, 68, 0.85)',
+                            borderColor: 'rgb(239, 68, 68)',
+                            borderWidth: 1,
+                            borderRadius: 6
+                        },
+                        {
+                            label: 'Laba Bersih',
+                            data: profits,
+                            backgroundColor: 'rgba(16, 185, 129, 0.85)',
+                            borderColor: 'rgb(16, 185, 129)',
+                            borderWidth: 1,
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            align: 'end',
+                            labels: {
+                                usePointStyle: true,
+                                boxWidth: 8,
+                                font: {
+                                    family: 'Helvetica, Arial, sans-serif',
+                                    size: 11,
+                                    weight: 'bold'
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += 'Rp ' + context.parsed.y.toLocaleString('id-ID');
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: '#f1f5f9'
+                            },
+                            ticks: {
+                                font: {
+                                    size: 10
+                                },
+                                callback: function(value) {
+                                    if (value >= 1000000000) return 'Rp ' + (value / 1000000000).toFixed(1) + ' M';
+                                    if (value >= 1000000) return 'Rp ' + (value / 1000000).toFixed(0) + ' Jt';
+                                    if (value >= 1000) return 'Rp ' + (value / 1000).toFixed(0) + ' Rb';
+                                    return 'Rp ' + value;
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                font: {
+                                    size: 10,
+                                    weight: 'bold'
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,1004 @@
+{% extends 'base.html' %}
+
+{% block title %}Detail Resi - ERP Paketin{% endblock %}
+{% block page_title %}Detail Pengiriman{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+        <a href="{% url 'operations:shipment-list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+        </a>
+        <div class="dropdown d-inline-block">
+            <button class="btn btn-danger btn-sm shadow-sm px-3 dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="ph-bold ph-printer me-1"></i> Cetak Resi
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                <li><a class="dropdown-item py-2" href="{% url 'operations:print-awb-reguler' shipment.pk %}" target="_blank"><i class="ph-duotone ph-printer me-2 text-dark"></i>AWB Reguler</a></li>
+                <li><a class="dropdown-item py-2" href="{% url 'operations:shipment-print' shipment.pk %}?type=package_id" target="_blank"><i class="ph-duotone ph-identification-badge me-2 text-dark"></i>Package ID</a></li>
+                <li><a class="dropdown-item py-2" href="{% url 'operations:shipment-print' shipment.pk %}?type=reguler" target="_blank"><i class="ph-duotone ph-file-text me-2 text-dark"></i>AWB Reguler A4</a></li>
+                <li><a class="dropdown-item py-2" href="{% url 'operations:shipment-print' shipment.pk %}?type=sticker_100x100" target="_blank"><i class="ph-duotone ph-sticker me-2 text-dark"></i>AWB Sticker 100x100</a></li>
+                <li><a class="dropdown-item py-2" href="{% url 'operations:shipment-print' shipment.pk %}?type=sticker_100x150" target="_blank"><i class="ph-duotone ph-sticker me-2 text-dark"></i>AWB Sticker 100x150</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item py-2" href="{% url 'operations:shipment-print' shipment.pk %}" target="_blank"><i class="ph-duotone ph-receipt me-2 text-dark"></i>Resi Thermal</a></li>
+            </ul>
+        </div>
+    </div>
+
+<div class="row">
+    <!-- Left Column: Info Pengiriman -->
+    <div class="col-lg-5 mb-4">
+        <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+            <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-dark">Informasi Resi</h5>
+                    <span class="badge 
+                        {% if shipment.status == 'POD' %}bg-success
+                        {% elif shipment.status == 'PENDING' %}bg-warning text-dark
+                        {% elif shipment.status == 'VOID' %}bg-dark
+                        {% elif shipment.status == 'TRANSIT' %}bg-danger
+                        {% else %}bg-primary{% endif %} 
+                        rounded-pill px-3 py-2 fs-6">
+                        {% if shipment.status == 'VOID' %}VOID{% else %}{{ shipment.get_status_display }}{% endif %}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="card-body p-4">
+                <h3 class="fw-bold text-primary mb-4">{{ shipment.resi_number }}</h3>
+                
+                <div class="row mb-3">
+                    <div class="col-4">
+                        <p class="text-muted small mb-1">Tanggal Dibuat</p>
+                        <h6 class="fw-semibold">{{ shipment.created_at|date:"d M Y, H:i" }}</h6>
+                    </div>
+                    <div class="col-4">
+                        <p class="text-muted small mb-1">No. Referensi</p>
+                        <h6 class="fw-semibold text-dark">{{ shipment.reference_no|default:"-" }}</h6>
+                    </div>
+                    <div class="col-4">
+                        <p class="text-muted small mb-1">Layanan</p>
+                        <h6 class="fw-semibold">{{ shipment.get_service_type_display }}</h6>
+                    </div>
+                </div>
+
+                <hr class="my-3 text-muted opacity-25">
+
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <p class="text-muted small mb-1 fw-bold">PENGIRIM</p>
+                        {% if shipment.client %}
+                        <h6 class="mb-0 fw-bold text-dark">{{ shipment.client.name }}</h6>
+                        {% if shipment.sender_attention or shipment.client.pic_account %}
+                        <p class="mb-0 fw-semibold text-secondary small">PIC: {{ shipment.sender_attention|default:shipment.client.pic_account }}</p>
+                        {% elif shipment.sender_name and shipment.sender_name != shipment.client.name %}
+                        <p class="mb-0 fw-semibold text-secondary small">PIC: {{ shipment.sender_name }}</p>
+                        {% endif %}
+                        <p class="mb-0 text-muted small"><i class="ph-fill ph-phone text-danger me-1"></i> {{ shipment.sender_phone|default:shipment.client.pic_phone|default:"-" }}</p>
+                        <p class="mb-0 text-muted small"><i class="ph-fill ph-map-pin text-danger me-1"></i> {{ shipment.get_tlc_origin }} - {{ shipment.get_city_origin }}</p>
+                        <p class="mb-0 text-muted small mt-1">{{ shipment.sender_address|default:shipment.client.office_address|default:"-" }}</p>
+                        {% else %}
+                        <h6 class="mb-0 fw-bold text-dark">{{ shipment.sender_name|default:"-" }}</h6>
+                        {% if shipment.sender_attention and shipment.sender_attention != shipment.sender_name %}
+                        <p class="mb-0 fw-semibold text-secondary small">PIC: {{ shipment.sender_attention }}</p>
+                        {% endif %}
+                        <p class="mb-0 text-muted small"><i class="ph-fill ph-phone text-danger me-1"></i> {{ shipment.sender_phone|default:"-" }}</p>
+                        <p class="mb-0 text-muted small"><i class="ph-fill ph-map-pin text-danger me-1"></i> {{ shipment.get_tlc_origin }} - {{ shipment.get_city_origin }}</p>
+                        <p class="mb-0 text-muted small mt-1">{{ shipment.sender_address|default:"-" }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-6">
+                        <p class="text-muted small mb-1 fw-bold">PENERIMA</p>
+                        <h6 class="mb-0 fw-bold text-dark">{{ shipment.receiver_name }}</h6>
+                        {% if shipment.receiver_attention %}
+                        <p class="mb-0 fw-semibold text-secondary small">PIC: {{ shipment.receiver_attention }}</p>
+                        {% endif %}
+                        <p class="mb-0 text-muted small"><i class="ph-fill ph-phone text-danger me-1"></i> {{ shipment.receiver_phone|default:"-" }}</p>
+                        <p class="mb-0 text-muted small"><i class="ph-fill ph-map-pin text-danger me-1"></i> {{ shipment.get_tlc_dest }} - {{ shipment.get_city_dest }}</p>
+                        <p class="mb-0 text-muted small mt-1">{{ shipment.receiver_address|default:"-" }}</p>
+                    </div>
+                </div>
+                
+                <hr class="my-3 text-muted opacity-25">
+
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <p class="text-muted small mb-1">Berat Aktual</p>
+                        <h6 class="fw-semibold">{{ shipment.actual_weight|default:"0" }} Kg</h6>
+                    </div>
+                    <div class="col-6">
+                        <p class="text-muted small mb-1">Berat Volume</p>
+                        <h6 class="fw-semibold">{{ shipment.calculated_volume_weight|default:"0"|floatformat:2 }} Kg</h6>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <p class="text-muted small mb-2 fw-bold">DETAIL BARANG</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered text-center align-middle" style="font-size: 12px;">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Koli</th>
+                                    <th>Berat Akt.</th>
+                                    <th>Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in shipment.items.all %}
+                                <tr>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>{{ item.actual_weight }} Kg</td>
+                                    <td class="text-start">{{ item.description|default:shipment.description_item|default:"-" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td>{{ shipment.total_colly|default:"1" }}</td>
+                                    <td>{{ shipment.weight|default:"0" }} Kg</td>
+                                    <td class="text-start">{{ shipment.description_item|default:"-" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Tracking History -->
+    <div class="col-lg-7 mb-4">
+        <div class="card border-0 shadow-sm" style="border-radius: 12px; height: 100%;">
+            <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
+                <h5 class="fw-bold text-dark mb-0">Riwayat Perjalanan</h5>
+            </div>
+            
+            <div class="card-body p-4" id="trackingTabsContent">
+                
+                <!-- Fixed Horizontal Pipeline (Shopee style) -->
+                <style>
+                    .status-stepper {
+                        display: flex;
+                        justify-content: space-between;
+                        position: relative;
+                        margin: 20px 0 40px 0;
+                    }
+                    .status-stepper::before {
+                        content: '';
+                        position: absolute;
+                        top: 15px;
+                        height: 3px;
+                        background-color: #e9ecef;
+                        z-index: 0;
+                    }
+                    .status-stepper::after {
+                        content: '';
+                        position: absolute;
+                        top: 15px;
+                        height: 3px;
+                        background-color: #dc3545;
+                        z-index: 0;
+                        transition: width .35s ease;
+                    }
+                    /* 5 Steps (Normal / Failed) */
+                    .status-stepper.stepper-5::before { left: 10%; width: 80%; }
+                    .status-stepper.stepper-5::after { left: 10%; }
+                    .status-stepper.stepper-5.progress-25::after { width: 20%; }
+                    .status-stepper.stepper-5.progress-50::after { width: 40%; }
+                    .status-stepper.stepper-5.progress-75::after { width: 60%; }
+                    .status-stepper.stepper-5.progress-100::after { width: 80%; }
+
+                    /* 6 Steps (Return) */
+                    .status-stepper.stepper-6::before { left: 8.33%; width: 83.33%; }
+                    .status-stepper.stepper-6::after { left: 8.33%; }
+                    .status-stepper.stepper-6.progress-100::after { width: 83.33%; }
+
+                    /* 7 Steps (Re-delivery) */
+                    .status-stepper.stepper-7::before { left: 7.14%; width: 85.71%; }
+                    .status-stepper.stepper-7::after { left: 7.14%; }
+                    .status-stepper.stepper-7.progress-83::after { width: 71.43%; }
+                    .status-stepper.stepper-7.progress-100::after { width: 85.71%; }
+
+                    .step {
+                        position: relative;
+                        z-index: 1;
+                        text-align: center;
+                        flex: 1;
+                    }
+                    .step .icon {
+                        width: 32px;
+                        height: 32px;
+                        background-color: #e9ecef;
+                        border-radius: 50%;
+                        margin: 0 auto 10px auto;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: #adb5bd;
+                        border: 3px solid #fff;
+                    }
+                    .step.active .icon {
+                        background-color: #dc3545;
+                        color: #fff;
+                        animation: status-pulse 1.5s infinite;
+                    }
+                    .step.passed .icon {
+                        background-color: #dc3545;
+                        color: #fff;
+                    }
+                    .step.failed .icon {
+                        background-color: #dc3545;
+                        color: #fff;
+                        animation: status-pulse 1.5s infinite;
+                    }
+                    .step-text {
+                        font-size: 11px;
+                        font-weight: 600;
+                        color: #6c757d;
+                        white-space: nowrap;
+                    }
+                    .step.active .step-text, .step.passed .step-text {
+                        color: #000;
+                    }
+                    .step.failed .step-text {
+                        color: #dc3545;
+                        font-weight: 700;
+                    }
+                    @keyframes status-pulse {
+                        0%, 100% { box-shadow: 0 0 0 4px rgba(220, 53, 69, .18); }
+                        50% { box-shadow: 0 0 0 9px rgba(220, 53, 69, .08); }
+                    }
+                </style>
+
+                {% if shipment.is_redelivery %}
+                <!-- Case: Kirim Ulang / Re-Delivery Flow (7 steps) -->
+                <div class="status-stepper stepper-7 {% if shipment.status in 'POD,POD_BALIK' %}progress-100{% else %}progress-83{% endif %}">
+                    <!-- Penjemputan -->
+                    <div class="step passed">
+                        <div class="icon"><i class="ph-fill ph-package"></i></div>
+                        <div class="step-text">Penjemputan</div>
+                    </div>
+                    <!-- Gudang Asal -->
+                    <div class="step passed">
+                        <div class="icon"><i class="ph-fill ph-buildings"></i></div>
+                        <div class="step-text">Gudang Asal</div>
+                    </div>
+                    <!-- Perjalanan -->
+                    <div class="step passed">
+                        <div class="icon"><i class="ph-fill ph-truck"></i></div>
+                        <div class="step-text">Perjalanan</div>
+                    </div>
+                    <!-- Pengantaran -->
+                    <div class="step passed">
+                        <div class="icon"><i class="ph-fill ph-moped"></i></div>
+                        <div class="step-text">Pengantaran</div>
+                    </div>
+                    <!-- Gagal Antar -->
+                    <div class="step passed">
+                        <div class="icon"><i class="ph-fill ph-x-circle"></i></div>
+                        <div class="step-text">Gagal Antar</div>
+                    </div>
+                    <!-- Kirim Ulang -->
+                    <div class="step {% if shipment.status in 'POD,POD_BALIK' %}passed{% else %}active{% endif %}">
+                        <div class="icon"><i class="ph-fill ph-arrows-clockwise"></i></div>
+                        <div class="step-text">Kirim Ulang</div>
+                    </div>
+                    <!-- Terkirim -->
+                    <div class="step {% if shipment.status in 'POD,POD_BALIK' %}active{% endif %}">
+                        <div class="icon"><i class="ph-fill ph-check-circle"></i></div>
+                        <div class="step-text">Terkirim</div>
+                    </div>
+                </div>
+
+                {% elif shipment.is_returned_to_origin %}
+                <!-- Case: Return Flow (6 steps) -->
+                <div class="status-stepper stepper-6 progress-100">
+                    <!-- Penjemputan -->
+                    <div class="step passed">
+                        <div class="icon"><i class="ph-fill ph-package"></i></div>
+                        <div class="step-text">Penjemputan</div>
+                    </div>
+                    <!-- Gudang Asal -->
+                    <div class="step passed">
+                        <div class="icon"><i class="ph-fill ph-buildings"></i></div>
+                        <div class="step-text">Gudang Asal</div>
+                    </div>
+                    <!-- Perjalanan -->
+                    <div class="step passed">
+                        <div class="icon"><i class="ph-fill ph-truck"></i></div>
+                        <div class="step-text">Perjalanan</div>
+                    </div>
+                    <!-- Pengantaran -->
+                    <div class="step passed">
+                        <div class="icon"><i class="ph-fill ph-moped"></i></div>
+                        <div class="step-text">Pengantaran</div>
+                    </div>
+                    <!-- Gagal Antar -->
+                    <div class="step passed">
+                        <div class="icon"><i class="ph-fill ph-x-circle"></i></div>
+                        <div class="step-text">Gagal Antar</div>
+                    </div>
+                    <!-- Return -->
+                    <div class="step active failed">
+                        <div class="icon"><i class="ph-fill ph-arrow-u-up-left"></i></div>
+                        <div class="step-text">Return</div>
+                    </div>
+                </div>
+
+                {% elif shipment.status == 'DELIVERY_FAILED' or shipment.has_failed_delivery and not shipment.status in 'POD,POD_BALIK' %}
+                <!-- Case: Gagal / Failed Delivery Flow (5 steps ending in Failed) -->
+                <div class="status-stepper stepper-5 progress-100">
+                    <!-- Penjemputan -->
+                    <div class="step passed">
+                        <div class="icon"><i class="ph-fill ph-package"></i></div>
+                        <div class="step-text">Penjemputan</div>
+                    </div>
+                    <!-- Gudang Asal -->
+                    <div class="step passed">
+                        <div class="icon"><i class="ph-fill ph-buildings"></i></div>
+                        <div class="step-text">Gudang Asal</div>
+                    </div>
+                    <!-- Perjalanan -->
+                    <div class="step passed">
+                        <div class="icon"><i class="ph-fill ph-truck"></i></div>
+                        <div class="step-text">Perjalanan</div>
+                    </div>
+                    <!-- Pengantaran -->
+                    <div class="step passed">
+                        <div class="icon"><i class="ph-fill ph-moped"></i></div>
+                        <div class="step-text">Pengantaran</div>
+                    </div>
+                    <!-- Failed -->
+                    <div class="step active failed">
+                        <div class="icon"><i class="ph-fill ph-x-circle"></i></div>
+                        <div class="step-text">Failed</div>
+                    </div>
+                </div>
+
+                {% else %}
+                <!-- Case: Standard Normal Delivery Flow (5 steps ending in Terkirim) -->
+                {% with current=shipment.status %}
+                <div class="status-stepper stepper-5 {% if current in 'PENDING,PICKUP,INBOUND_ORIGIN' %}progress-25{% elif current in 'OUTGOING,TRANSFER,TRANSIT' %}progress-50{% elif current in 'INCOMING_DESTINATION,DELIVERY' %}progress-75{% elif current in 'POD,POD_BALIK' %}progress-100{% else %}progress-25{% endif %}">
+                    <!-- Menunggu / Pickup -->
+                    <div class="step {% if current in 'PENDING,PICKUP,INBOUND_ORIGIN,OUTGOING,TRANSFER,TRANSIT,INCOMING_DESTINATION,DELIVERY,POD,POD_BALIK' %}passed{% endif %}">
+                        <div class="icon"><i class="ph-fill ph-package"></i></div>
+                        <div class="step-text">Penjemputan</div>
+                    </div>
+                    <!-- Gudang Asal -->
+                    <div class="step {% if current in 'PENDING,PICKUP,INBOUND_ORIGIN' %}active{% elif current in 'OUTGOING,TRANSFER,TRANSIT,INCOMING_DESTINATION,DELIVERY,POD,POD_BALIK' %}passed{% endif %}">
+                        <div class="icon"><i class="ph-fill ph-buildings"></i></div>
+                        <div class="step-text">Gudang Asal</div>
+                    </div>
+                    <!-- Perjalanan (Outgoing/Transfer) -->
+                    <div class="step {% if current in 'OUTGOING,TRANSFER,TRANSIT' %}active{% elif current in 'INCOMING_DESTINATION,DELIVERY,POD,POD_BALIK' %}passed{% endif %}">
+                        <div class="icon"><i class="ph-fill ph-truck"></i></div>
+                        <div class="step-text">Perjalanan</div>
+                    </div>
+                    <!-- Delivery / Kurir -->
+                    <div class="step {% if current in 'INCOMING_DESTINATION,DELIVERY' %}active{% elif current in 'POD,POD_BALIK' %}passed{% endif %}">
+                        <div class="icon"><i class="ph-fill ph-moped"></i></div>
+                        <div class="step-text">Pengantaran</div>
+                    </div>
+                    <!-- Selesai (POD) -->
+                    <div class="step {% if current in 'POD,POD_BALIK' %}active{% endif %}">
+                        <div class="icon"><i class="ph-fill ph-check-circle"></i></div>
+                        <div class="step-text">Terkirim</div>
+                    </div>
+                </div>
+                {% endwith %}
+                {% endif %}
+                
+                <hr class="text-muted opacity-25 my-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0 fs-6">Detail Riwayat</h6>
+                    {% if request.user.is_superuser or request.user.is_staff or request.user.user_type in 'ADMIN,CS,OPS,MANAGER' %}
+                    <button type="button" class="btn btn-sm btn-outline-danger px-3 fw-semibold shadow-sm" onclick="openTrackingManager()">
+                        <i class="ph-bold ph-sliders me-1"></i> Kelola Riwayat Alur
+                    </button>
+                    {% endif %}
+                </div>
+
+                <!-- Detailed Vertical History -->
+                <div class="position-relative ms-2 mt-3">
+                    <div class="position-absolute h-100 border-start border-2" style="left: 6px; top: 10px; z-index: 0; opacity: 0.25; border-color: #dc3545 !important;"></div>
+                    
+                    {% for history in tracking_history %}
+                    <div class="d-flex mb-4 position-relative" style="z-index: 1;">
+                        <div class="rounded-circle mt-1 flex-shrink-0 bg-danger" style="width: 14px; height: 14px; box-shadow: 0 0 0 3px #fff;{% if forloop.first %} animation: trackingPulse 1.5s infinite;{% endif %}"></div>
+                        <div class="ms-3 w-100">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="fw-bold text-dark mb-1" style="font-size: 0.88rem;">
+                                        {{ history.get_status_display }}
+                                    </div>
+                                </div>
+                                <span class="text-danger small fw-semibold text-nowrap ms-2">{{ history.occurred_at|date:"d M Y, H:i" }}</span>
+                            </div>
+                            {% if history.location %}<p class="mb-1 text-muted small"><i class="ph-fill ph-map-pin text-danger me-1"></i>{{ history.formatted_location }}</p>{% endif %}
+                            {% if history.professional_description %}<p class="mb-0 text-muted small" style="line-height: 1.4;">{{ history.professional_description }}</p>{% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4">
+                        <i class="ph-duotone ph-clock text-muted mb-2" style="font-size: 2rem;"></i>
+                        <p class="text-muted mb-0">Belum ada riwayat tercatat.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                <style>
+                    @keyframes trackingPulse {
+                        0%, 100% { box-shadow: 0 0 0 3px #fff, 0 0 0 5px rgba(220, 53, 69, .25); }
+                        50% { box-shadow: 0 0 0 3px #fff, 0 0 0 9px rgba(220, 53, 69, .10); }
+                    }
+                </style>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if request.user.is_superuser or request.user.is_staff or request.user.user_type in 'ADMIN,CS,OPS,MANAGER' %}
+<!-- ============================================================================== -->
+<!-- MODAL: KELOLA RIWAYAT ALUR (POP UP STANDAR & CLEAN) -->
+<!-- ============================================================================== -->
+<div class="modal fade" id="trackingManagerModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width: 860px;">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+      
+      <!-- Header Standar ERP -->
+      <div class="modal-header bg-white border-bottom px-4 py-3">
+        <div>
+          <div class="d-flex align-items-center gap-2">
+            <h5 class="modal-title fw-bold text-dark mb-0">Kelola Riwayat Alur</h5>
+            <span class="badge bg-danger rounded-pill px-2 py-1 font-monospace fw-bold" style="font-size: 0.75rem;">{{ shipment.resi_number }}</span>
+          </div>
+          <small class="text-muted">Kelola urutan langkah, status, lokasi, dan tanggal riwayat pengiriman.</small>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <!-- Body -->
+      <div class="modal-body p-4 bg-light" style="max-height: calc(85vh - 120px); overflow-y: auto;">
+        
+        <!-- Toolbar Sederhana -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-white text-dark border px-3 py-2 rounded-pill fw-semibold shadow-xs" id="tmSummaryCount">
+              0 Checkpoint
+            </span>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary bg-white px-3 fw-semibold shadow-xs" onclick="autoAlignByTime()" title="Urutkan langkah otomatis dari waktu paling lampau ke terbaru">
+              <i class="ph-bold ph-lightning text-warning me-1"></i> Auto-Align Waktu
+            </button>
+            <button type="button" class="btn btn-sm btn-danger px-3 fw-semibold shadow-sm" onclick="toggleAddCheckpointForm()">
+              <i class="ph-bold ph-plus me-1"></i> Tambah Titik
+            </button>
+          </div>
+        </div>
+
+        <!-- Alert Notification Box -->
+        <div id="tmAlertBox" class="alert d-none py-2 px-3 rounded-3 small mb-3 border-0 shadow-sm" role="alert"></div>
+
+        <!-- Warning Urutan Waktu -->
+        <div id="tmGlobalWarning" class="alert alert-warning d-none mb-3 border-0 rounded-3 shadow-sm py-2 px-3 small">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+              <i class="ph-bold ph-warning-circle text-warning fs-5"></i>
+              <span>Terdapat riwayat dengan waktu yang mendahului langkah sebelumnya.</span>
+            </div>
+            <button type="button" class="btn btn-sm btn-warning px-3 py-1 fw-bold text-dark" onclick="autoAlignByTime()">
+              Rapikan Waktu
+            </button>
+          </div>
+        </div>
+
+        <!-- Form Tambah Checkpoint Baru -->
+        <div id="addCheckpointPanel" class="card border-0 shadow-sm rounded-3 mb-3 d-none">
+          <div class="card-header bg-white border-bottom py-2 px-3 fw-bold small text-dark d-flex justify-content-between align-items-center">
+            <span><i class="ph-bold ph-plus-circle text-danger me-1"></i> Tambah Titik Riwayat Baru</span>
+            <button type="button" class="btn-close" style="font-size: 0.65rem;" onclick="toggleAddCheckpointForm()"></button>
+          </div>
+          <div class="card-body p-3 bg-white">
+            <form id="addCheckpointForm" onsubmit="submitNewCheckpoint(event)">
+              <div class="row g-2">
+                <div class="col-md-4">
+                  <label class="form-label small fw-semibold text-secondary mb-1">Status</label>
+                  <select name="status" id="new_track_status" class="form-select form-select-sm" required></select>
+                </div>
+                <div class="col-md-8">
+                  <label class="form-label small fw-semibold text-secondary mb-1">Lokasi</label>
+                  <input type="text" name="location" id="new_track_location" class="form-control form-control-sm" placeholder="Contoh: Semarang Hub / Cakung DC" required>
+                </div>
+                <div class="col-12">
+                  <label class="form-label small fw-semibold text-secondary mb-1">Keterangan</label>
+                  <input type="text" name="description" id="new_track_description" class="form-control form-control-sm" placeholder="Contoh: Paket tiba di hub transit">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small fw-semibold text-secondary mb-1">Tanggal Kejadian</label>
+                  <input type="date" name="event_date" id="new_track_date" class="form-control form-control-sm" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small fw-semibold text-secondary mb-1">Jam Kejadian</label>
+                  <input type="time" name="event_time" id="new_track_time" class="form-control form-control-sm" required>
+                </div>
+              </div>
+              <div class="d-flex justify-content-end gap-2 mt-3 pt-2 border-top">
+                <button type="button" class="btn btn-sm btn-light px-3" onclick="toggleAddCheckpointForm()">Batal</button>
+                <button type="submit" class="btn btn-sm btn-danger px-4 fw-bold shadow-sm" id="btnSaveNewCheckpoint">
+                  Simpan Checkpoint
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Tabel Riwayat (Struktur Rapi & Posisi Tombol Konsisten) -->
+        <div class="card border-0 shadow-sm rounded-3 overflow-hidden bg-white">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+              <thead class="table-light text-secondary small text-uppercase fw-bold">
+                <tr>
+                  <th style="width: 105px;" class="ps-3">URUTAN</th>
+                  <th style="width: 160px;">STATUS</th>
+                  <th>LOKASI & KETERANGAN</th>
+                  <th style="width: 160px;">WAKTU</th>
+                  <th style="width: 110px;" class="text-center pe-3">AKSI</th>
+                </tr>
+              </thead>
+              <tbody id="tmTableBody">
+                <tr>
+                  <td colspan="5" class="text-center py-5 text-muted">
+                    <div class="spinner-border spinner-border-sm text-danger me-2" role="status"></div>
+                    Memuat data riwayat...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer Standar -->
+      <div class="modal-footer bg-white border-top py-2 px-4 d-flex justify-content-between align-items-center">
+        <small class="text-muted"><i class="ph-bold ph-arrows-clockwise me-1 text-success"></i> Status &amp; alur otomatis disinkronkan.</small>
+        <div class="d-flex align-items-center gap-2">
+          <button type="button" class="btn btn-sm btn-light border px-3" data-bs-dismiss="modal">
+            Tutup
+          </button>
+          <button type="button" class="btn btn-sm btn-dark px-4 fw-semibold shadow-sm" onclick="applyAndRefreshPage()">
+            <i class="ph-bold ph-check me-1"></i> Terapkan &amp; Refresh
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+{% if request.user.is_superuser or request.user.is_staff or request.user.user_type in 'ADMIN,CS,OPS,MANAGER' %}
+<script>
+let tmShipmentId = {{ shipment.pk }};
+let tmCheckpoints = [];
+let tmStatusChoices = [];
+let tmHasModified = false;
+
+function applyAndRefreshPage() {
+    window.location.reload();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const tmModalEl = document.getElementById('trackingManagerModal');
+    if (tmModalEl) {
+        tmModalEl.addEventListener('hidden.bs.modal', function () {
+            if (tmHasModified) {
+                window.location.reload();
+            }
+        });
+    }
+});
+
+function showTmAlert(msg, type = 'success') {
+    const box = document.getElementById('tmAlertBox');
+    if (!box) return;
+    box.className = `alert alert-${type} py-2 px-3 rounded-3 small mb-3 border-0 shadow-sm`;
+    box.innerHTML = `<i class="ph-bold ${type === 'success' ? 'ph-check-circle text-success' : 'ph-x-circle text-danger'} me-1"></i> ${msg}`;
+    box.classList.remove('d-none');
+    setTimeout(() => { box.classList.add('d-none'); }, 4000);
+}
+
+function openTrackingManager() {
+    const modal = new bootstrap.Modal(document.getElementById('trackingManagerModal'));
+    modal.show();
+    loadTrackingList();
+}
+
+function loadTrackingList() {
+    const tbody = document.getElementById('tmTableBody');
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm text-danger me-2" role="status"></div>Memuat data riwayat...</td></tr>';
+
+    fetch(`{% url 'operations:api-tracking-list' shipment.pk %}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.status === 'success') {
+            tmCheckpoints = res.checkpoints;
+            tmStatusChoices = res.status_choices;
+            populateStatusSelects();
+            renderCheckpointsTable();
+        } else {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-danger small">${res.message || 'Gagal memuat data.'}</td></tr>`;
+        }
+    })
+    .catch(err => {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-danger small">Terjadi kesalahan jaringan: ${err}</td></tr>`;
+    });
+}
+
+function populateStatusSelects() {
+    const select = document.getElementById('new_track_status');
+    if (!select) return;
+    select.innerHTML = '';
+    tmStatusChoices.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.value;
+        opt.textContent = c.label;
+        if (c.value === 'TRANSIT') opt.selected = true;
+        select.appendChild(opt);
+    });
+    
+    // Set default datetime
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    document.getElementById('new_track_date').value = `${yyyy}-${mm}-${dd}`;
+    document.getElementById('new_track_time').value = `${hh}:${min}`;
+}
+
+function getStatusBadgeHtml(status, label) {
+    let cls = 'bg-secondary text-white';
+    if (status === 'TRANSIT') cls = 'bg-info text-dark';
+    else if (status === 'INCOMING_DESTINATION') cls = 'bg-warning text-dark';
+    else if (status === 'DELIVERY') cls = 'bg-primary text-white';
+    else if (['POD', 'COMPLETED', 'POD_BALIK'].includes(status)) cls = 'bg-success text-white';
+    else if (['VOID', 'CANCELLED'].includes(status)) cls = 'bg-dark text-white';
+    else cls = 'bg-danger text-white';
+    
+    return `<span class="badge ${cls} rounded-pill px-2 py-1 fw-bold" style="font-size: 0.72rem;">${label}</span>`;
+}
+
+function renderCheckpointsTable() {
+    const tbody = document.getElementById('tmTableBody');
+    const warnEl = document.getElementById('tmGlobalWarning');
+    const countEl = document.getElementById('tmSummaryCount');
+    
+    if (countEl) {
+        countEl.textContent = `${tmCheckpoints.length} Checkpoint`;
+    }
+
+    let hasAnyWarning = tmCheckpoints.some(c => c.has_time_warning);
+    if (hasAnyWarning) {
+        warnEl.classList.remove('d-none');
+    } else {
+        warnEl.classList.add('d-none');
+    }
+
+    if (tmCheckpoints.length === 0) {
+        tbody.innerHTML = `
+        <tr>
+          <td colspan="5" class="text-center py-5 text-muted">
+            <i class="ph-duotone ph-map-pin text-muted mb-2" style="font-size: 2.5rem; opacity: 0.3;"></i>
+            <p class="mb-1 fw-semibold text-dark">Belum ada titik riwayat pengiriman.</p>
+            <small>Klik tombol <strong>"Tambah Titik"</strong> di atas untuk membuat riwayat baru.</small>
+          </td>
+        </tr>`;
+        return;
+    }
+
+    let html = '';
+    tmCheckpoints.forEach((cp, idx) => {
+        const isFirst = idx === 0;
+        const isLast = idx === tmCheckpoints.length - 1;
+        const stepNum = tmCheckpoints.length - idx;
+
+        html += `
+        <tr id="cp-row-${cp.id}">
+          <!-- Kolom 1: Urutan & Tombol Reorder -->
+          <td class="ps-3">
+            <div class="d-flex align-items-center gap-1">
+              <div class="btn-group-vertical btn-group-sm">
+                <button type="button" class="btn btn-light btn-sm py-0 px-1 border" title="Naikkan Urutan (Ke Arah Terbaru)" onclick="moveCheckpoint(${idx}, -1)" ${isFirst ? 'disabled style="opacity:0.25"' : ''}>
+                  <i class="ph-bold ph-caret-up text-dark" style="font-size: 0.7rem;"></i>
+                </button>
+                <button type="button" class="btn btn-light btn-sm py-0 px-1 border" title="Turunkan Urutan (Ke Arah Terlama)" onclick="moveCheckpoint(${idx}, 1)" ${isLast ? 'disabled style="opacity:0.25"' : ''}>
+                  <i class="ph-bold ph-caret-down text-dark" style="font-size: 0.7rem;"></i>
+                </button>
+              </div>
+              <span class="badge ${isFirst ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-light text-secondary border'} fw-bold font-monospace" style="font-size: 0.72rem;">
+                Step ${stepNum}
+              </span>
+            </div>
+          </td>
+
+          <!-- Kolom 2: Status -->
+          <td>
+            ${getStatusBadgeHtml(cp.status, cp.status_display)}
+          </td>
+
+          <!-- Kolom 3: Lokasi & Keterangan -->
+          <td>
+            <div class="fw-semibold text-dark d-flex align-items-center gap-1">
+              <i class="ph-fill ph-map-pin text-danger" style="font-size: 0.85rem;"></i>
+              <span>${cp.formatted_location || '-'}</span>
+            </div>
+            <div class="text-muted small" style="font-size: 0.75rem;">
+              ${cp.description || '<span class="fst-italic opacity-75">Tanpa keterangan</span>'}
+            </div>
+          </td>
+
+          <!-- Kolom 4: Waktu Kejadian -->
+          <td>
+            <div class="text-dark small fw-medium">
+              ${cp.occurred_at_formatted}
+            </div>
+            ${cp.has_time_warning ? `
+              <span class="badge bg-warning text-dark border mt-1" style="font-size: 0.65rem;" title="${cp.warning_msg}">
+                <i class="ph-bold ph-warning me-1"></i>Waktu Tidak Urut
+              </span>` : ''}
+          </td>
+
+          <!-- Kolom 5: Aksi (Selalu Konsisten di Kanan) -->
+          <td class="text-center pe-3">
+            <div class="d-inline-flex align-items-center gap-1">
+              <button type="button" class="btn btn-sm btn-outline-secondary px-2 py-1" onclick="toggleEditRow(${cp.id})" title="Edit Checkpoint">
+                <i class="ph-bold ph-pencil-simple"></i>
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-danger px-2 py-1" onclick="deleteCheckpoint(${cp.id})" title="Hapus Checkpoint">
+                <i class="ph-bold ph-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Baris Form Edit Inline -->
+        <tr id="cp-edit-row-${cp.id}" class="d-none bg-light">
+          <td colspan="5" class="p-3 border-top border-bottom">
+            <form onsubmit="submitEditCheckpoint(event, ${cp.id})" class="bg-white p-3 rounded-3 border shadow-xs">
+              <div class="row g-2">
+                <div class="col-md-3">
+                  <label class="form-label small fw-semibold text-secondary mb-1">Status</label>
+                  <select name="status" id="edit_status_${cp.id}" class="form-select form-select-sm" required>
+                    ${tmStatusChoices.map(sc => `<option value="${sc.value}" ${sc.value === cp.status ? 'selected' : ''}>${sc.label}</option>`).join('')}
+                  </select>
+                </div>
+                <div class="col-md-9">
+                  <label class="form-label small fw-semibold text-secondary mb-1">Lokasi Checkpoint</label>
+                  <input type="text" name="location" id="edit_location_${cp.id}" class="form-control form-control-sm" value="${cp.location}" required>
+                </div>
+                <div class="col-12">
+                  <label class="form-label small fw-semibold text-secondary mb-1">Keterangan</label>
+                  <input type="text" name="description" id="edit_description_${cp.id}" class="form-control form-control-sm" value="${cp.description}">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small fw-semibold text-secondary mb-1">Tanggal Kejadian</label>
+                  <input type="date" name="event_date" id="edit_date_${cp.id}" class="form-control form-control-sm" value="${cp.event_date}" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small fw-semibold text-secondary mb-1">Jam Kejadian</label>
+                  <input type="time" name="event_time" id="edit_time_${cp.id}" class="form-control form-control-sm" value="${cp.event_time}" required>
+                </div>
+              </div>
+              <div class="d-flex justify-content-end gap-2 mt-3 pt-2 border-top">
+                <button type="button" class="btn btn-sm btn-light px-3" onclick="toggleEditRow(${cp.id})">Batal</button>
+                <button type="submit" class="btn btn-sm btn-primary px-3 fw-bold">
+                  Simpan Perubahan
+                </button>
+              </div>
+            </form>
+          </td>
+        </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+}
+
+function toggleAddCheckpointForm() {
+    const p = document.getElementById('addCheckpointPanel');
+    p.classList.toggle('d-none');
+}
+
+function toggleEditRow(id) {
+    const f = document.getElementById(`cp-edit-row-${id}`);
+    if (f) f.classList.toggle('d-none');
+}
+
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+}
+
+function submitNewCheckpoint(e) {
+    e.preventDefault();
+    const form = e.target;
+    const btn = document.getElementById('btnSaveNewCheckpoint');
+    if (btn) btn.disabled = true;
+    const formData = new FormData(form);
+
+    fetch(`{% url 'operations:api-tracking-create' shipment.pk %}`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (btn) btn.disabled = false;
+        if (res.status === 'success') {
+            tmHasModified = true;
+            form.reset();
+            toggleAddCheckpointForm();
+            showTmAlert('Titik riwayat alur berhasil ditambahkan.', 'success');
+            loadTrackingList();
+        } else {
+            showTmAlert(res.message || 'Gagal menambahkan titik riwayat.', 'danger');
+        }
+    })
+    .catch(err => {
+        if (btn) btn.disabled = false;
+        showTmAlert('Terjadi kesalahan: ' + err, 'danger');
+    });
+}
+
+function submitEditCheckpoint(e, id) {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+
+    fetch(`/operations/tracking/${id}/update/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.status === 'success') {
+            tmHasModified = true;
+            showTmAlert('Titik riwayat berhasil diperbarui.', 'success');
+            loadTrackingList();
+        } else {
+            showTmAlert(res.message || 'Gagal mengedit titik riwayat.', 'danger');
+        }
+    })
+    .catch(err => showTmAlert('Terjadi kesalahan: ' + err, 'danger'));
+}
+
+function deleteCheckpoint(id) {
+    PaketinModal.confirm({
+        title: 'Hapus Titik Riwayat?',
+        description: 'Titik riwayat tracking ini akan dihapus permanen. Status resi akan disinkronkan secara otomatis sesuai checkpoint terakhir.',
+        theme: 'danger',
+        confirmText: 'Hapus Riwayat',
+        cancelText: 'Batal',
+        icon: 'ph-trash'
+    }).then(confirmed => {
+        if (!confirmed) return;
+
+        fetch(`/operations/tracking/${id}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.status === 'success') {
+                tmHasModified = true;
+                showTmAlert('Titik riwayat berhasil dihapus.', 'success');
+                loadTrackingList();
+            } else {
+                showTmAlert(res.message || 'Gagal menghapus riwayat.', 'danger');
+            }
+        })
+        .catch(err => showTmAlert('Terjadi kesalahan: ' + err, 'danger'));
+    });
+}
+
+function moveCheckpoint(index, direction) {
+    const targetIdx = index + direction;
+    if (targetIdx < 0 || targetIdx >= tmCheckpoints.length) return;
+
+    const movingCp = tmCheckpoints[index];
+    const targetCp = tmCheckpoints[targetIdx];
+
+    // Validasi POD dalam tampilan terbaru di paling atas:
+    // 1. POD tidak boleh digeser ke bawah (direction > 0) melewati status proses aktif
+    if (['POD', 'POD_BALIK', 'RETURNED'].includes(movingCp.status) && direction > 0 && !['POD', 'POD_BALIK', 'RETURNED'].includes(targetCp.status)) {
+        showTmAlert('Status POD (Terkirim) adalah alur akhir dan tidak dapat ditaruh sebelum proses Delivery.', 'warning');
+        return;
+    }
+    // 2. Status proses aktif tidak boleh digeser ke atas (direction < 0) melewati status final POD
+    if (!['POD', 'POD_BALIK', 'RETURNED'].includes(movingCp.status) && direction < 0 && ['POD', 'POD_BALIK', 'RETURNED'].includes(targetCp.status)) {
+        showTmAlert('Proses pengantaran tidak dapat diletakkan setelah status final Terkirim (POD).', 'warning');
+        return;
+    }
+
+    const temp = tmCheckpoints[index];
+    tmCheckpoints[index] = tmCheckpoints[targetIdx];
+    tmCheckpoints[targetIdx] = temp;
+
+    // Karena di tabel berurutan terbaru ke terlama, kirimkan array kronologis (Step 1 ke Step N) ke backend:
+    const orderedIds = tmCheckpoints.slice().reverse().map(c => c.id);
+
+    fetch(`{% url 'operations:api-tracking-reorder' shipment.pk %}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ ordered_ids: orderedIds })
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.status === 'success') {
+            tmHasModified = true;
+            showTmAlert('Urutan langkah berhasil diperbarui.', 'success');
+            loadTrackingList();
+        } else {
+            showTmAlert(res.message || 'Gagal mengubah urutan.', 'danger');
+            loadTrackingList();
+        }
+    })
+    .catch(err => {
+        showTmAlert('Terjadi kesalahan: ' + err, 'danger');
+        loadTrackingList();
+    });
+}
+
+function autoAlignByTime() {
+    PaketinModal.confirm({
+        title: 'Urutkan Alur Kronologis?',
+        description: 'Sistem akan merapikan dan menyortir seluruh riwayat pengiriman secara otomatis dari waktu awal hingga waktu terbaru.',
+        theme: 'info',
+        confirmText: 'Urutkan Waktu',
+        cancelText: 'Batal',
+        icon: 'ph-clock-counter-clockwise'
+    }).then(confirmed => {
+        if (!confirmed) return;
+
+        fetch(`{% url 'operations:api-tracking-auto-align' shipment.pk %}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.status === 'success') {
+                tmHasModified = true;
+                showTmAlert('Riwayat alur berhasil dirapikan secara kronologis.', 'success');
+                loadTrackingList();
+            } else {
+                showTmAlert(res.message || 'Gagal menyelaraskan urutan waktu.', 'danger');
+            }
+        })
+        .catch(err => showTmAlert('Terjadi kesalahan: ' + err, 'danger'));
+    });
+}
+</script>
+{% endif %}
+{% endblock %}

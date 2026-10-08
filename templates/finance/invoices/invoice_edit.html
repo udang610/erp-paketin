@@ -1,0 +1,648 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Form Entry Invoice - ERP Paketin{% endblock %}
+{% block page_title %}Form Entry Invoice{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12">
+        <!-- Back button above card (Matching Form Entry LDP) -->
+        <div class="mb-3">
+            <a href="{% url 'finance:invoice_list' %}" class="btn btn-outline-secondary btn-sm px-3 shadow-sm">
+                <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+            </a>
+        </div>
+
+        <!-- Main Card Structure (Exact Match with Form Entry LDP) -->
+        <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+            <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h5 class="mb-0 fw-bold text-dark">
+                        <i class="ph-duotone ph-file-text me-2 text-danger"></i>Form Entry Invoice
+                    </h5>
+                </div>
+            </div>
+            
+            <div class="card-body p-4 bg-light mt-3 border-top">
+                <!-- 1. Konfigurasi Filter Pengiriman Box (Exact Match with LDP Form) -->
+                <div class="p-3 rounded mb-4 shadow-sm" style="background-color: #fff; border: 1px solid #dee2e6;">
+                    <h6 class="fw-bold mb-3 text-dark"><i class="ph-duotone ph-funnel me-2 text-danger"></i>Konfigurasi Filter Pengiriman:</h6>
+                    <form method="get" id="formFilterShipments" class="row g-3 align-items-end mt-0">
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-semibold">Customer <span class="text-danger">*</span></label>
+                            <select name="customer" class="form-select select2">
+                                <option value="">type customer name or code</option>
+                                {% for c in customers %}
+                                <option value="{{ c.id }}" {% if customer_id == c.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ c.name }} {% if c.customer_code %}({{ c.customer_code }}){% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-muted small fw-semibold">From <span class="text-danger">*</span></label>
+                            <input type="text" name="date_from" value="{{ date_from|default:'' }}" class="form-control flatpickr-empty-date" placeholder="dd/mm/yyyy" autocomplete="off">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-muted small fw-semibold">End <span class="text-danger">*</span></label>
+                            <input type="text" name="date_to" value="{{ date_to|default:'' }}" class="form-control flatpickr-empty-date" placeholder="dd/mm/yyyy" autocomplete="off">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-muted small fw-semibold">Status <span class="text-danger">*</span></label>
+                            <select name="status" class="form-select">
+                                <option value="ALL" {% if status_filter == 'ALL' %}selected{% endif %}>All</option>
+                                <option value="CONFIRMED" {% if status_filter == 'CONFIRMED' %}selected{% endif %}>Siap Tagih (Confirmed)</option>
+                                <option value="DRAFT" {% if status_filter == 'DRAFT' %}selected{% endif %}>Draft</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex gap-2">
+                            <a href="{% url 'finance:invoice_create' %}" class="btn btn-light border btn-sm shadow-sm text-secondary" title="Reset Filter" style="width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                <i class="ph-bold ph-arrow-counter-clockwise fs-6"></i>
+                            </a>
+                            <button type="submit" class="btn btn-danger btn-sm shadow-sm" title="Cari / Search" style="width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                <i class="ph-bold ph-magnifying-glass fs-6"></i>
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Scan Barcode AWB / Batch LDP Inside Card Konfigurasi -->
+                    <div class="mt-3 pt-3 border-top">
+                        <button class="btn btn-light bg-light w-100 border text-secondary fw-semibold py-1 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseScanBarcode" style="border-radius: 6px; height: 32px; font-size: 0.82rem; display: flex; align-items: center; justify-content: center;" id="btnAccordionScan">
+                            <i class="ph-bold ph-caret-down me-1" id="iconAccordionScan"></i> Scan Barcode Batch LDP
+                        </button>
+                        <div id="collapseScanBarcode" class="collapse show">
+                            <div class="pt-3">
+                                <div class="p-3 bg-light rounded-3 border" style="border-color: #cfd4dc !important;">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label text-muted small fw-semibold">Scan Barcode (Add Scan Batch LDP No)</label>
+                                            <div class="input-group shadow-sm">
+                                                <span class="input-group-text bg-white border-end-0"><i class="ph-bold ph-scan text-success"></i></span>
+                                                <input type="text" id="inputScanAdd" class="form-control border-start-0 ps-0 bg-white" placeholder="Arahkan Barcode Scanner kesini / paste No. LDP..." autocomplete="off" onkeypress="handleScanAdd(event)" autofocus>
+                                                <button class="btn btn-success px-3" type="button" id="btnAddScan" onclick="triggerManualScanAdd()">Scan & Tambah</button>
+                                            </div>
+                                            <small class="text-muted mt-1 d-block" style="font-size: 0.72rem;">Tekan <b>Enter</b> pada scanner untuk scan berulang.</small>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label text-muted small fw-semibold">Hapus dari Antrean (Deleted Scan Batch LDP No)</label>
+                                            <div class="input-group shadow-sm">
+                                                <span class="input-group-text bg-white border-end-0"><i class="ph-bold ph-trash text-dark"></i></span>
+                                                <input type="text" id="inputScanDelete" class="form-control border-start-0 ps-0 bg-white" placeholder="Scan untuk membatalkan..." autocomplete="off" onkeypress="handleScanDelete(event)">
+                                                <button class="btn btn-danger px-3" type="button" id="btnDelScan" onclick="triggerManualScanDelete()">Hapus</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Action Sub-Header Bar with Pricing Mode Switcher (Matching LDP Form) -->
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 bg-white p-3 rounded-3 border shadow-xs">
+                    <div class="d-flex align-items-center gap-2">
+                        <h6 class="fw-bold text-dark mb-0">List Awb OnProcess Invoice</h6>
+                        <span class="badge bg-danger rounded-pill px-3 py-1">Total Awb : <span id="displayTotalAwb">0</span></span>
+                        <span class="badge bg-secondary rounded-pill px-3 py-1 ms-1">Total LDP : <span id="displayTotalLdp">0</span></span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted small fw-semibold d-none d-md-inline"><i class="ph-bold ph-coins me-1 text-danger"></i>Opsi Harga:</span>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-sm btn-outline-danger active px-3 py-1 fw-semibold shadow-xs" id="btnModeAuto" onclick="switchPricingMode('AUTO')">
+                                <i class="ph-bold ph-magic-wand me-1"></i> Otomatis (Master Rate)
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary px-3 py-1 fw-semibold ms-1 shadow-xs" id="btnModeManual" onclick="switchPricingMode('MANUAL')">
+                                <i class="ph-bold ph-pencil-simple me-1"></i> Manual (Bypass Master)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Form for Submitting Invoice Table -->
+                <form method="post" id="formActualInvoice" action="{% url 'finance:invoice_create' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="customer" id="inputHiddenCustomer" value="{{ customer_id }}">
+                    <input type="hidden" name="client_name" id="inputHiddenClientName" value="{{ selected_customer.name|default:'' }}">
+                    <input type="hidden" name="date_from" value="{{ date_from }}">
+                    <input type="hidden" name="date_to" value="{{ date_to }}">
+
+                    <!-- Hidden container for checked LDP IDs -->
+                    <div id="containerSelectedLdps">
+                        {% for ldp in available_ldps %}
+                        <input type="hidden" name="selected_ldps" id="hidden-ldp-{{ ldp.id }}" value="{{ ldp.id }}">
+                        {% endfor %}
+                    </div>
+
+                    <style>
+                        .table-ldp-outline {
+                            border-collapse: separate;
+                            border-spacing: 0;
+                            width: 100%;
+                            font-size: 0.82rem;
+                        }
+                        .table-ldp-outline thead th {
+                            background-color: #f8f9fa !important;
+                            color: #6c757d !important;
+                            font-weight: 600;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                            padding: 10px 12px;
+                            border-bottom: 2px solid #e9ecef !important;
+                            border-top: 1px solid #e9ecef !important;
+                            white-space: nowrap;
+                            font-size: 0.74rem;
+                        }
+                        .table-ldp-outline tbody td {
+                            padding: 8px 10px;
+                            border-bottom: 1px solid #f1f5f9;
+                            white-space: nowrap;
+                            vertical-align: middle;
+                        }
+                        .table-input-num {
+                            padding: 3px 6px;
+                            font-size: 0.8rem;
+                            font-weight: 500;
+                            border-radius: 6px;
+                            border: 1px solid #cbd5e1;
+                            background-color: #ffffff;
+                            transition: all 0.2s ease;
+                        }
+                        .table-input-num:focus {
+                            background-color: #ffffff;
+                            border-color: #dc3545;
+                            box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.15);
+                            outline: none;
+                        }
+                        .table-input-num:hover {
+                            border-color: #94a3b8;
+                        }
+                        .row-custom-rate {
+                            background-color: #fffdf5 !important;
+                        }
+                    </style>
+
+                    <div class="table-responsive bg-white rounded-3 shadow-sm border mb-4" style="border-color: #e2e8f0 !important;">
+                        <table class="table table-hover align-middle mb-0 table-ldp-outline" id="tableOnProcess">
+                            <thead>
+                                <tr>
+                                    <th class="ps-3">AWB NO</th>
+                                    <th>CREATED AT</th>
+                                    <th>ORIGIN</th>
+                                    <th>DEST.</th>
+                                    <th class="text-center">SERVIS</th>
+                                    <th class="text-end">BERAT (KG)</th>
+                                    <th class="text-end text-success">TOTAL BIAYA KIRIM (NETTO)</th>
+                                    <th class="text-end text-muted">BIAYA KIRIM BY SISTEM</th>
+                                    <th class="text-end">BIAYA KIRIM</th>
+                                    <th class="text-end">BIAYA KIRIM / KG</th>
+                                    <th class="text-end text-danger">DISKON</th>
+                                    <th class="text-end">PACKING</th>
+                                    <th class="text-end">ASURANSI</th>
+                                    <th class="text-end">HANDLING & SURCHARGE</th>
+                                    <th class="text-center pe-3">AKSI</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyOnProcess">
+                                {% for ldp in available_ldps %}
+                                    {% for it in ldp.items.all %}
+                                    <tr id="row-awb-{{ it.id }}" 
+                                        data-ldp-id="{{ ldp.id }}"
+                                        data-ldp-number="{{ ldp.ldp_number }}"
+                                        data-resi="{{ it.awb_number }}"
+                                        data-weight="{{ it.chargeable_weight|stringformat:'.2f' }}"
+                                        data-master-pkg="{{ it.price_per_kg|stringformat:'.2f' }}"
+                                        data-master-freight="{{ it.freight_charge|stringformat:'.2f' }}"
+                                        data-master-packing="{{ it.packing_fee|stringformat:'.2f' }}"
+                                        data-master-insurance="{{ it.insurance_fee|stringformat:'.2f' }}"
+                                        data-master-handling="{{ it.handling_fee|stringformat:'.2f' }}"
+                                        data-master-discount="{{ it.discount|stringformat:'.2f' }}">
+                                        <td class="ps-3 fw-bold text-dark">
+                                            {{ it.awb_number }}
+                                            <span class="badge bg-light text-secondary border ms-1" style="font-size: 0.68rem;">{{ ldp.ldp_number }}</span>
+                                        </td>
+                                        <td>{{ it.shipment_date|date:"d/m/Y"|default:"-" }}</td>
+                                        <td>{{ it.origin|default:"-" }}</td>
+                                        <td>{{ it.destination|default:"-" }}</td>
+                                        <td class="text-center"><span class="badge bg-light text-dark border">{{ it.service_type }}</span></td>
+                                        <td class="text-end fw-semibold">{{ it.chargeable_weight|floatformat:1 }}</td>
+                                        <td class="text-end fw-bold text-success display-netto" id="netto-display-{{ it.id }}">
+                                            Rp {{ it.subtotal|floatformat:0|intcomma }}
+                                        </td>
+                                        <td class="text-end text-muted display-system-freight">Rp {{ it.freight_charge|floatformat:0|intcomma }}</td>
+                                        <td class="text-end">
+                                            <input type="number" step="any" name="freight_charge_{{ it.id }}" class="form-control form-control-sm text-end table-input-num input-freight fw-semibold text-dark" style="width: 110px;" value="{{ it.freight_charge|floatformat:0 }}" oninput="recalcFromFreight(this)">
+                                        </td>
+                                        <td class="text-end">
+                                            <input type="number" step="any" name="price_per_kg_{{ it.id }}" class="form-control form-control-sm text-end table-input-num input-pkg" style="width: 100px;" value="{{ it.price_per_kg|floatformat:0 }}" oninput="recalcFromPkg(this)">
+                                        </td>
+                                        <td class="text-end">
+                                            <input type="number" step="any" name="discount_{{ it.id }}" class="form-control form-control-sm text-end table-input-num input-discount text-danger" style="width: 90px;" value="{{ it.discount|floatformat:0 }}" oninput="recalcNettoOnly(this)">
+                                        </td>
+                                        <td class="text-end">
+                                            <input type="number" step="any" name="packing_fee_{{ it.id }}" class="form-control form-control-sm text-end table-input-num input-packing" style="width: 85px;" value="{{ it.packing_fee|floatformat:0 }}" oninput="recalcNettoOnly(this)">
+                                        </td>
+                                        <td class="text-end">
+                                            <input type="number" step="any" name="insurance_fee_{{ it.id }}" class="form-control form-control-sm text-end table-input-num input-insurance" style="width: 85px;" value="{{ it.insurance_fee|floatformat:0 }}" oninput="recalcNettoOnly(this)">
+                                        </td>
+                                        <td class="text-end">
+                                            <input type="number" step="any" name="handling_fee_{{ it.id }}" class="form-control form-control-sm text-end table-input-num input-handling" style="width: 85px;" value="{{ it.handling_fee|floatformat:0 }}" oninput="recalcNettoOnly(this)">
+                                        </td>
+                                        <td class="text-center pe-3">
+                                            <button type="button" class="btn btn-outline-danger btn-sm p-1 py-0 rounded" title="Hapus AWB" onclick="removeAwbRow('{{ it.id }}')">
+                                                <i class="ph-bold ph-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% empty %}
+                                <tr id="rowEmpty">
+                                    <td colspan="15" class="text-center py-5 text-muted small">
+                                        Belum ada AWB dalam proses LDP. Masukkan Customer & Tanggal lalu klik ikon cari, atau gunakan Scan Barcode.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 4. Summary Calculation & Submission Bar (Matching LDP Form Bottom Actions) -->
+                    <div class="card border-0 shadow-sm rounded-3 p-4 bg-white mb-3">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                            <div class="d-flex flex-wrap gap-4 align-items-center">
+                                <div>
+                                    <div class="text-muted small fw-semibold">TOTAL BERAT</div>
+                                    <h5 class="fw-bold text-dark mb-0" id="summaryTotalWeight">0.0 Kg</h5>
+                                </div>
+                                <div class="border-start ps-4">
+                                    <div class="text-muted small fw-semibold">TOTAL FREIGHT</div>
+                                    <h5 class="fw-bold text-dark mb-0" id="summaryTotalFreight">Rp 0</h5>
+                                </div>
+                                <div class="border-start ps-4">
+                                    <div class="text-muted small fw-semibold">PPN (1.1%)</div>
+                                    <h5 class="fw-bold text-muted mb-0" id="summaryTotalPpn">Rp 0</h5>
+                                </div>
+                                <div class="border-start ps-4">
+                                    <div class="text-muted small fw-semibold">ESTIMASI TOTAL DRAFT INVOICE</div>
+                                    <h4 class="fw-bold text-success mb-0" id="summaryTotalNetto">Rp 0</h4>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'finance:invoice_list' %}" class="btn btn-light border px-4 py-2 fw-semibold">Batal</a>
+                                <button type="button" class="btn btn-danger px-5 py-2 fw-bold shadow-sm" id="btnSubmitInvoice" onclick="submitInvoiceForm()">
+                                    <i class="ph-bold ph-receipt me-1"></i> Terbitkan Draft Invoice
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+var pricingMode = 'AUTO';
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateOverallSummary();
+    updateTotalCount();
+    var scanInput = document.getElementById('inputScanAdd');
+    if (scanInput) scanInput.focus();
+});
+
+function switchPricingMode(mode) {
+    pricingMode = mode;
+    var btnAuto = document.getElementById('btnModeAuto');
+    var btnManual = document.getElementById('btnModeManual');
+    var allInputs = document.querySelectorAll('.table-input-num');
+
+    if (mode === 'AUTO') {
+        btnAuto.className ='btn btn-sm btn-outline-danger active px-3 py-1 fw-semibold shadow-xs';
+        btnManual.className ='btn btn-sm btn-outline-secondary px-3 py-1 fw-semibold ms-1 shadow-xs';
+        allInputs.forEach(inp => inp.disabled = false);
+    } else {
+        btnManual.className ='btn btn-sm btn-outline-danger active px-3 py-1 fw-semibold ms-1 shadow-xs';
+        btnAuto.className ='btn btn-sm btn-outline-secondary px-3 py-1 fw-semibold shadow-xs';
+        allInputs.forEach(inp => inp.disabled = false);
+    }
+}
+
+function recalcFromPkg(pkgInput) {
+    var tr = pkgInput.closest('tr');
+    if (!tr) return;
+    var weight = parseFloat(tr.getAttribute('data-weight') || '0') || 0;
+    var pkg = parseFloat(pkgInput.value || '0') || 0;
+    var freightInput = tr.querySelector('.input-freight');
+    if (freightInput) {
+        freightInput.value = Math.round(weight * pkg);
+    }
+    recalcNettoOnly(pkgInput);
+}
+
+function recalcFromFreight(freightInput) {
+    var tr = freightInput.closest('tr');
+    if (!tr) return;
+    var weight = parseFloat(tr.getAttribute('data-weight') || '0') || 0;
+    var freight = parseFloat(freightInput.value || '0') || 0;
+    var pkgInput = tr.querySelector('.input-pkg');
+    if (pkgInput && weight > 0) {
+        pkgInput.value = Math.round(freight / weight);
+    }
+    recalcNettoOnly(freightInput);
+}
+
+function recalcNettoOnly(elem) {
+    var tr = elem.closest('tr');
+    if (!tr) return;
+
+    var freight = parseFloat(tr.querySelector('.input-freight') ? tr.querySelector('.input-freight').value : '0') || 0;
+    var discount = parseFloat(tr.querySelector('.input-discount') ? tr.querySelector('.input-discount').value : '0') || 0;
+    var packing = parseFloat(tr.querySelector('.input-packing') ? tr.querySelector('.input-packing').value : '0') || 0;
+    var ins = parseFloat(tr.querySelector('.input-insurance') ? tr.querySelector('.input-insurance').value : '0') || 0;
+    var handling = parseFloat(tr.querySelector('.input-handling') ? tr.querySelector('.input-handling').value : '0') || 0;
+
+    var netto = Math.max(0, freight + packing + ins + handling - discount);
+    var displayNetto = tr.querySelector('.display-netto');
+    if (displayNetto) {
+        displayNetto.textContent = 'Rp ' + netto.toLocaleString();
+    }
+
+    updateOverallSummary();
+}
+
+function updateOverallSummary() {
+    var rows = document.querySelectorAll('#tbodyOnProcess tr[id^="row-awb-"]');
+    var totalWeight = 0;
+    var totalFreight = 0;
+    var totalDiscount = 0;
+    var totalNetto = 0;
+
+    rows.forEach(function(tr) {
+        var w = parseFloat(tr.getAttribute('data-weight') || '0') || 0;
+        var freight = parseFloat(tr.querySelector('.input-freight') ? tr.querySelector('.input-freight').value : '0') || 0;
+        var discount = parseFloat(tr.querySelector('.input-discount') ? tr.querySelector('.input-discount').value : '0') || 0;
+        var packing = parseFloat(tr.querySelector('.input-packing') ? tr.querySelector('.input-packing').value : '0') || 0;
+        var ins = parseFloat(tr.querySelector('.input-insurance') ? tr.querySelector('.input-insurance').value : '0') || 0;
+        var handling = parseFloat(tr.querySelector('.input-handling') ? tr.querySelector('.input-handling').value : '0') || 0;
+
+        var n = Math.max(0, freight + packing + ins + handling - discount);
+
+        totalWeight += w;
+        totalFreight += freight;
+        totalDiscount += discount;
+        totalNetto += n;
+    });
+
+    var ppn = Math.round(totalNetto * 0.011);
+    var grandTotal = totalNetto + ppn;
+
+    var dispWeight = document.getElementById('summaryTotalWeight');
+    if (dispWeight) dispWeight.textContent = totalWeight.toFixed(1) + ' Kg';
+
+    var dispFreight = document.getElementById('summaryTotalFreight');
+    if (dispFreight) dispFreight.textContent = 'Rp ' + totalFreight.toLocaleString();
+
+    var dispPpn = document.getElementById('summaryTotalPpn');
+    if (dispPpn) dispPpn.textContent = 'Rp ' + ppn.toLocaleString();
+
+    var dispNetto = document.getElementById('summaryTotalNetto');
+    if (dispNetto) dispNetto.textContent = 'Rp ' + grandTotal.toLocaleString();
+}
+
+function updateTotalCount() {
+    var rows = document.querySelectorAll('#tbodyOnProcess tr[id^="row-awb-"]');
+    var displayAwb = document.getElementById('displayTotalAwb');
+    if (displayAwb) displayAwb.textContent = rows.length;
+
+    var ldpInputs = document.querySelectorAll('#containerSelectedLdps input[name="selected_ldps"]');
+    var displayLdp = document.getElementById('displayTotalLdp');
+    if (displayLdp) displayLdp.textContent = ldpInputs.length;
+}
+
+function removeAwbRow(awbId) {
+    var row = document.getElementById('row-awb-' + awbId);
+    if (row) {
+        var ldpId = row.getAttribute('data-ldp-id');
+        row.remove();
+
+        // Check if any other rows belong to this LDP
+        var otherRows = document.querySelectorAll('#tbodyOnProcess tr[data-ldp-id="' + ldpId + '"]');
+        if (otherRows.length === 0) {
+            var hiddenLdp = document.getElementById('hidden-ldp-' + ldpId);
+            if (hiddenLdp) hiddenLdp.remove();
+        }
+
+        updateTotalCount();
+        updateOverallSummary();
+        checkEmptyTable();
+    }
+}
+
+function checkEmptyTable() {
+    var tbody = document.getElementById('tbodyOnProcess');
+    var rows = tbody.querySelectorAll('tr[id^="row-awb-"]');
+    if (rows.length === 0 && !document.getElementById('rowEmpty')) {
+        tbody.innerHTML = `
+            <tr id="rowEmpty">
+                <td colspan="15" class="text-center py-5 text-muted small">
+                    Belum ada AWB dalam proses LDP. Masukkan Customer & Tanggal lalu klik ikon cari, atau gunakan Scan Barcode.
+                </td>
+            </tr>
+        `;
+    }
+}
+
+function triggerManualScanAdd() {
+    var e = new KeyboardEvent('keypress', {'key': 'Enter'});
+    handleScanAdd(e);
+}
+
+function triggerManualScanDelete() {
+    var e = new KeyboardEvent('keypress', {'key': 'Enter'});
+    handleScanDelete(e);
+}
+
+function handleScanAdd(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        var inputEl = document.getElementById('inputScanAdd');
+        var ldpQuery = inputEl.value.trim();
+        if (!ldpQuery) return;
+
+        // Check if LDP already added
+        var existingHidden = document.getElementById('hidden-ldp-' + ldpQuery);
+        var existingTr = document.querySelector('tr[data-ldp-number="' + ldpQuery + '"]');
+        if (existingHidden || existingTr) {
+            alert('Batch LDP ' + ldpQuery + ' sudah ada di dalam tabel antrean invoice saat ini.');
+            inputEl.value = '';
+            inputEl.focus();
+            return;
+        }
+
+        var lookupUrl = "{% url 'finance:api_ldp_lookup' %}?ldp_number=" + encodeURIComponent(ldpQuery);
+        var btnAdd = document.getElementById('btnAddScan');
+        if (btnAdd) btnAdd.disabled = true;
+
+        fetch(lookupUrl)
+            .then(res => res.json())
+            .then(data => {
+                if (btnAdd) btnAdd.disabled = false;
+                if (data.status === 'success') {
+                    var ldp = data.data;
+
+                    // Remove empty row
+                    var emptyRow = document.getElementById('rowEmpty');
+                    if (emptyRow) emptyRow.remove();
+
+                    // Update hidden customer & client name if empty
+                    var hiddenCust = document.getElementById('inputHiddenCustomer');
+                    var hiddenClientName = document.getElementById('inputHiddenClientName');
+                    if (hiddenCust && !hiddenCust.value) {
+                        hiddenCust.value = ldp.client_id || '';
+                        if (hiddenClientName) hiddenClientName.value = ldp.client_name;
+                    }
+
+                    // Add hidden LDP input
+                    var container = document.getElementById('containerSelectedLdps');
+                    if (!document.getElementById('hidden-ldp-' + ldp.id)) {
+                        var hiddenInp = document.createElement('input');
+                        hiddenInp.type = 'hidden';
+                        hiddenInp.name = 'selected_ldps';
+                        hiddenInp.id = 'hidden-ldp-' + ldp.id;
+                        hiddenInp.value = ldp.id;
+                        container.appendChild(hiddenInp);
+                    }
+
+                    // Append rows to tbodyOnProcess
+                    var tbody = document.getElementById('tbodyOnProcess');
+                    if (ldp.items && ldp.items.length > 0) {
+                        ldp.items.forEach(function(it, idx) {
+                            var tr = document.createElement('tr');
+                            var rowId = 'row-awb-' + ldp.id + '-' + idx;
+                            tr.id = rowId;
+                            tr.setAttribute('data-ldp-id', ldp.id);
+                            tr.setAttribute('data-ldp-number', ldp.ldp_number);
+                            tr.setAttribute('data-resi', it.awb_number);
+                            tr.setAttribute('data-weight', it.weight.toFixed(2));
+                            tr.setAttribute('data-master-pkg', it.price_per_kg.toFixed(2));
+                            tr.setAttribute('data-master-freight', it.freight_charge.toFixed(2));
+                            tr.setAttribute('data-master-packing', it.packing_fee.toFixed(2));
+                            tr.setAttribute('data-master-insurance', it.insurance_fee.toFixed(2));
+                            tr.setAttribute('data-master-handling', (it.handling_fee + it.surcharges).toFixed(2));
+                            tr.setAttribute('data-master-discount', it.discount.toFixed(2));
+
+                            tr.innerHTML = `
+                                <td class="ps-3 fw-bold text-dark">
+                                    ${it.awb_number}
+                                    <span class="badge bg-light text-secondary border ms-1" style="font-size: 0.68rem;">${ldp.ldp_number}</span>
+                                </td>
+                                <td>${it.shipment_date}</td>
+                                <td>${it.origin}</td>
+                                <td>${it.destination}</td>
+                                <td class="text-center"><span class="badge bg-light text-dark border">${it.service_type}</span></td>
+                                <td class="text-end fw-semibold">${it.weight.toFixed(1)}</td>
+                                <td class="text-end fw-bold text-success display-netto" id="netto-display-${rowId}">
+                                    Rp ${Math.round(it.subtotal).toLocaleString()}
+                                </td>
+                                <td class="text-end text-muted display-system-freight">Rp ${Math.round(it.freight_charge).toLocaleString()}</td>
+                                <td class="text-end">
+                                    <input type="number" step="any" class="form-control form-control-sm text-end table-input-num input-freight fw-semibold text-dark" style="width: 110px;" value="${Math.round(it.freight_charge)}" oninput="recalcFromFreight(this)">
+                                </td>
+                                <td class="text-end">
+                                    <input type="number" step="any" class="form-control form-control-sm text-end table-input-num input-pkg" style="width: 100px;" value="${Math.round(it.price_per_kg)}" oninput="recalcFromPkg(this)">
+                                </td>
+                                <td class="text-end">
+                                    <input type="number" step="any" class="form-control form-control-sm text-end table-input-num input-discount text-danger" style="width: 90px;" value="${Math.round(it.discount)}" oninput="recalcNettoOnly(this)">
+                                </td>
+                                <td class="text-end">
+                                    <input type="number" step="any" class="form-control form-control-sm text-end table-input-num input-packing" style="width: 85px;" value="${Math.round(it.packing_fee)}" oninput="recalcNettoOnly(this)">
+                                </td>
+                                <td class="text-end">
+                                    <input type="number" step="any" class="form-control form-control-sm text-end table-input-num input-insurance" style="width: 85px;" value="${Math.round(it.insurance_fee)}" oninput="recalcNettoOnly(this)">
+                                </td>
+                                <td class="text-end">
+                                    <input type="number" step="any" class="form-control form-control-sm text-end table-input-num input-handling" style="width: 85px;" value="${Math.round(it.handling_fee + it.surcharges)}" oninput="recalcNettoOnly(this)">
+                                </td>
+                                <td class="text-center pe-3">
+                                    <button type="button" class="btn btn-outline-danger btn-sm p-1 py-0 rounded" title="Hapus AWB" onclick="removeAwbRow('${rowId}')">
+                                        <i class="ph-bold ph-trash"></i>
+                                    </button>
+                                </td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    }
+
+                    updateTotalCount();
+                    updateOverallSummary();
+                    inputEl.value = '';
+                    inputEl.focus();
+                } else {
+                    alert(data.message || 'Gagal memuat batch LDP.');
+                    inputEl.select();
+                }
+            })
+            .catch(err => {
+                if (btnAdd) btnAdd.disabled = false;
+                alert('Terjadi kesalahan koneksi server: ' + err);
+            });
+    }
+}
+
+function handleScanDelete(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        var inputEl = document.getElementById('inputScanDelete');
+        var delQuery = inputEl.value.trim();
+        if (!delQuery) return;
+
+        // Try deleting by LDP number
+        var rowsByLdp = document.querySelectorAll('#tbodyOnProcess tr[data-ldp-number="' + delQuery + '"]');
+        if (rowsByLdp.length > 0) {
+            var ldpId = rowsByLdp[0].getAttribute('data-ldp-id');
+            rowsByLdp.forEach(r => r.remove());
+            var hiddenLdp = document.getElementById('hidden-ldp-' + ldpId);
+            if (hiddenLdp) hiddenLdp.remove();
+            updateTotalCount();
+            updateOverallSummary();
+            checkEmptyTable();
+            inputEl.value = '';
+            inputEl.focus();
+            return;
+        }
+
+        // Try deleting by AWB number
+        var rowByAwb = document.querySelector('#tbodyOnProcess tr[data-resi="' + delQuery + '"]');
+        if (rowByAwb) {
+            removeAwbRow(rowByAwb.id.replace('row-awb-', ''));
+            inputEl.value = '';
+            inputEl.focus();
+            return;
+        }
+
+        alert('Nomor LDP / AWB "' + delQuery + '" tidak ditemukan di dalam tabel antrean saat ini.');
+        inputEl.select();
+    }
+}
+
+function submitInvoiceForm() {
+    var ldpInputs = document.querySelectorAll('#containerSelectedLdps input[name="selected_ldps"]');
+    var awbRows = document.querySelectorAll('#tbodyOnProcess tr[id^="row-awb-"]');
+
+    if (ldpInputs.length === 0 && awbRows.length === 0) {
+        alert("Minimal harus ada 1 batch LDP dalam daftar untuk memproses Invoice.");
+        var scanInput = document.getElementById('inputScanAdd');
+        if (scanInput) scanInput.focus();
+        return;
+    }
+
+    var btn = document.getElementById('btnSubmitInvoice');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Menerbitkan Draft Invoice...';
+    }
+    document.getElementById('formActualInvoice').submit();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,751 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Invoice Process - ERP Paketin{% endblock %}
+{% block page_title %}Invoice Process{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Header Section -->
+    <!-- Actions Bar (Search + Filter Pop-up + Actions) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <form class="d-flex align-items-center gap-2" method="get">
+            <input type="hidden" name="tab" value="{{ tab }}">
+            <!-- Search Input -->
+            <div class="search-box-clean d-flex align-items-center bg-white px-3" style="width: 270px; max-width: 320px; height: 38px;">
+                <i class="ph-bold ph-magnifying-glass me-2 text-muted" style="font-size: 1rem; color: #64748b;"></i>
+                <input type="text" name="q" class="border-0 shadow-none p-0 bg-transparent flex-grow-1" placeholder="Cari invoice, customer..." value="{{ search|default:'' }}" style="outline: none !important; font-size: 0.88rem; color: #1e293b; height: 100%;">
+            </div>
+
+            <!-- Filter Button with Pop-up Dropdown (Photo 2 Style) -->
+            <div class="dropdown">
+                <button class="btn shadow-sm position-relative rounded-3 d-inline-flex align-items-center gap-2 px-3 border" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Filter Invoice" style="height: 38px; font-size: 0.88rem; font-weight: 600; color: #1e293b; background-color: #ffffff !important; border-color: #cbd5e1 !important;">
+                    <i class="ph-bold ph-faders fs-5" style="color: #1e293b;"></i>
+                    <span>Filter</span>
+                    {% if search or active_filters %}
+                    <span class="active-filter-dot" title="Filter Aktif"></span>
+                    {% endif %}
+                </button>
+                <div class="dropdown-menu filter-dropdown-menu dropdown-menu-start p-3 shadow-lg border-0" style="width: 320px; z-index: 1050; border-radius: 12px; border: 1px solid #e2e8f0 !important;">
+                    <h6 class="dropdown-header px-0 text-dark mb-2"><i class="ph-bold ph-faders me-2 text-dark"></i>Filter Lanjutan</h6>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Nama / Kode Customer</label>
+                        <input type="text" name="customer" class="form-control form-control-sm" placeholder="Contoh: PT. ABC..." value="{{ customer_query|default:'' }}">
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-muted small mb-1">Tanggal Mulai</label>
+                            <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date|default:'' }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small mb-1">Tanggal Akhir</label>
+                            <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date|default:'' }}">
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 pt-2 border-top">
+                        <button type="submit" class="btn btn-danger btn-sm w-100 fw-bold">Terapkan</button>
+                        <a href="?tab={{ tab }}" class="btn btn-outline-secondary btn-sm w-100">Reset</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div class="d-flex gap-2">
+            {% if tab == 'reconcile' %}
+            <button type="button" class="btn btn-danger px-4 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#reconcileModal" style="height: 38px;">
+                <i class="ph-bold ph-plus me-1"></i> Catat Pembayaran / Rekonsiliasi
+            </button>
+            {% else %}
+            <a href="{% url 'finance:invoice_create' %}" class="btn btn-danger px-4 fw-bold shadow-sm" style="height: 38px;">
+                <i class="ph-bold ph-plus me-1"></i> Buat Invoice Baru
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <style>
+        /* Clean Table Styling */
+        .table-premium {
+            border-collapse: separate;
+            border-spacing: 0;
+            border: none;
+        }
+        .table-premium thead th {
+            background-color: #f8fafc !important;
+            color: #475569;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+            border-bottom: 1px solid #eaedf1 !important;
+            padding: 14px 16px;
+            vertical-align: middle;
+        }
+        .table-premium tbody td {
+            padding: 12px 16px;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 13px;
+            color: #1e293b;
+            background-color: #ffffff;
+            transition: background-color 0.2s ease;
+        }
+        .table-premium tbody tr:hover td {
+            background-color: #f8fafc;
+        }
+        .table-premium tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Clean Nav Tabs with Uniform Thick Vertical Dividers */
+        .nav-tabs-custom {
+            background-color: transparent !important;
+            padding: 0 !important;
+            border-bottom: 1px solid #eaedf1 !important;
+            gap: 0 !important;
+            margin-bottom: 0 !important;
+            display: flex;
+            align-items: stretch;
+        }
+        .nav-tabs-custom .nav-item {
+            position: relative;
+            margin-bottom: -1px;
+            display: flex;
+            align-items: center;
+        }
+        .nav-tabs-custom .nav-item:first-child::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 1px;
+            height: 16px;
+            background-color: #94a3b8;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 1;
+        }
+        .nav-tabs-custom .nav-item:first-child:has(.active)::before,
+        .nav-tabs-custom .nav-item:first-child:has(.nav-link:hover)::before {
+            opacity: 0;
+        }
+        .nav-tabs-custom .nav-item::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 1px;
+            height: 16px;
+            background-color: #94a3b8;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 1;
+        }
+        .nav-tabs-custom .nav-item:has(.active)::after,
+        .nav-tabs-custom .nav-item:has(+ .nav-item .active)::after,
+        .nav-tabs-custom .nav-item:has(.nav-link:hover)::after,
+        .nav-tabs-custom .nav-item:has(+ .nav-item .nav-link:hover)::after {
+            opacity: 0;
+        }
+        .nav-tabs-custom .nav-link {
+            background-color: transparent !important;
+            border: 1px solid transparent !important;
+            border-bottom: 1px solid transparent !important;
+            color: #334155 !important;
+            font-weight: 600;
+            border-radius: 10px 10px 0 0 !important;
+            padding: 0 20px !important;
+            height: 42px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            transition: all 0.2s ease-in-out;
+            box-shadow: none !important;
+            position: relative;
+            white-space: nowrap;
+        }
+        .nav-tabs-custom .nav-link i {
+            opacity: 0.9 !important;
+        }
+        .nav-tabs-custom .nav-link:hover {
+            background-color: rgba(241, 245, 249, 0.8) !important;
+            color: #0f172a !important;
+        }
+        .nav-tabs-custom .nav-link.active {
+            background-color: #f8fafc !important;
+            border: 1px solid #eaedf1 !important;
+            border-bottom: 1px solid #f8fafc !important;
+            color: #0f172a !important;
+            font-weight: 700;
+            box-shadow: none !important;
+            z-index: 2;
+        }
+    </style>
+
+    <!-- Multi-Tab Top Level (Approval, Reconcile, Riwayat Selesai) -->
+    <ul class="nav nav-tabs nav-tabs-custom" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link {% if tab == 'approval' %}active{% endif %} px-4 py-2 fw-semibold" href="?tab=approval{% if search %}&q={{ search }}{% endif %}">
+                <i class="ph-duotone ph-check-square-offset me-2 text-danger"></i> Approval Invoice
+                <span class="badge bg-danger text-white ms-2 rounded-pill fw-bold">{{ total_draft }}</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if tab == 'reconcile' %}active{% endif %} px-4 py-2 fw-semibold" href="?tab=reconcile{% if search %}&q={{ search }}{% endif %}">
+                <i class="ph-duotone ph-currency-circle-dollar me-2 text-primary"></i> Reconcile Invoice
+                <span class="badge bg-danger text-white ms-2 rounded-pill fw-bold">{{ total_unpaid }} Unpaid</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if tab == 'completed' %}active{% endif %} px-4 py-2 fw-semibold" href="?tab=completed{% if search %}&q={{ search }}{% endif %}">
+                <i class="ph-duotone ph-check-circle me-2 text-success"></i> Riwayat Selesai
+                <span class="badge bg-success text-white ms-2 rounded-pill fw-bold">{{ total_completed }} Selesai</span>
+            </a>
+        </li>
+    </ul>
+
+    <!-- Table Container (Seamless connection with active tab) -->
+    <div class="table-responsive shadow-sm mt-0 mb-4" style="border: 1px solid #eaedf1; border-top: none; border-radius: 0 0 16px 16px; background-color: #fff;">
+        {% if tab == 'approval' %}
+        <!-- ─── TAB 1: APPROVAL INVOICE ─── -->
+        <table class="table table-premium mb-0">
+            <thead>
+                <tr>
+                    <th class="ps-4">No. Invoice Draft</th>
+                    <th>Customer</th>
+                    <th class="text-center">Total LDP</th>
+                    <th class="text-center">Total AWB</th>
+                    <th class="text-end">Biaya Kirim</th>
+                    <th class="text-end">PPN (1.1%)</th>
+                    <th class="text-end">Total Tagihan</th>
+                    <th>Tanggal Draft</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center pe-4">Aksi Approval</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in draft_invoices %}
+                <tr>
+                    <td class="ps-4 fw-bold">
+                        <a href="{% url 'finance:invoice_detail' inv.id %}" class="text-decoration-none text-dark fw-bold">
+                            {{ inv.invoice_number }}
+                        </a>
+                    </td>
+                    <td>
+                        <div class="fw-semibold text-dark">{{ inv.client_name }}</div>
+                        {% if inv.kode_pelanggan %}
+                        <div class="text-dark" style="font-size: 0.72rem;">Ref: {{ inv.kode_pelanggan }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="text-center fw-bold text-dark">{{ inv.total_ldp_count }} LDP</td>
+                    <td class="text-center fw-bold text-dark">{{ inv.total_awb_count }} AWB</td>
+                    <td class="text-end fw-bold text-dark">Rp {{ inv.biaya_kirim|floatformat:0|intcomma }}</td>
+                    <td class="text-end fw-bold text-dark">Rp {{ inv.tax|floatformat:0|intcomma }}</td>
+                    <td class="text-end fw-bold text-dark">Rp {{ inv.total_amount|floatformat:0|intcomma }}</td>
+                    <td class="text-dark small">
+                        {{ inv.date_issued|date:"d M Y" }}
+                    </td>
+                    <td class="text-center">
+                        <span class="badge bg-secondary text-white rounded-pill px-3 py-1 fw-bold" style="font-size: 0.72rem;">DRAFT</span>
+                    </td>
+                    <td class="pe-4 text-center">
+                        <button type="button" class="btn btn-sm btn-success px-3 shadow-sm fw-bold" onclick="openApproveModal('{{ inv.id }}', '{{ inv.invoice_number }}', '{{ inv.client_name }}', 'Rp {{ inv.total_amount|floatformat:0|intcomma }}')">
+                            <i class="ph-bold ph-check-circle me-1"></i> Approve
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="10" class="text-center py-5 text-muted">
+                        <i class="ph-duotone ph-check-circle text-success mb-2" style="font-size: 3rem; opacity: 0.5;"></i>
+                        <p class="fw-semibold text-dark mb-1">Semua Draft Invoice Sudah Di-approve</p>
+                        <p class="text-muted small mb-0">Tidak ada draft yang menunggu approval saat ini.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% elif tab == 'reconcile' %}
+        <!-- ─── TAB 2: RECONCILE INVOICE (BELUM LUNAS) ─── -->
+        <table class="table table-premium mb-0">
+            <thead>
+                <tr>
+                    <th class="ps-4">No. Invoice</th>
+                    <th class="text-center">Bukti Transfer</th>
+                    <th>Customer</th>
+                    <th class="text-end">Total Tagihan</th>
+                    <th class="text-end">Total Dibayar</th>
+                    <th class="text-end">Sisa Tagihan</th>
+                    <th>Bank / Rek</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center pe-4">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in reconcile_invoices %}
+                <tr>
+                    <td class="ps-4 fw-bold text-dark">
+                        <a href="{% url 'finance:invoice_detail' inv.id %}" class="text-decoration-none text-dark fw-bold">
+                            {{ inv.invoice_number }}
+                        </a>
+                    </td>
+                    <td class="text-center">
+                        {% if inv.latest_reconciliation and inv.latest_reconciliation.proof_file %}
+                        <img src="{{ inv.latest_reconciliation.proof_file.url }}" 
+                             alt="Bukti" 
+                             class="rounded-2 border shadow-sm" 
+                             style="width: 40px; height: 40px; object-fit: cover; cursor: pointer; transition: transform 0.15s ease;"
+                             onmouseover="this.style.transform='scale(1.08)'"
+                             onmouseout="this.style.transform='scale(1)'"
+                             onclick="previewProofImage('{{ inv.latest_reconciliation.proof_file.url }}', '{{ inv.invoice_number }}', '{{ inv.client_name }}')"
+                             title="Klik untuk melihat bukti transfer">
+                        {% else %}
+                        <span class="badge bg-light text-dark border px-2 py-1 rounded-pill" style="font-size: 0.72rem;">Belum Ada</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="fw-semibold text-dark">{{ inv.client_name }}</div>
+                    </td>
+                    <td class="text-end fw-bold text-dark">Rp {{ inv.total_amount|floatformat:0|intcomma }}</td>
+                    <td class="text-end fw-bold text-dark">Rp {{ inv.amount_paid|floatformat:0|intcomma }}</td>
+                    <td class="text-end fw-bold text-dark">
+                        Rp {{ inv.sisa_tagihan|floatformat:0|intcomma }}
+                    </td>
+                    <td class="text-dark fw-medium small">
+                        {% if inv.latest_reconciliation and inv.latest_reconciliation.bank %}
+                            {{ inv.latest_reconciliation.bank.name }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if inv.status == 'PARTIAL' %}
+                            <span class="badge bg-info text-white px-2 py-1 rounded-pill" style="font-size: 0.72rem;">SEBAGIAN</span>
+                        {% elif inv.status == 'SENT' %}
+                            <span class="badge bg-primary text-white px-2 py-1 rounded-pill" style="font-size: 0.72rem;">UNPAID</span>
+                        {% else %}
+                            <span class="badge bg-secondary text-white px-2 py-1 rounded-pill" style="font-size: 0.72rem;">{{ inv.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="pe-4 text-center">
+                        <button type="button" class="btn btn-sm btn-secondary px-3 shadow-sm fw-semibold" onclick="openReconcilePreFilled('{{ inv.id }}', '{{ inv.invoice_number }}', '{{ inv.client_name }}', '{{ inv.total_amount }}', '{{ inv.amount_paid }}')">
+                            <i class="ph-bold ph-receipt me-1"></i> Rekonsiliasi
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center py-5 text-muted">
+                        <i class="ph-duotone ph-receipt text-muted mb-2" style="font-size: 3rem; opacity: 0.4;"></i>
+                        <p class="fw-semibold text-dark mb-1">Semua Invoice Resmi Telah Lunas</p>
+                        <p class="text-muted small mb-0">Tidak ada tagihan tertunda yang perlu direkonsiliasi.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% else %}
+        <!-- ─── TAB 3: RIWAYAT SELESAI (LUNAS) ─── -->
+        <table class="table table-premium mb-0">
+            <thead>
+                <tr>
+                    <th class="ps-4">No. Invoice</th>
+                    <th class="text-center">Bukti Transfer</th>
+                    <th>Customer</th>
+                    <th class="text-end">Total Tagihan</th>
+                    <th class="text-end">Total Dibayar</th>
+                    <th class="text-end">Sisa Tagihan</th>
+                    <th>Bank / Rek</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center pe-4">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in completed_invoices %}
+                <tr>
+                    <td class="ps-4 fw-bold text-dark">
+                        <a href="{% url 'finance:invoice_detail' inv.id %}" class="text-decoration-none text-dark fw-bold">
+                            {{ inv.invoice_number }}
+                        </a>
+                    </td>
+                    <td class="text-center">
+                        {% if inv.latest_reconciliation and inv.latest_reconciliation.proof_file %}
+                        <img src="{{ inv.latest_reconciliation.proof_file.url }}" 
+                             alt="Bukti" 
+                             class="rounded-2 border shadow-sm" 
+                             style="width: 40px; height: 40px; object-fit: cover; cursor: pointer; transition: transform 0.15s ease;"
+                             onmouseover="this.style.transform='scale(1.08)'"
+                             onmouseout="this.style.transform='scale(1)'"
+                             onclick="previewProofImage('{{ inv.latest_reconciliation.proof_file.url }}', '{{ inv.invoice_number }}', '{{ inv.client_name }}')"
+                             title="Klik untuk melihat bukti transfer">
+                        {% else %}
+                        <span class="badge bg-light text-dark border px-2 py-1 rounded-pill" style="font-size: 0.72rem;">Belum Ada</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="fw-semibold text-dark">{{ inv.client_name }}</div>
+                    </td>
+                    <td class="text-end fw-bold text-dark">Rp {{ inv.total_amount|floatformat:0|intcomma }}</td>
+                    <td class="text-end fw-bold text-dark">Rp {{ inv.amount_paid|floatformat:0|intcomma }}</td>
+                    <td class="text-end fw-bold text-dark">
+                        Rp {{ inv.sisa_tagihan|floatformat:0|intcomma }}
+                    </td>
+                    <td class="text-dark fw-medium small">
+                        {% if inv.latest_reconciliation and inv.latest_reconciliation.bank %}
+                            {{ inv.latest_reconciliation.bank.name }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <span class="badge bg-success text-white px-2 py-1 rounded-pill" style="font-size: 0.72rem;">LUNAS</span>
+                    </td>
+                    <td class="pe-4 text-center">
+                        <div class="dropdown">
+                            <button class="btn btn-action-table dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Aksi">
+                                <i class="ph-bold ph-list"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border-radius: 10px; border: 1px solid #eaedf1; font-size: 0.85rem;">
+                                <li>
+                                    <a class="dropdown-item py-2" href="{% url 'finance:invoice_detail' inv.id %}">
+                                        <i class="ph-bold ph-eye me-2 text-primary"></i>Lihat Detail
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item py-2" href="{% url 'finance:invoice_pdf' inv.id %}" target="_blank">
+                                        <i class="ph-bold ph-printer me-2 text-dark"></i>Cetak Invoice (PDF)
+                                    </a>
+                                </li>
+                                {% if inv.latest_reconciliation and inv.latest_reconciliation.proof_file %}
+                                <li>
+                                    <a class="dropdown-item py-2" href="javascript:void(0)" onclick="previewProofImage('{{ inv.latest_reconciliation.proof_file.url }}', '{{ inv.invoice_number }}', '{{ inv.client_name }}')">
+                                        <i class="ph-bold ph-file-image me-2 text-success"></i>Lihat Bukti Transfer
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center py-5 text-muted">
+                        <i class="ph-duotone ph-check-circle text-muted mb-2" style="font-size: 3rem; opacity: 0.4;"></i>
+                        <p class="fw-semibold text-dark mb-1">Belum ada riwayat invoice selesai</p>
+                        <p class="text-muted small mb-0">Invoice yang lunas akan otomatis muncul di tab ini.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="d-flex justify-content-between align-items-center mt-3 px-2 mb-4">
+        <span class="text-muted small">Menampilkan halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</span>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?tab={{ tab }}&page={{ page_obj.previous_page_number }}{% if search %}&q={{ search }}{% endif %}">&laquo;</a></li>
+                {% endif %}
+                {% for i in page_obj.paginator.page_range %}
+                    {% if page_obj.number == i %}
+                    <li class="page-item active"><span class="page-link bg-primary border-primary">{{ i }}</span></li>
+                    {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                    <li class="page-item"><a class="page-link" href="?tab={{ tab }}&page={{ i }}{% if search %}&q={{ search }}{% endif %}">{{ i }}</a></li>
+                    {% endif %}
+                {% endfor %}
+                {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?tab={{ tab }}&page={{ page_obj.next_page_number }}{% if search %}&q={{ search }}{% endif %}">&raquo;</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal Approval Invoice (Matches Universal Pop-up Structure - Horizontal & Red Theme) -->
+<div class="modal fade" id="approveModal" tabindex="-1" role="alertdialog" aria-modal="true" aria-labelledby="modalApproveTitle" aria-describedby="modalApproveDesc" style="backdrop-filter: blur(4px); background-color: rgba(15, 23, 42, 0.45);">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 660px;">
+        <div class="modal-content border-0 shadow-lg p-4" style="border-radius: 24px; background-color: #ffffff;">
+            <div class="modal-body p-0 text-center">
+                <!-- Signal Emphasis Icon (Red Brand Theme) -->
+                <div class="signal-emphasis-wrapper" style="color: #ef4444; width: 76px; height: 76px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; position: relative;">
+                    <div class="signal-emphasis-ring ring-1"></div>
+                    <div class="signal-emphasis-ring ring-2"></div>
+                    <div class="signal-emphasis-ring ring-3"></div>
+                    <div class="signal-icon-core" style="width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; z-index: 2; position: relative; background-color: #fee2e2; color: #ef4444; border: 1.5px solid rgba(239, 68, 68, 0.3);">
+                        <i class="ph-bold ph-seal-check"></i>
+                    </div>
+                </div>
+
+                <!-- Headline & Subtitle -->
+                <h5 class="fw-bold text-dark mb-1 px-2" id="modalApproveTitle" style="font-size: 1.18rem; line-height: 1.35; letter-spacing: -0.2px;">
+                    Approval & Terbitkan Invoice Resmi
+                </h5>
+                <p class="text-muted mb-3 px-2" id="modalApproveDesc" style="font-size: 0.85rem; line-height: 1.45;">
+                    Validasi dan terbitkan invoice resmi tagihan pelanggan.
+                </p>
+
+                <form id="formApproveInvoice" method="post" action="">
+                    {% csrf_token %}
+                    
+                    <!-- Context Summary Card (Horizontal Grid) -->
+                    <div class="p-3 mb-3 text-start" style="background-color: #f8fafc; border: 1px solid #eaedf1; border-radius: 14px;">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-sm-4">
+                                <span class="text-muted small d-block" style="font-size: 0.76rem;">No. Invoice:</span>
+                                <span class="fw-bold text-dark" id="modalApproveInvNo">-</span>
+                            </div>
+                            <div class="col-sm-4">
+                                <span class="text-muted small d-block" style="font-size: 0.76rem;">Customer:</span>
+                                <span class="fw-bold text-dark" id="modalApproveCustomer">-</span>
+                            </div>
+                            <div class="col-sm-4 text-sm-end">
+                                <span class="text-muted small d-block" style="font-size: 0.76rem;">Total Tagihan:</span>
+                                <span class="fw-bold text-dark fs-6" id="modalApproveAmount">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Input Fields (Horizontal Two-Column Layout) -->
+                    <div class="row g-3 mb-3 text-start">
+                        <div class="col-sm-7">
+                            <label class="form-label fw-bold text-dark small mb-1" style="font-size: 0.82rem;">Entitas Perusahaan Penerbit <span class="text-danger">*</span></label>
+                            <select name="company_code" class="form-select shadow-none" required style="border-radius: 12px; font-size: 0.88rem; border-color: #cbd5e1;">
+                                <option value="PT AMANAH">PT Amanah Cargo Jaya Mandiri (Paketin Cargo)</option>
+                                <option value="PT SARANA">Sarana Express (PT Sarana)</option>
+                                <option value="PT SINERGI">Paketin Express (PT Sinergi)</option>
+                            </select>
+                            <div class="form-text text-muted small mt-1" style="font-size: 0.72rem;">Kop surat dan rekening pembayaran resmi disesuaikan.</div>
+                        </div>
+                        <div class="col-sm-5">
+                            <label class="form-label fw-bold text-dark small mb-1" style="font-size: 0.82rem;">Tanggal Jatuh Tempo (Due Date)</label>
+                            <input type="date" name="due_date" class="form-control shadow-none" style="border-radius: 12px; font-size: 0.88rem; border-color: #cbd5e1;">
+                        </div>
+                    </div>
+
+                    <div class="text-start mb-3">
+                        <label class="form-label fw-bold text-dark small mb-1" style="font-size: 0.82rem;">Catatan Approval (Opsional)</label>
+                        <textarea name="notes" class="form-control shadow-none" rows="2" placeholder="Catatan verifikasi atau approval..." style="border-radius: 12px; font-size: 0.88rem; border-color: #cbd5e1;"></textarea>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-2 mt-4 pt-1">
+                        <button type="button" class="btn btn-outline-secondary w-50 py-2 fw-semibold" data-bs-dismiss="modal" style="border-radius: 12px; border-color: #e2e8f0; color: #475569; font-size: 0.9rem;">
+                            Batal
+                        </button>
+                        <button type="submit" class="btn btn-danger w-50 py-2 fw-bold shadow-sm" style="border-radius: 12px; font-size: 0.9rem;">
+                            <i class="ph-bold ph-seal-check me-1"></i> Ya, Approve & Terbitkan
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Rekonsiliasi Pembayaran (Matches Universal Pop-up Structure - Horizontal & Red Theme) -->
+<div class="modal fade" id="reconcileModal" tabindex="-1" role="alertdialog" aria-modal="true" aria-labelledby="modalReconcileTitle" aria-describedby="modalReconcileDesc" style="backdrop-filter: blur(4px); background-color: rgba(15, 23, 42, 0.45);">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 660px;">
+        <div class="modal-content border-0 shadow-lg p-4" style="border-radius: 24px; background-color: #ffffff;">
+            <div class="modal-body p-0 text-center">
+                <!-- Signal Emphasis Icon (Red Brand Theme) -->
+                <div class="signal-emphasis-wrapper" style="color: #ef4444; width: 76px; height: 76px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; position: relative;">
+                    <div class="signal-emphasis-ring ring-1"></div>
+                    <div class="signal-emphasis-ring ring-2"></div>
+                    <div class="signal-emphasis-ring ring-3"></div>
+                    <div class="signal-icon-core" style="width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; z-index: 2; position: relative; background-color: #fee2e2; color: #ef4444; border: 1.5px solid rgba(239, 68, 68, 0.3);">
+                        <i class="ph-bold ph-receipt"></i>
+                    </div>
+                </div>
+
+                <!-- Headline & Subtitle -->
+                <h5 class="fw-bold text-dark mb-1 px-2" id="modalReconcileTitle" style="font-size: 1.18rem; line-height: 1.35; letter-spacing: -0.2px;">
+                    Rekonsiliasi Pembayaran Invoice
+                </h5>
+                <p class="text-muted mb-3 px-2" id="modalReconcileDesc" style="font-size: 0.85rem; line-height: 1.45;">
+                    Catat pelunasan tagihan invoice dan unggah bukti transfer pembayaran.
+                </p>
+
+                <form id="formReconcileInvoice" method="post" action="{% url 'finance:invoice_reconcile' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- Context Summary Card (Horizontal Grid) -->
+                    <div class="p-3 mb-3 text-start" id="reconcileSummaryCard" style="background-color: #f8fafc; border: 1px solid #eaedf1; border-radius: 14px;">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-sm-4">
+                                <span class="text-muted small d-block" style="font-size: 0.76rem;">No. Invoice:</span>
+                                <span class="fw-bold text-dark" id="modalReconcileInvNo">-</span>
+                            </div>
+                            <div class="col-sm-4">
+                                <span class="text-muted small d-block" style="font-size: 0.76rem;">Customer:</span>
+                                <span class="fw-bold text-dark" id="modalReconcileCustomer">-</span>
+                            </div>
+                            <div class="col-sm-4 text-sm-end">
+                                <span class="text-muted small d-block" style="font-size: 0.76rem;">Sisa Tagihan:</span>
+                                <span class="fw-bold text-danger fs-6" id="modalReconcileAmount">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-start mb-3">
+                        <label class="form-label fw-bold text-dark small mb-1" style="font-size: 0.82rem;">Pilih Invoice Yang Dibayar <span class="text-danger">*</span></label>
+                        <select name="invoice_id" id="reconcileSelectInvoice" class="form-select select2 shadow-none" required onchange="handleReconcileInvoiceChange()" style="border-radius: 12px; font-size: 0.88rem; border-color: #cbd5e1;">
+                            <option value="">-- Pilih Invoice --</option>
+                            {% for u in unpaid_invoices_dropdown %}
+                            <option value="{{ u.id }}" data-invno="{{ u.invoice_number }}" data-customer="{{ u.client_name }}" data-total="{{ u.total_amount }}" data-paid="{{ u.amount_paid }}">
+                                {{ u.invoice_number }} - {{ u.client_name }} (Tagihan: Rp {{ u.total_amount|floatformat:0|intcomma }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Input Fields (Horizontal Two-Column Layout) -->
+                    <div class="row g-3 mb-3 text-start">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-bold text-dark small mb-1" style="font-size: 0.82rem;">Nominal Transfer (Rp) <span class="text-danger">*</span></label>
+                            <input type="text" name="amount_paid" id="reconcileAmountPaid" class="form-control shadow-none" placeholder="0" required style="border-radius: 12px; font-size: 0.88rem; border-color: #cbd5e1;">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-bold text-dark small mb-1" style="font-size: 0.82rem;">Tanggal Transfer <span class="text-danger">*</span></label>
+                            <input type="date" name="transfer_date" id="reconcileTransferDate" class="form-control shadow-none" required style="border-radius: 12px; font-size: 0.88rem; border-color: #cbd5e1;">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3 text-start">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-bold text-dark small mb-1" style="font-size: 0.82rem;">Bank Rekening Penerima</label>
+                            <select name="bank_id" class="form-select shadow-none" style="border-radius: 12px; font-size: 0.88rem; border-color: #cbd5e1;">
+                                <option value="">-- Pilih Bank --</option>
+                                {% for b in banks %}
+                                <option value="{{ b.id }}">{{ b.name }} - {{ b.account_number }} (a/n {{ b.account_name }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-bold text-dark small mb-1" style="font-size: 0.82rem;">No. Referensi / Berita Transfer</label>
+                            <input type="text" name="reference_number" class="form-control shadow-none" placeholder="Contoh: REF12345678" style="border-radius: 12px; font-size: 0.88rem; border-color: #cbd5e1;">
+                        </div>
+                    </div>
+
+                    <div class="text-start mb-3">
+                        <label class="form-label fw-bold text-dark small mb-1" style="font-size: 0.82rem;">Upload Foto / Bukti Transfer (JPG/PNG/PDF)</label>
+                        <input type="file" name="proof_file" class="form-control shadow-none" accept="image/*,.pdf" style="border-radius: 12px; font-size: 0.88rem; border-color: #cbd5e1;">
+                    </div>
+
+                    <div class="text-start mb-3">
+                        <label class="form-label fw-bold text-dark small mb-1" style="font-size: 0.82rem;">Catatan Rekonsiliasi (Opsional)</label>
+                        <textarea name="notes" class="form-control shadow-none" rows="2" placeholder="Catatan rekonsiliasi atau pelunasan..." style="border-radius: 12px; font-size: 0.88rem; border-color: #cbd5e1;"></textarea>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-2 mt-4 pt-1">
+                        <button type="button" class="btn btn-outline-secondary w-50 py-2 fw-semibold" data-bs-dismiss="modal" style="border-radius: 12px; border-color: #e2e8f0; color: #475569; font-size: 0.9rem;">
+                            Batal
+                        </button>
+                        <button type="submit" class="btn btn-danger w-50 py-2 fw-bold shadow-sm" style="border-radius: 12px; font-size: 0.9rem;">
+                            <i class="ph-bold ph-check-circle me-1"></i> Simpan Pembayaran
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Preview Bukti Transfer (Like in POD) -->
+<div class="modal fade" id="proofPreviewModal" tabindex="-1" aria-modal="true" style="backdrop-filter: blur(4px); background-color: rgba(15, 23, 42, 0.5);">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 600px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden; background: #ffffff;">
+            <div class="modal-header border-bottom py-3 px-4 d-flex justify-content-between align-items-center bg-white">
+                <div>
+                    <h6 class="modal-title fw-bold text-dark mb-0"><i class="ph-bold ph-image me-1 text-primary"></i> Bukti Pembayaran / Transfer</h6>
+                    <span class="text-dark small" id="proofModalSubtitle">-</span>
+                </div>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3 text-center bg-light">
+                <div id="proofModalImageWrapper" class="d-flex align-items-center justify-content-center" style="min-height: 280px; max-height: 480px; overflow: auto;">
+                    <img src="" id="proofModalImg" class="img-fluid rounded-3 shadow-sm border" style="max-height: 460px; object-fit: contain;">
+                </div>
+            </div>
+            <div class="modal-footer border-top py-2 px-4 d-flex justify-content-between align-items-center bg-white">
+                <a href="#" id="proofModalDownloadBtn" target="_blank" class="btn btn-sm btn-outline-secondary px-3">
+                    <i class="ph-bold ph-arrow-square-out me-1"></i> Buka File Asli
+                </a>
+                <button type="button" class="btn btn-sm btn-secondary px-4 fw-semibold" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function previewProofImage(imgUrl, invNo, customer) {
+    document.getElementById('proofModalImg').src = imgUrl;
+    document.getElementById('proofModalSubtitle').textContent = (invNo ? invNo : '') + (customer ? ' · ' + customer : '');
+    document.getElementById('proofModalDownloadBtn').href = imgUrl;
+    var modal = new bootstrap.Modal(document.getElementById('proofPreviewModal'));
+    modal.show();
+}
+
+function openApproveModal(invId, invNo, customer, amount) {
+    document.getElementById('modalApproveInvNo').textContent = invNo;
+    document.getElementById('modalApproveCustomer').textContent = customer;
+    document.getElementById('modalApproveAmount').textContent = amount;
+    document.getElementById('formApproveInvoice').action = '/finance/invoice-process/approve/' + invId + '/';
+    var modal = new bootstrap.Modal(document.getElementById('approveModal'));
+    modal.show();
+}
+
+function openReconcilePreFilled(invId, invNo, customer, total, paid) {
+    var select = document.getElementById('reconcileSelectInvoice');
+    var sisa = Math.max(0, parseFloat(total) - parseFloat(paid || 0));
+    if (select) {
+        select.value = invId;
+        document.getElementById('reconcileAmountPaid').value = sisa;
+    }
+    document.getElementById('modalReconcileInvNo').textContent = invNo || '-';
+    document.getElementById('modalReconcileCustomer').textContent = customer || '-';
+    document.getElementById('modalReconcileAmount').textContent = 'Rp ' + sisa.toLocaleString('id-ID');
+
+    // Set today's date
+    var today = new Date().toISOString().split('T')[0];
+    document.getElementById('reconcileTransferDate').value = today;
+
+    var modal = new bootstrap.Modal(document.getElementById('reconcileModal'));
+    modal.show();
+}
+
+function handleReconcileInvoiceChange() {
+    var select = document.getElementById('reconcileSelectInvoice');
+    var selectedOpt = select.options[select.selectedIndex];
+    if (selectedOpt && selectedOpt.value) {
+        var invNo = selectedOpt.getAttribute('data-invno') || selectedOpt.textContent.split('-')[0].trim();
+        var customer = selectedOpt.getAttribute('data-customer') || '-';
+        var total = parseFloat(selectedOpt.getAttribute('data-total') || 0);
+        var paid = parseFloat(selectedOpt.getAttribute('data-paid') || 0);
+        var sisa = Math.max(0, total - paid);
+
+        document.getElementById('modalReconcileInvNo').textContent = invNo;
+        document.getElementById('modalReconcileCustomer').textContent = customer;
+        document.getElementById('modalReconcileAmount').textContent = 'Rp ' + sisa.toLocaleString('id-ID');
+        document.getElementById('reconcileAmountPaid').value = sisa;
+    } else {
+        document.getElementById('modalReconcileInvNo').textContent = '-';
+        document.getElementById('modalReconcileCustomer').textContent = '-';
+        document.getElementById('modalReconcileAmount').textContent = '-';
+        document.getElementById('reconcileAmountPaid').value = '';
+    }
+}
+</script>
+{% endblock %}

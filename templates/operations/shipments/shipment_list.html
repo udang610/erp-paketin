@@ -1,0 +1,445 @@
+{% extends 'base.html' %}
+
+{% block title %}Data Shipment - ERP Paketin{% endblock %}
+{% block page_title %}Shipments{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid px-0">
+    <!-- Header Section (transparent background over gradient) -->
+    <!-- Actions Bar (Search + Filter Pop-up + Actions) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <form class="d-flex align-items-center gap-2" method="get">
+            <!-- Search Input -->
+            <div class="search-box-clean d-flex align-items-center bg-white px-3" style="width: 270px; max-width: 320px; height: 38px;">
+                <i class="ph-bold ph-magnifying-glass me-2 text-muted" style="font-size: 1rem; color: #64748b;"></i>
+                <input type="text" name="q" class="border-0 shadow-none p-0 bg-transparent flex-grow-1" placeholder="Cari resi, nama, kota..." value="{{ search_q|default:'' }}" style="outline: none !important; font-size: 0.88rem; color: #1e293b; height: 100%;">
+            </div>
+
+            <!-- Filter Button with Pop-up Dropdown (Photo 2 Style) -->
+            <div class="dropdown">
+                <button class="btn shadow-sm position-relative rounded-3 d-inline-flex align-items-center gap-2 px-3 border" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Filter Shipment" style="height: 38px; font-size: 0.88rem; font-weight: 600; color: #1e293b; background-color: #ffffff !important; border-color: #cbd5e1 !important;">
+                    <i class="ph-bold ph-faders fs-5" style="color: #1e293b;"></i>
+                    <span>Filter</span>
+                    {% if active_filters %}
+                    <span class="active-filter-dot" title="Filter Aktif"></span>
+                    {% endif %}
+                </button>
+                <div class="dropdown-menu filter-dropdown-menu dropdown-menu-start p-3 shadow-lg border-0" style="width: 320px; z-index: 1050; border-radius: 12px; border: 1px solid #e2e8f0 !important;">
+                    <h6 class="dropdown-header px-0 text-dark mb-2"><i class="ph-bold ph-faders me-2 text-dark"></i>Filter Lanjutan</h6>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Pengirim / Penerima</label>
+                        <input type="text" name="customer" class="form-control form-control-sm" placeholder="Nama..." value="{{ customer|default:'' }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Status Pengiriman</label>
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="">Semua Status</option>
+                            {% for value, label in status_choices %}
+                            <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Tipe Pembayaran</label>
+                        <select name="payment_type" class="form-select form-select-sm">
+                            <option value="">Semua Tipe Bayar</option>
+                            {% for val, lbl in payment_choices %}
+                            <option value="{{ val }}" {% if payment_type == val %}selected{% endif %}>{{ lbl }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Layanan</label>
+                        <select name="service" class="form-select form-select-sm">
+                            <option value="">Semua Layanan</option>
+                            {% for value, label in service_choices %}
+                            <option value="{{ value }}" {% if selected_service == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Rute</label>
+                        <select name="route" class="form-select form-select-sm">
+                            <option value="">Semua Rute</option>
+                            {% for route in routes %}
+                            <option value="{{ route }}" {% if selected_route == route %}selected{% endif %}>{{ route }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-muted small mb-1">Tanggal Mulai</label>
+                            <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date|default:'' }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small mb-1">Tanggal Akhir</label>
+                            <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date|default:'' }}">
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 pt-2 border-top">
+                        <button type="submit" class="btn btn-danger btn-sm w-100 fw-bold">Terapkan</button>
+                        <a href="{% url 'operations:shipment-list' %}" class="btn btn-outline-secondary btn-sm w-100">Reset</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div class="d-flex gap-2 align-items-center">
+            <button type="button" class="btn btn-secondary px-3 fw-bold shadow-sm" id="btnBatchAction" style="display: none; height: 38px;">
+                <i class="ph-bold ph-truck me-2"></i> <span id="batchActionText">Buat Manifest Terpilih (0)</span>
+            </button>
+            <button type="button" class="btn btn-secondary px-3 fw-bold shadow-sm" id="btnBatchPrint" style="display: none; height: 38px;">
+                <i class="ph-bold ph-printer me-2"></i> <span id="batchPrintText">Cetak Terpilih (0)</span>
+            </button>
+            <button type="button" class="btn btn-outline-secondary bg-white px-3 shadow-sm d-inline-flex align-items-center" data-bs-toggle="modal" data-bs-target="#importResiModal" style="height: 38px;">
+                <i class="ph-bold ph-upload-simple me-2"></i> Import Resi
+            </button>
+            <a href="{% url 'operations:print_bulky' %}" class="btn btn-outline-secondary bg-white px-3 shadow-sm d-inline-flex align-items-center" style="height: 38px;">
+                <i class="ph-bold ph-printer me-2"></i> Cetak Massal
+            </a>
+            <div class="dropdown d-inline-block">
+                <button class="btn btn-danger px-4 dropdown-toggle fw-bold shadow-sm d-inline-flex align-items-center" type="button" id="buatBaruDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="height: 38px;">
+                    <i class="ph-bold ph-plus me-2"></i> Buat Baru
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="buatBaruDropdown" style="min-width: 200px; z-index: 9999;">
+                    {% if request.GET.status == 'INCOMING_DESTINATION' %}
+                    <li><a class="dropdown-item py-2 fw-medium" href="{% url 'operations:incoming-by-resi' %}"><i class="ph-bold ph-barcode me-2 text-dark"></i>Incoming By Resi</a></li>
+                    <li><a class="dropdown-item py-2 fw-medium" href="{% url 'operations:incoming-by-manifest' %}"><i class="ph-bold ph-file-text me-2 text-secondary"></i>Incoming By Manifest</a></li>
+                    {% else %}
+                    <li><a class="dropdown-item py-2 fw-medium" href="{% url 'operations:pos-credit' %}"><i class="ph-duotone ph-credit-card me-2 text-dark"></i>Buat Resi (POS Credit)</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table Data Container ONLY -->
+    <div class="table-responsive rounded-4 shadow-sm bg-white border" style="font-size: 0.85rem;">
+
+
+
+                    <style>
+                        .table-premium {
+                            border-collapse: separate;
+                            border-spacing: 0;
+                            width: 100%;
+                            font-size: 0.875rem;
+                        }
+                        .table-premium thead th {
+                            background-color: #f8f9fa;
+                            color: #6c757d;
+                            font-weight: 600;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                            padding: 12px 16px;
+                            border-bottom: 2px solid #e9ecef;
+                            border-top: 1px solid #e9ecef;
+                        }
+                        .table-premium thead th:first-child {
+                            border-top-left-radius: 8px;
+                            border-left: 1px solid #e9ecef;
+                        }
+                        .table-premium thead th:last-child {
+                            border-top-right-radius: 8px;
+                            border-right: 1px solid #e9ecef;
+                        }
+                        .table-premium tbody td {
+                            padding: 16px;
+                            vertical-align: middle;
+                            border-bottom: 1px solid #e9ecef;
+                            color: #212529;
+                            background-color: #fff;
+                            transition: background-color 0.2s ease;
+                        }
+                        .table-premium tbody tr:hover td {
+                            background-color: #f8f9fa;
+                        }
+                        .table-premium tbody tr:last-child td {
+                            border-bottom: 1px solid #e9ecef;
+                        }
+                        .table-premium tbody tr:last-child td:first-child {
+                            border-bottom-left-radius: 8px;
+                            border-left: 1px solid #e9ecef;
+                        }
+                        .table-premium tbody tr:last-child td:last-child {
+                            border-bottom-right-radius: 8px;
+                            border-right: 1px solid #e9ecef;
+                        }
+                        .table-premium tbody td:first-child {
+                            border-left: 1px solid #e9ecef;
+                        }
+                        .table-premium tbody td:last-child {
+                            border-right: 1px solid #e9ecef;
+                        }
+                        .shipment-filter-summary { padding: 10px 12px; border: 1px solid #edf1f7; border-radius: 10px; background: #fbfcfe; }
+                        .filter-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 999px; background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; font-size: .72rem; font-weight: 600; text-decoration: none; }
+                        .filter-chip:hover { color: #9f1239; background: #ffe4e6; }
+                    </style>
+
+                    <div class="table-responsive rounded-3 shadow-sm" style="font-size: 0.85rem;">
+                        <table class="table table-premium table-sm table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="ps-3" style="width: 40px;">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input" type="checkbox" id="selectAllShipment">
+                                        </div>
+                                    </th>
+                                    <th class="text-nowrap text-secondary fw-semibold">No. AWB</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">Total Berat</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">Total Koli</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">Asal</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">Tujuan</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">User Input</th>
+                                    <th class="text-nowrap text-secondary fw-semibold">Dibuat Pada</th>
+                                    <th class="text-nowrap text-secondary fw-semibold text-center">Status</th>
+                                    <th class="text-center text-nowrap text-secondary fw-semibold">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in shipments %}
+                                <tr>
+                                    <td class="ps-3">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input shipment-checkbox" type="checkbox" value="{{ item.id }}" data-resi="{{ item.resi_number }}">
+                                        </div>
+                                    </td>
+                                    <td class="text-nowrap">
+                                        <span class="fw-bold text-dark">{{ item.resi_number }}</span>
+                                        {% if item.reference_no %}<br><small class="text-muted" style="font-size: 0.72rem;">Ref: {{ item.reference_no }}</small>{% endif %}
+                                    </td>
+                                    <td><span class="fw-semibold text-dark">{{ item.chargeable_weight|default:item.weight }} Kg</span></td>
+                                    <td><span class="fw-semibold text-dark">{{ item.total_colly }}</span> Koli</td>
+                                    <td><span class="text-dark">{{ item.get_city_origin|title }} - {{ item.get_tlc_origin }}</span></td>
+                                    <td><span class="text-dark">{{ item.get_city_dest|title }} - {{ item.get_tlc_dest }}</span></td>
+                                    <td>
+                                        {% if item.created_by %}
+                                        <span class="fw-medium text-dark">{{ item.created_by.username }}</span>
+                                        {% elif item.client %}
+                                        <span class="fw-medium text-dark">{{ item.client.name }}</span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-muted small">{{ item.created_at|date:"d M Y, H:i" }}</td>
+                                    <td class="text-center">
+                                        {% if item.status == 'PENDING' %}
+                                        <span class="badge bg-warning text-dark rounded-pill px-3 py-1 fw-bold">PENDING</span>
+                                        {% elif item.status == 'PICKUP' %}
+                                        <span class="badge text-white rounded-pill px-3 py-1 fw-bold" style="background-color: #06b6d4;">PICKUP</span>
+                                        {% elif item.status == 'INBOUND_ORIGIN' %}
+                                        <span class="badge text-white rounded-pill px-3 py-1 fw-bold" style="background-color: #3b82f6;">INBOUND</span>
+                                        {% elif item.status == 'OUTGOING' %}
+                                        <span class="badge text-white rounded-pill px-3 py-1 fw-bold" style="background-color: #2563eb;">OUTGOING</span>
+                                        {% elif item.status == 'TRANSFER' %}
+                                        <span class="badge bg-secondary text-white rounded-pill px-3 py-1 fw-bold">TRANSFER</span>
+                                        {% elif item.status == 'TRANSIT' %}
+                                        <span class="badge text-white rounded-pill px-3 py-1 fw-bold" style="background-color: #8b5cf6;">TRANSIT</span>
+                                        {% elif item.status == 'INCOMING_DESTINATION' %}
+                                        <span class="badge text-white rounded-pill px-3 py-1 fw-bold" style="background-color: #0d9488;">INCOMING</span>
+                                        {% elif item.status == 'DELIVERY' %}
+                                        <span class="badge text-white rounded-pill px-3 py-1 fw-bold" style="background-color: #f97316;">DELIVERY</span>
+                                        {% elif item.status == 'POD' or item.status == 'POD_BALIK' %}
+                                        <span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold">TERKIRIM</span>
+                                        {% elif item.status == 'PARTIAL_DELIVERED' %}
+                                        <span class="badge bg-warning text-dark rounded-pill px-3 py-1 fw-bold">PARTIAL</span>
+                                        {% elif item.status == 'RETURNED' %}
+                                        <span class="badge bg-danger text-white rounded-pill px-3 py-1 fw-bold">RETUR</span>
+                                        {% elif item.status == 'VOID' %}
+                                        <span class="badge bg-dark text-white rounded-pill px-3 py-1 fw-bold">VOID</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary rounded-pill px-3 py-1 fw-bold">{{ item.get_status_display|upper }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="dropdown">
+                                            <button class="btn btn-action-table dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Aksi">
+                                                <i class="ph-bold ph-list"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                                <li><a class="dropdown-item py-2" href="{% url 'operations:shipment-detail' item.pk %}"><i class="ph-duotone ph-eye me-2 text-info"></i>Lihat Detail</a></li>
+                                                {% if user.is_superuser or user.is_staff or user.user_type == 'ADMIN' %}
+                                                <li><a class="dropdown-item py-2" href="{% url 'operations:shipment-update' item.pk %}"><i class="ph-duotone ph-pencil-simple me-2 text-warning"></i>Ubah</a></li>
+                                                {% if item.status == 'VOID' %}
+                                                <li><a class="dropdown-item py-2 text-danger" href="#" onclick="event.preventDefault(); showHideModal('{% url 'operations:shipment-hide' item.pk %}', '{{ item.resi_number|default:item.pk }}');"><i class="ph-duotone ph-trash me-2 text-danger"></i>Hapus</a></li>
+                                                {% else %}
+                                                <li><a class="dropdown-item py-2" href="#" onclick="event.preventDefault(); showVoidModal('{% url 'operations:shipment-void' item.pk %}', '{{ item.resi_number|default:item.pk }}');"><i class="ph-duotone ph-prohibit me-2 text-secondary"></i>Void</a></li>
+                                                {% endif %}
+                                                {% endif %}
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li><h6 class="dropdown-header">Cetak</h6></li>
+                                                <li><a class="dropdown-item py-2" href="{% url 'operations:print-awb-reguler' item.pk %}" target="_blank"><i class="ph-duotone ph-printer me-2 text-dark"></i>AWB Reguler</a></li>
+                                                <li><a class="dropdown-item py-2" href="{% url 'operations:shipment-print' item.pk %}?type=package_id" target="_blank"><i class="ph-duotone ph-identification-badge me-2 text-dark"></i>Package ID</a></li>
+                                                <li><a class="dropdown-item py-2" href="{% url 'operations:shipment-print' item.pk %}?type=reguler" target="_blank"><i class="ph-duotone ph-file-text me-2 text-dark"></i>AWB Reguler A4</a></li>
+                                                <li><a class="dropdown-item py-2" href="{% url 'operations:shipment-print' item.pk %}?type=sticker_100x100" target="_blank"><i class="ph-duotone ph-sticker me-2 text-dark"></i>AWB Sticker 100x100</a></li>
+                                                <li><a class="dropdown-item py-2" href="{% url 'operations:shipment-print' item.pk %}?type=sticker_100x150" target="_blank"><i class="ph-duotone ph-sticker me-2 text-dark"></i>AWB Sticker 100x150</a></li>
+                                                {% if item.status == 'POD' or item.status == 'POD_BALIK' or item.status == 'DELIVERED' or item.status == 'DELIVERY' or item.pod_image or item.pod_date %}
+                                                <li><a class="dropdown-item py-2 text-success fw-semibold" href="{% url 'operations:print-e-pod' item.pk %}" target="_blank"><i class="ph-duotone ph-certificate me-2 text-success"></i>Cetak E-POD</a></li>
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="10" class="text-center py-5 text-muted">
+                                        <i class="ph-duotone ph-package text-muted mb-3" style="font-size: 3rem; opacity: 0.5;"></i>
+                                        <p class="mb-0">Belum ada data resi pengiriman.</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if page_obj.has_other_pages %}
+                    <nav class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">‹</a></li>
+                            {% endif %}
+                            {% for num in page_obj.paginator.page_range %}
+                            <li class="page-item {% if page_obj.number == num %}active{% endif %}"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                            {% endfor %}
+                            {% if page_obj.has_next %}
+                            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">›</a></li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+    </div>
+</div>
+
+
+
+<div class="modal fade" id="importResiModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered border-0">
+    <div class="modal-content shadow-lg" style="border-radius: 16px; overflow: hidden; border: none;">
+      <form method="post" action="{% url 'operations:shipment-import' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="modal-header border-0 bg-success text-white py-3">
+          <div class="d-flex align-items-center">
+            <div class="bg-white rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 40px; height: 40px;">
+              <i class="ph-bold ph-upload-simple text-success" style="font-size: 1.25rem;"></i>
+            </div>
+            <h5 class="modal-title fw-bold mb-0">Import Resi</h5>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4 bg-light">
+          <p class="text-dark fw-medium mb-4" style="font-size: 0.95rem;">Upload file Excel (.xlsx) sesuai format template untuk mengimport data resi secara massal.</p>
+          
+          <div class="mb-4 bg-white p-4 text-center rounded-4 shadow-sm border border-success border-2" style="border-style: dashed !important; cursor: pointer;" onclick="document.getElementById('importFileInput').click();">
+            <i class="ph-duotone ph-cloud-arrow-up text-success mb-2" style="font-size: 3.5rem;"></i>
+            <h6 class="fw-bold text-dark mb-1">Pilih File Excel</h6>
+            <p class="small text-muted mb-2" id="importFileName">Belum ada file yang dipilih</p>
+            <input type="file" name="file" id="importFileInput" class="d-none" accept=".xlsx,.xls" required onchange="var n = this.files[0] ? this.files[0].name : 'Belum ada file yang dipilih'; var p = document.getElementById('importFileName'); p.textContent = n; if(this.files[0]){p.classList.add('text-success', 'fw-bold'); p.classList.remove('text-muted');}else{p.classList.remove('text-success', 'fw-bold'); p.classList.add('text-muted');}">
+            <div class="form-text text-muted mt-0">Format yang diterima: .xlsx, .xls</div>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center p-3 bg-white rounded-3 shadow-sm border">
+            <div>
+              <h6 class="fw-bold text-dark mb-1 small">Belum punya template?</h6>
+              <p class="small text-muted mb-0">Unduh template format excel.</p>
+            </div>
+            <a href="{% url 'operations:shipment-import-template' %}" class="btn btn-sm btn-outline-success px-3 fw-bold">
+              <i class="ph-bold ph-download-simple me-1"></i> Unduh
+            </a>
+          </div>
+        </div>
+        <div class="modal-footer border-0 bg-white py-3">
+          <button type="button" class="btn btn-light fw-bold px-4 shadow-sm" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-success fw-bold px-4 shadow-sm"><i class="ph-bold ph-upload-simple me-2"></i>Import Sekarang</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ======= CHECKBOX LOGIC =======
+    const selectAllCheckbox = document.getElementById('selectAllShipment');
+    const itemCheckboxes = document.querySelectorAll('.shipment-checkbox');
+    const btnBatchAction = document.getElementById('btnBatchAction');
+    const batchActionText = document.getElementById('batchActionText');
+    const btnBatchPrint = document.getElementById('btnBatchPrint');
+    const batchPrintText = document.getElementById('batchPrintText');
+
+    function updateCheckboxState() {
+        const checkedCount = document.querySelectorAll('.shipment-checkbox:checked').length;
+        
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = (checkedCount === itemCheckboxes.length && itemCheckboxes.length > 0);
+            selectAllCheckbox.indeterminate = (checkedCount > 0 && checkedCount < itemCheckboxes.length);
+        }
+        
+        if (btnBatchAction) {
+            if (checkedCount > 0) {
+                btnBatchAction.style.display = 'inline-block';
+                if (batchActionText) {
+                    batchActionText.textContent = `Buat Manifest (${checkedCount})`;
+                }
+            } else {
+                btnBatchAction.style.display = 'none';
+            }
+        }
+
+        if (btnBatchPrint) {
+            if (checkedCount > 0) {
+                btnBatchPrint.style.display = 'inline-block';
+                if (batchPrintText) {
+                    batchPrintText.textContent = `Cetak Terpilih (${checkedCount})`;
+                }
+            } else {
+                btnBatchPrint.style.display = 'none';
+            }
+        }
+    }
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            itemCheckboxes.forEach(cb => cb.checked = selectAllCheckbox.checked);
+            updateCheckboxState();
+        });
+    }
+
+    itemCheckboxes.forEach(cb => cb.addEventListener('change', updateCheckboxState));
+
+    // ======= BATCH ACTION =======
+    if (btnBatchAction) {
+        btnBatchAction.addEventListener('click', function() {
+            const checkedBoxes = document.querySelectorAll('.shipment-checkbox:checked');
+            const resiIds = Array.from(checkedBoxes).map(cb => cb.value);
+            
+            // Redirect to manifest create with selected resi IDs
+            const params = resiIds.map(id => 'resi_ids=' + id).join('&');
+            window.location.href = '{% url "operations:manifest-create" %}?type=OUTGOING&' + params;
+        });
+    }
+
+    if (btnBatchPrint) {
+        btnBatchPrint.addEventListener('click', function() {
+            const checkedBoxes = document.querySelectorAll('.shipment-checkbox:checked');
+            const resiIds = Array.from(checkedBoxes).map(cb => cb.value);
+            
+            // Redirect to print bulky with selected resi IDs
+            const params = resiIds.map(id => 'resi_ids=' + id).join('&');
+            window.location.href = '{% url "operations:print_bulky" %}?' + params;
+        });
+    }
+});
+</script>
+{% endblock %}

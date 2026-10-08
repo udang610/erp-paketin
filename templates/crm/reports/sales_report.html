@@ -1,0 +1,418 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Report Performa Sales & CRM - ERP Paketin{% endblock %}
+{% block page_title %}Report{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-filter-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+    }
+    .report-filter-card .form-control,
+    .report-filter-card .form-select,
+    .report-filter-card .input-group-text {
+        background-color: #ffffff !important;
+        border-color: #cbd5e1;
+    }
+    .report-filter-card .form-control:focus,
+    .report-filter-card .form-select:focus {
+        border-color: #ed1c2e;
+        box-shadow: 0 0 0 3px rgba(237, 28, 46, 0.15);
+    }
+    .table-report th {
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 700;
+        color: #1e293b;
+        background-color: #f8fafc;
+        white-space: nowrap;
+        border-bottom: 2px solid #e2e8f0;
+        padding: 10px 12px;
+    }
+    .table-report td {
+        font-size: 0.84rem;
+        vertical-align: middle;
+        padding: 10px 12px;
+        color: #1e293b;
+    }
+    .table-report tfoot td {
+        background-color: #ffffff !important;
+        font-weight: 700;
+        font-size: 0.85rem;
+        border-top: 2px solid #cbd5e1;
+        color: #1e293b;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-2">
+    <!-- Header Action Bar -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+        <div>
+            <h4 class="fw-bold mb-1 text-dark">Report Performa Sales &amp; CRM</h4>
+            <p class="text-muted small mb-0">Filter dan pratinjau rekap data peluang sales, pipeline value, konversi closing, dan performa tim.</p>
+        </div>
+    </div>
+
+    <!-- 1. Filter Card (Simple & Practical) -->
+    <div class="card report-filter-card shadow-sm mb-4">
+        <div class="card-body p-4">
+            <form method="get" id="salesReportFilterForm">
+                <div class="row g-3">
+                    <!-- Date Range -->
+                    <div class="col-md-3 col-sm-6">
+                        <label class="form-label text-muted small fw-semibold mb-1">Dari Tanggal</label>
+                        <input type="text" name="start_date" class="form-control form-control-sm flatpickr-date bg-white" placeholder="dd/mm/yyyy" value="{{ start_date }}">
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <label class="form-label text-muted small fw-semibold mb-1">Sampai Tanggal</label>
+                        <input type="text" name="end_date" class="form-control form-control-sm flatpickr-date bg-white" placeholder="dd/mm/yyyy" value="{{ end_date }}">
+                    </div>
+
+                    <!-- PIC Sales -->
+                    <div class="col-md-3 col-sm-6">
+                        <label class="form-label text-muted small fw-semibold mb-1">PIC Sales</label>
+                        <select name="owner" class="form-select form-select-sm bg-white">
+                            <option value="">Semua PIC Sales</option>
+                            {% for u in sales_users %}
+                            <option value="{{ u.pk }}" {% if owner_id == u.pk|stringformat:"i" %}selected{% endif %}>
+                                {{ u.get_full_name|default:u.username }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Status / Tahapan -->
+                    <div class="col-md-3 col-sm-6">
+                        <label class="form-label text-muted small fw-semibold mb-1">Tahapan (Status)</label>
+                        <select name="status" class="form-select form-select-sm bg-white">
+                            <option value="">Semua Tahapan</option>
+                            {% for code, label in status_choices %}
+                            <option value="{{ code }}" {% if status_filter == code %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Sumber Lead -->
+                    <div class="col-md-3 col-sm-6">
+                        <label class="form-label text-muted small fw-semibold mb-1">Sumber Lead</label>
+                        <select name="source" class="form-select form-select-sm bg-white">
+                            <option value="">Semua Sumber</option>
+                            {% for code, label in source_choices %}
+                            <option value="{{ code }}" {% if source_filter == code %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Tipe Industri -->
+                    <div class="col-md-3 col-sm-6">
+                        <label class="form-label text-muted small fw-semibold mb-1">Tipe Industri</label>
+                        <select name="industry" class="form-select form-select-sm bg-white">
+                            <option value="">Semua Industri</option>
+                            {% for code, label in industry_choices %}
+                            <option value="{{ code }}" {% if industry_filter == code %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Search Input & Submit -->
+                    <div class="col-md-6 col-sm-12">
+                        <label class="form-label text-muted small fw-semibold mb-1">Cari Klien / PIC / Kontak</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white text-dark"><i class="ph-bold ph-magnifying-glass"></i></span>
+                            <input type="text" name="q" class="form-control bg-white" placeholder="Ketik nama PT, nama PIC, atau email..." value="{{ search_query }}">
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="col-12 d-flex align-items-end justify-content-md-end gap-2 pt-1">
+                        <a href="{% url 'crm:sales-report' %}" class="btn btn-outline-secondary btn-sm px-3" title="Reset Filter">
+                            <i class="ph-bold ph-arrow-clockwise me-1"></i> Reset
+                        </a>
+                        <button type="submit" class="btn btn-danger btn-sm px-4 fw-bold shadow-sm" style="background-color: #ed1c2e; border-color: #ed1c2e;">
+                            <i class="ph-bold ph-funnel me-1"></i> Preview
+                        </button>
+                        <a href="{% url 'crm:sales-report-export-excel' %}?start_date={{ start_date }}&end_date={{ end_date }}&owner={{ owner_id }}&status={{ status_filter }}&source={{ source_filter }}&industry={{ industry_filter }}&q={{ search_query }}" class="btn btn-success btn-sm px-4 fw-bold shadow-sm">
+                            <i class="ph-bold ph-file-xls me-1"></i> Export Excel
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. List Data Card (Tabel Data Sales) -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+            <h6 class="fw-bold mb-0 text-dark">
+                <i class="ph-bold ph-list-dashes text-dark me-2"></i>Daftar Data Laporan Peluang (Leads)
+            </h6>
+            <span class="text-muted small fw-semibold">
+                Total: <strong class="text-dark">{{ total_leads_count }}</strong> Data Lead
+            </span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-report align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-3 text-center" style="width: 45px;">No</th>
+                            <th>Nama Peluang (Lead)</th>
+                            <th>Perusahaan / Klien</th>
+                            <th>PIC Sales</th>
+                            <th>Tanggal Buat</th>
+                            <th>Sumber</th>
+                            <th>Industri</th>
+                            <th class="text-end">Nilai Estimasi (Rp)</th>
+                            <th>Status / Tahapan</th>
+                            <th class="pe-3 text-center" style="width: 80px;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lead in page_obj %}
+                        <tr id="row-lead-{{ lead.pk }}">
+                            <td class="ps-3 text-center text-muted small">
+                                {{ forloop.counter0|add:page_obj.start_index }}
+                            </td>
+                            <td>
+                                <a href="javascript:void(0)" onclick="openLeadPreview({{ lead.pk }})" class="fw-bold text-dark text-decoration-underline">
+                                    {{ lead.title }}
+                                </a>
+                                {% if lead.quotations_count > 0 %}
+                                <span class="text-muted small ms-1">
+                                    ({{ lead.quotations_count }} Penawaran)
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark">{{ lead.client.name|default:"-" }}</div>
+                                <div class="text-muted" style="font-size: 0.72rem;">{{ lead.contact_person|default:lead.client.contact_person|default:"-" }}</div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark">{% if lead.owner %}{{ lead.owner.get_full_name|default:lead.owner.username }}{% else %}-{% endif %}</div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark">{{ lead.created_at|date:"d/m/Y" }}</div>
+                                <div class="text-muted" style="font-size: 0.72rem;">{{ lead.created_at|date:"H:i" }}</div>
+                            </td>
+                            <td>
+                                <span class="text-dark">{{ lead.get_source_display }}</span>
+                            </td>
+                            <td>
+                                <span class="text-dark">{{ lead.client.get_industry_display|default:"-" }}</span>
+                            </td>
+                            <td class="text-end fw-bold text-dark">
+                                {{ lead.estimated_value_formatted }}
+                            </td>
+                            <td class="text-center">
+                                {% if lead.status == 'WON' %}
+                                <span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold">CLOSED WON</span>
+                                {% elif lead.status == 'LOST' %}
+                                <span class="badge bg-danger text-white rounded-pill px-3 py-1 fw-bold">CLOSED LOST</span>
+                                {% elif lead.status == 'NEGOTIATION' %}
+                                <span class="badge text-white rounded-pill px-3 py-1 fw-bold" style="background-color: #f97316;">NEGOSIASI</span>
+                                {% elif lead.status == 'PROPOSAL' %}
+                                <span class="badge text-white rounded-pill px-3 py-1 fw-bold" style="background-color: #3b82f6;">PROPOSAL</span>
+                                {% elif lead.status == 'CONTACTED' or lead.status == 'MEETING' %}
+                                <span class="badge text-white rounded-pill px-3 py-1 fw-bold" style="background-color: #8b5cf6;">{{ lead.get_status_display|upper }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary text-white rounded-pill px-3 py-1 fw-bold">{{ lead.get_status_display|upper }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-3 text-center">
+                                <button type="button" class="btn btn-outline-dark btn-sm px-2 py-1" onclick="openLeadPreview({{ lead.pk }})" title="Quick Preview">
+                                    <i class="ph-bold ph-eye"></i>
+                                </button>
+
+                                <!-- Hidden JSON payload for modal preview -->
+                                <script type="application/json" id="data-lead-{{ lead.pk }}">
+                                {
+                                    "pk": {{ lead.pk }},
+                                    "title": "{{ lead.title|escapejs }}",
+                                    "client": "{{ lead.client.name|default:'-'|escapejs }}",
+                                    "client_industry": "{{ lead.client.get_industry_display|default:'-'|escapejs }}",
+                                    "contact": "{{ lead.contact_person|default:lead.client.contact_person|default:'-'|escapejs }}",
+                                    "phone": "{{ lead.client.phone|default:'-'|escapejs }}",
+                                    "email": "{{ lead.client.email|default:'-'|escapejs }}",
+                                    "owner": "{% if lead.owner %}{{ lead.owner.get_full_name|default:lead.owner.username|escapejs }}{% else %}-{% endif %}",
+                                    "source": "{{ lead.get_source_display|escapejs }}",
+                                    "status": "{{ lead.get_status_display|escapejs }}",
+                                    "status_code": "{{ lead.status }}",
+                                    "estimated_value": "{{ lead.estimated_value_formatted }}",
+                                    "created_at": "{{ lead.created_at|date:'d M Y H:i' }}",
+                                    "expected_close_date": "{% if lead.expected_close_date %}{{ lead.expected_close_date|date:'d M Y' }}{% else %}-{% endif %}",
+                                    "quotations_count": {{ lead.quotations_count|default:0 }},
+                                    "notes": "{{ lead.notes|default:'-'|escapejs }}"
+                                }
+                                </script>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="10" class="text-center py-5 text-muted">
+                                <i class="ph-duotone ph-funnel-x fs-1 d-block mb-2 text-secondary"></i>
+                                Tidak ada data peluang (lead) ditemukan untuk filter yang dipilih.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    {% if page_obj %}
+                    <tfoot>
+                        <tr>
+                            <td colspan="7" class="ps-4 text-end text-uppercase text-muted small fw-bold">
+                                Total (Seluruh Filter):
+                            </td>
+                            <td class="text-end text-dark fw-bold">
+                                {{ total_pipeline_value_display }}
+                            </td>
+                            <td colspan="2" class="text-dark fw-bold">
+                                Won: {{ deals_won_value_display }} ({{ deals_won_count }} Deals)
+                            </td>
+                        </tr>
+                    </tfoot>
+                    {% endif %}
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <div class="card-footer bg-white border-top py-3 px-4 d-flex justify-content-between align-items-center">
+                <span class="text-muted small">
+                    Halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}
+                </span>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link text-dark" href="?page={{ page_obj.previous_page_number }}&start_date={{ start_date }}&end_date={{ end_date }}&owner={{ owner_id }}&status={{ status_filter }}&source={{ source_filter }}&industry={{ industry_filter }}&q={{ search_query }}">Prev</a>
+                    </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link bg-dark border-dark text-white">{{ page_obj.number }}</span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link text-dark" href="?page={{ page_obj.next_page_number }}&start_date={{ start_date }}&end_date={{ end_date }}&owner={{ owner_id }}&status={{ status_filter }}&source={{ source_filter }}&industry={{ industry_filter }}&q={{ search_query }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Quick Preview Modal -->
+<div class="modal fade" id="leadPreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-bottom-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="bg-light text-dark p-2 rounded-3 border">
+                        <i class="ph-bold ph-funnel fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0" id="prevLeadTitle">Judul Peluang</h5>
+                        <span class="text-muted small" id="prevLeadCreatedAt">Tanggal Dibuat</span>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Status & Estimasi Nilai -->
+                <div class="p-3 bg-light rounded-3 mb-3 d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-muted small fw-semibold d-block">Status / Tahapan</span>
+                        <h6 class="fw-bold mb-0 text-dark" id="prevLeadStatus">NEW LEAD</h6>
+                    </div>
+                    <div class="text-end">
+                        <span class="text-muted small fw-semibold d-block">Estimasi Nilai Pipeline</span>
+                        <h5 class="fw-bold mb-0 text-dark" id="prevLeadValue">Rp 0</h5>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <!-- Detail Klien -->
+                    <div class="col-md-6">
+                        <div class="p-3 bg-light rounded-3 h-100">
+                            <h6 class="fw-bold text-secondary mb-2" style="font-size: 0.8rem;"><i class="ph-bold ph-buildings me-1 text-dark"></i> Perusahaan / Klien</h6>
+                            <div class="fw-bold text-dark" id="prevLeadClient">PT Contoh</div>
+                            <div class="text-muted small mb-1" id="prevLeadIndustry">Industri: -</div>
+                            <div class="text-muted small" style="font-size: 0.75rem;" id="prevLeadContact">PIC: -</div>
+                        </div>
+                    </div>
+                    <!-- PIC Sales & Sumber -->
+                    <div class="col-md-6">
+                        <div class="p-3 bg-light rounded-3 h-100">
+                            <h6 class="fw-bold text-secondary mb-2" style="font-size: 0.8rem;"><i class="ph-bold ph-user-gear me-1 text-dark"></i> Sales &amp; Klasifikasi</h6>
+                            <div class="fw-bold text-dark" id="prevLeadOwner">PIC: -</div>
+                            <div class="text-muted small mb-1" id="prevLeadSource">Sumber: -</div>
+                            <div class="text-muted small" style="font-size: 0.75rem;" id="prevLeadExpectedClose">Target Closing: -</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Catatan -->
+                <div class="p-3 bg-light rounded-3 mb-3">
+                    <h6 class="fw-bold text-secondary mb-2" style="font-size: 0.8rem;"><i class="ph-bold ph-notepad me-1 text-dark"></i> Catatan &amp; Deskripsi Peluang</h6>
+                    <p class="text-dark small mb-0" id="prevLeadNotes">-</p>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Tutup</button>
+                    <a href="#" id="prevLeadDetailLink" class="btn btn-dark px-4 fw-bold">
+                        <i class="ph-bold ph-arrow-square-out me-1"></i> Buka Detail Lead
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openLeadPreview(pk) {
+    const rawDataEl = document.getElementById('data-lead-' + pk);
+    if (!rawDataEl) return;
+    try {
+        const data = JSON.parse(rawDataEl.textContent);
+        document.getElementById('prevLeadTitle').textContent = data.title;
+        document.getElementById('prevLeadCreatedAt').textContent = 'Dibuat: ' + data.created_at;
+        document.getElementById('prevLeadStatus').textContent = data.status;
+        document.getElementById('prevLeadValue').textContent = data.estimated_value;
+        document.getElementById('prevLeadClient').textContent = data.client;
+        document.getElementById('prevLeadIndustry').textContent = 'Industri: ' + data.client_industry;
+        document.getElementById('prevLeadContact').textContent = 'Kontak: ' + data.contact + ' (' + data.phone + ')';
+        document.getElementById('prevLeadOwner').textContent = 'PIC Sales: ' + data.owner;
+        document.getElementById('prevLeadSource').textContent = 'Sumber: ' + data.source;
+        document.getElementById('prevLeadExpectedClose').textContent = 'Target Closing: ' + data.expected_close_date;
+        document.getElementById('prevLeadNotes').textContent = data.notes || 'Tidak ada catatan khusus.';
+
+        document.getElementById('prevLeadDetailLink').href = '/crm/leads/' + pk + '/';
+
+        const modal = new bootstrap.Modal(document.getElementById('leadPreviewModal'));
+        modal.show();
+    } catch (e) {
+        console.error('Error opening lead preview:', e);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof flatpickr !== 'undefined') {
+        flatpickr('.flatpickr-date', {
+            dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'd/m/Y',
+            allowInput: true
+        });
+    }
+});
+</script>
+{% endblock %}

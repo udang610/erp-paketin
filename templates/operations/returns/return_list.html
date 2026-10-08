@@ -1,0 +1,717 @@
+{% extends 'base.html' %}
+{% load static humanize %}
+
+{% block title %}Manajemen Retur &amp; Gagal Antar (RTO) - ERP Paketin{% endblock %}
+{% block page_title %}Retur (RTO){% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Actions Bar (Search + Filter Pop-up + Actions) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <form class="d-flex align-items-center gap-2" method="get">
+            <input type="hidden" name="tab" value="{{ active_tab }}">
+            <!-- Search Input -->
+            <div class="search-box-clean d-flex align-items-center bg-white px-3" style="width: 280px; max-width: 320px; height: 38px;">
+                <i class="ph-bold ph-magnifying-glass me-2 text-muted" style="font-size: 1rem; color: #64748b;"></i>
+                <input type="text" name="q" class="border-0 shadow-none p-0 bg-transparent flex-grow-1" placeholder="Cari no. RTO, resi..." value="{{ search_query|default:'' }}" style="outline: none !important; font-size: 0.88rem; color: #1e293b; height: 100%;">
+            </div>
+
+            <!-- Filter Button with Pop-up Dropdown -->
+            <div class="dropdown">
+                <button class="btn shadow-sm position-relative rounded-3 d-inline-flex align-items-center gap-2 px-3 border" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Filter Retur" style="height: 38px; font-size: 0.88rem; font-weight: 600; color: #1e293b; background-color: #ffffff !important; border-color: #cbd5e1 !important;">
+                    <i class="ph-bold ph-faders fs-5" style="color: #1e293b;"></i>
+                    <span>Filter</span>
+                    {% if has_active_filter %}
+                    <span class="active-filter-dot" title="Filter Aktif"></span>
+                    {% endif %}
+                </button>
+                <div class="dropdown-menu filter-dropdown-menu dropdown-menu-start p-3 shadow-lg border-0" style="width: 320px; z-index: 1050; border-radius: 12px; border: 1px solid #e2e8f0 !important;">
+                    <h6 class="dropdown-header px-0 text-dark mb-2"><i class="ph-bold ph-faders me-2 text-dark"></i>Filter Lanjutan</h6>
+                    
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Status</label>
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="">Semua Status</option>
+                            <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending</option>
+                            <option value="HOLD_DESTINATION" {% if status_filter == 'HOLD_DESTINATION' %}selected{% endif %}>Hold Destination</option>
+                            <option value="SCHEDULED_REDELIVERY" {% if status_filter == 'SCHEDULED_REDELIVERY' %}selected{% endif %}>Scheduled Redelivery</option>
+                            <option value="APPROVED_RTO" {% if status_filter == 'APPROVED_RTO' %}selected{% endif %}>Approved RTO</option>
+                            <option value="IN_TRANSIT_RTO" {% if status_filter == 'IN_TRANSIT_RTO' %}selected{% endif %}>In Transit RTO</option>
+                            <option value="RETURNED_TO_SHIPPER" {% if status_filter == 'RETURNED_TO_SHIPPER' %}selected{% endif %}>Returned to Shipper</option>
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary mb-1">Tanggal Mulai</label>
+                            <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date|default:'' }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary mb-1">Tanggal Akhir</label>
+                            <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date|default:'' }}">
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 pt-2 border-top">
+                        <button type="submit" class="btn btn-danger btn-sm w-100 fw-bold">Terapkan</button>
+                        <a href="{% url 'operations:return-list' %}?tab={{ active_tab }}" class="btn btn-outline-secondary btn-sm w-100">Reset</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div class="d-flex gap-2">
+            <a href="{% url 'operations:return-create' %}" class="btn btn-danger px-4 fw-bold shadow-sm d-inline-flex align-items-center" style="height: 38px;">
+                <i class="ph-bold ph-plus me-1 text-white"></i> Input Laporan
+            </a>
+        </div>
+    </div>
+
+    <style>
+        .table-premium {
+            border-collapse: separate;
+            border-spacing: 0;
+            border: none;
+        }
+        .table-premium thead th {
+            background-color: #f8fafc !important;
+            color: #475569;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+            border-bottom: 1px solid #e2e8f0 !important;
+            padding: 14px 16px;
+            vertical-align: middle;
+            text-align: left;
+        }
+        .table-premium tbody td {
+            padding: 13px 16px;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 13px;
+            color: #1e293b;
+            background-color: #ffffff;
+            transition: background-color 0.2s ease;
+            text-align: left;
+        }
+        .table-premium tbody tr:hover td {
+            background-color: #f8fafc !important;
+        }
+        .table-premium tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Clean Nav Tabs with Uniform Vertical Dividers */
+        .nav-tabs-custom {
+            background-color: transparent !important;
+            padding: 0 !important;
+            border-bottom: 1px solid #eaedf1 !important;
+            gap: 0 !important;
+            margin-bottom: 0 !important;
+            display: flex;
+            align-items: stretch;
+        }
+        .nav-tabs-custom .nav-item {
+            position: relative;
+            margin-bottom: -1px;
+            display: flex;
+            align-items: center;
+        }
+        .nav-tabs-custom .nav-item:first-child::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 1px;
+            height: 18px;
+            background-color: #94a3b8;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 1;
+        }
+        .nav-tabs-custom .nav-item:first-child:has(.active)::before,
+        .nav-tabs-custom .nav-item:first-child:has(.nav-link:hover)::before {
+            opacity: 0;
+        }
+        .nav-tabs-custom .nav-item::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 1px;
+            height: 18px;
+            background-color: #94a3b8;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 1;
+        }
+        .nav-tabs-custom .nav-item:has(.active)::after,
+        .nav-tabs-custom .nav-item:has(+ .nav-item .active)::after,
+        .nav-tabs-custom .nav-item:has(.nav-link:hover)::after,
+        .nav-tabs-custom .nav-item:has(+ .nav-item .nav-link:hover)::after {
+            opacity: 0;
+        }
+        .nav-tabs-custom .nav-link {
+            background-color: transparent !important;
+            border: 1px solid transparent !important;
+            border-bottom: 1px solid transparent !important;
+            color: #334155 !important;
+            font-weight: 600;
+            border-radius: 10px 10px 0 0 !important;
+            padding: 0 20px !important;
+            height: 44px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            transition: all 0.2s ease-in-out;
+            box-shadow: none !important;
+            position: relative;
+            white-space: nowrap;
+        }
+        .nav-tabs-custom .nav-link:hover {
+            background-color: rgba(241, 245, 249, 0.8) !important;
+            color: #0f172a !important;
+        }
+        .nav-tabs-custom .nav-link.active {
+            background-color: #f8fafc !important;
+            border: 1px solid #eaedf1 !important;
+            border-bottom: 1px solid #f8fafc !important;
+            color: #0f172a !important;
+            font-weight: 700;
+            box-shadow: none !important;
+            z-index: 2;
+        }
+    </style>
+
+    <!-- Nav 4 Tabs Utama -->
+    <ul class="nav nav-tabs nav-tabs-custom" id="returnMainTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <a class="nav-link {% if active_tab == 'laporan' %}active{% endif %}" href="?tab=laporan{% if search_query %}&q={{ search_query }}{% endif %}">
+                <i class="ph-duotone ph-tray-arrow-down me-2 text-warning fs-5"></i> Laporan Masuk
+                <span class="badge bg-danger text-white ms-2 rounded-pill fw-bold">{{ stats.count_laporan }}</span>
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link {% if active_tab == 'redeliver' %}active{% endif %}" href="?tab=redeliver{% if search_query %}&q={{ search_query }}{% endif %}">
+                <i class="ph-duotone ph-arrows-clockwise me-2 text-info fs-5"></i> Kirim Ulang (Re-delivery)
+                <span class="badge bg-danger text-white ms-2 rounded-pill fw-bold">{{ stats.count_redeliver }}</span>
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link {% if active_tab == 'return' %}active{% endif %}" href="?tab=return{% if search_query %}&q={{ search_query }}{% endif %}">
+                <i class="ph-duotone ph-arrow-u-down-left me-2 text-danger fs-5"></i> Kembali ke Pengirim (RTO)
+                <span class="badge bg-danger text-white ms-2 rounded-pill fw-bold">{{ stats.count_return }}</span>
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link {% if active_tab == 'selesai' %}active{% endif %}" href="?tab=selesai{% if search_query %}&q={{ search_query }}{% endif %}">
+                <i class="ph-duotone ph-check-circle me-2 text-success fs-5"></i> Riwayat Selesai
+                <span class="badge bg-danger text-white ms-2 rounded-pill fw-bold">{{ stats.count_selesai }}</span>
+            </a>
+        </li>
+    </ul>
+
+    <!-- Table Content -->
+    <div class="table-responsive shadow-sm mb-4" style="border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 16px 16px; background-color: #fff; overflow: visible;">
+        <table class="table table-premium table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    {% if active_tab == 'laporan' %}
+                    <th class="ps-4">NO. LAPORAN</th>
+                    <th>NO. AWB</th>
+                    <th>PENGIRIM &amp; ASAL</th>
+                    <th>PENERIMA &amp; TUJUAN</th>
+                    <th>ALASAN GAGAL ANTAR</th>
+                    <th>PERCOBAAN</th>
+                    <th>WAKTU LAPOR</th>
+                    <th class="text-center pe-4">AKSI</th>
+
+                    {% elif active_tab == 'redeliver' %}
+                    <th class="ps-4">NO. RE-DELIVERY</th>
+                    <th>NO. AWB</th>
+                    <th>PENGIRIM &amp; PENERIMA</th>
+                    <th>JADWAL KIRIM ULANG</th>
+                    <th>PERCOBAAN KE-</th>
+                    <th>CATATAN TINDAK LANJUT</th>
+                    <th class="text-center">STATUS</th>
+                    <th class="text-center pe-4">AKSI</th>
+
+                    {% elif active_tab == 'return' %}
+                    <th class="ps-4">NO. RTO</th>
+                    <th>NO. AWB</th>
+                    <th>PENGIRIM (HUB ASAL)</th>
+                    <th>PENERIMA (TUJUAN)</th>
+                    <th>NO MANIFEST RTO</th>
+                    <th class="text-center">STATUS PERJALANAN</th>
+                    <th class="text-end">BIAYA RETUR</th>
+                    <th class="text-center pe-4">AKSI</th>
+
+                    {% elif active_tab == 'selesai' %}
+                    <th class="ps-4">NO. REFERENSI / ID</th>
+                    <th>NO. AWB</th>
+                    <th>PENGIRIM &amp; ASAL</th>
+                    <th>PENERIMA &amp; TUJUAN</th>
+                    <th>HASIL AKHIR</th>
+                    <th class="text-center">STATUS PENYELESAIAN</th>
+                    <th>WAKTU SELESAI</th>
+                    <th class="text-center pe-4">AKSI</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in returns %}
+                <tr>
+                    {% if active_tab == 'laporan' %}
+                    <!-- LAPORAN MASUK -->
+                    <td class="ps-4">
+                        <span class="fw-bold text-dark">{{ r.rto_number }}</span>
+                    </td>
+                    <td>
+                        <a href="{% url 'operations:shipment-detail' r.shipment.pk %}" class="fw-bold text-decoration-none text-dark hover-danger">
+                            {{ r.shipment.resi_number }}
+                        </a>
+                    </td>
+                    <td>
+                        <div class="fw-semibold text-dark">{{ r.shipment.sender_name|default:r.shipment.client.name }}</div>
+                        <div class="text-muted small" style="font-size: 0.72rem;">{{ r.shipment.get_city_origin|title }} - {{ r.shipment.get_tlc_origin }}</div>
+                    </td>
+                    <td>
+                        <div class="fw-medium text-dark">{{ r.shipment.receiver_name }}</div>
+                        <div class="text-muted small" style="font-size: 0.72rem;">{{ r.shipment.get_city_dest|title }} - {{ r.shipment.get_tlc_dest }}</div>
+                    </td>
+                    <td>
+                        <span class="text-dark fw-semibold">{{ r.get_reason_display }}</span>
+                    </td>
+                    <td>
+                        <span class="text-dark fw-medium">Percobaan #{{ r.attempt_count|default:1 }}</span>
+                    </td>
+                    <td>
+                        <span class="text-dark small fw-medium">{{ r.created_at|date:"d M Y, H:i" }}</span>
+                    </td>
+                    <td class="text-center pe-4">
+                        <div class="dropdown">
+                            <button class="btn btn-action-table dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Aksi">
+                                <i class="ph-bold ph-list"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-2" style="z-index: 1050;">
+                                <li>
+                                    <a class="dropdown-item py-2 text-danger fw-bold" href="#" onclick="openDecisionModal('{{ r.shipment.resi_number }}')">
+                                        <i class="ph-duotone ph-arrows-split me-2 text-danger"></i>Tentukan Keputusan
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item py-2" href="{% url 'operations:shipment-detail' r.shipment.pk %}">
+                                        <i class="ph-duotone ph-eye me-2 text-info"></i>Lihat Detail Resi
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item py-2" href="{% url 'operations:return-detail' r.pk %}">
+                                        <i class="ph-duotone ph-file-text me-2 text-secondary"></i>Log RTO Lengkap
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </td>
+
+                    {% elif active_tab == 'redeliver' %}
+                    <!-- KIRIM ULANG (RE-DELIVERY) -->
+                    <td class="ps-4">
+                        <span class="fw-bold text-dark">{{ r.rto_number }}</span>
+                    </td>
+                    <td>
+                        <a href="{% url 'operations:shipment-detail' r.shipment.pk %}" class="fw-bold text-decoration-none text-dark hover-danger">
+                            {{ r.shipment.resi_number }}
+                        </a>
+                    </td>
+                    <td>
+                        <div class="fw-bold text-dark">{{ r.shipment.receiver_name }}</div>
+                        <div class="text-muted small" style="font-size: 0.72rem;">Pengirim: {{ r.shipment.sender_name|default:r.shipment.client.name }}</div>
+                    </td>
+                    <td>
+                        <span class="text-dark fw-bold">
+                            {% if r.scheduled_redelivery_date %}
+                            {{ r.scheduled_redelivery_date|date:"d M Y" }}
+                            {% else %}
+                            Hari Berikutnya
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="text-dark fw-medium">Percobaan #{{ r.attempt_count|default:1 }}</span>
+                    </td>
+                    <td>
+                        <div class="text-dark small" style="max-width: 250px;">{{ r.cs_notes|default:"Standby di Hub Tujuan untuk pengantaran ulang."|linebreaksbr }}</div>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge bg-info text-white rounded-pill px-3 py-1 fw-bold">Re-Delivery</span>
+                    </td>
+                    <td class="text-center pe-4">
+                        <div class="dropdown">
+                            <button class="btn btn-action-table dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Aksi">
+                                <i class="ph-bold ph-list"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-2" style="z-index: 1050;">
+                                <li>
+                                    <a class="dropdown-item py-2 fw-semibold text-info" href="{% url 'operations:return-redeliver-scan' %}">
+                                        <i class="ph-duotone ph-scan me-2 text-info"></i>Scan Re-Delivery (POD)
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item py-2" href="{% url 'operations:shipment-detail' r.shipment.pk %}">
+                                        <i class="ph-duotone ph-eye me-2 text-info"></i>Lihat Resi
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider my-1"></li>
+                                <li>
+                                    <a class="dropdown-item py-2 text-danger" href="#" onclick="openDecisionModal('{{ r.shipment.resi_number }}')">
+                                        <i class="ph-duotone ph-arrow-u-down-left me-2 text-danger"></i>Alihkan ke Retur Pengirim
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </td>
+
+                    {% elif active_tab == 'return' %}
+                    <!-- KEMBALI KE PENGIRIM (RTO) -->
+                    <td class="ps-4">
+                        <span class="fw-bold text-dark">{{ r.rto_number }}</span>
+                    </td>
+                    <td>
+                        <a href="{% url 'operations:shipment-detail' r.shipment.pk %}" class="fw-bold text-decoration-none text-dark hover-danger">
+                            {{ r.shipment.resi_number }}
+                        </a>
+                    </td>
+                    <td>
+                        <div class="fw-bold text-dark">{{ r.shipment.sender_name }}</div>
+                        <div class="text-muted small" style="font-size: 0.72rem;">Hub Asal: {{ r.shipment.get_city_origin|title }} - {{ r.shipment.get_tlc_origin }}</div>
+                    </td>
+                    <td>
+                        <div class="fw-medium text-dark">{{ r.shipment.receiver_name }}</div>
+                        <div class="text-muted small" style="font-size: 0.72rem;">Hub Tujuan: {{ r.shipment.get_city_dest|title }} - {{ r.shipment.get_tlc_dest }}</div>
+                    </td>
+                    <td>
+                        <span class="text-dark fw-medium">{{ r.rto_manifest_no|default:"-" }}</span>
+                    </td>
+                    <td class="text-center">
+                        {% if r.status == 'APPROVED_RTO' %}
+                        <span class="badge bg-primary text-white rounded-pill px-3 py-1 fw-bold">Return</span>
+                        <small class="d-block text-muted mt-1" style="font-size: 0.72rem;">Approved (Hub Tujuan)</small>
+                        {% elif r.status == 'IN_TRANSIT_RTO' %}
+                        <span class="badge bg-info text-white rounded-pill px-3 py-1 fw-bold">Linehaul Retur</span>
+                        <small class="d-block text-primary mt-1" style="font-size: 0.72rem;">Linehaul ke Hub Asal</small>
+                        {% elif r.status == 'RECEIVED_ORIGIN' %}
+                        <span class="badge bg-warning text-dark rounded-pill px-3 py-1 fw-bold">Tiba di Hub Asal</span>
+                        <small class="d-block text-warning mt-1" style="font-size: 0.72rem;">Tiba di Hub Asal</small>
+                        {% elif r.status == 'RETURNED_TO_SHIPPER' %}
+                        <span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold">Selesai Retur</span>
+                        <small class="d-block text-success mt-1" style="font-size: 0.72rem;">Diserahkan ke Pengirim</small>
+                        {% else %}
+                        <span class="badge bg-secondary text-white rounded-pill px-3 py-1 fw-bold">Return</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end fw-semibold text-dark">
+                        Rp {{ r.return_fee|floatformat:0|intcomma }}
+                    </td>
+                    <td class="text-center pe-4">
+                        <div class="dropdown">
+                            <button class="btn btn-action-table dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Aksi">
+                                <i class="ph-bold ph-list"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-2" style="z-index: 1050;">
+                                <li>
+                                    <a class="dropdown-item py-2" href="{% url 'operations:return-detail' r.pk %}">
+                                        <i class="ph-duotone ph-eye me-2 text-info"></i>Detail &amp; Riwayat Retur
+                                    </a>
+                                </li>
+                                {% if r.status == 'APPROVED_RTO' %}
+                                <li>
+                                    <a class="dropdown-item py-2 text-primary" href="{% url 'operations:return-detail' r.pk %}">
+                                        <i class="ph-duotone ph-truck me-2 text-primary"></i>Kirim Balik ke Hub Asal
+                                    </a>
+                                </li>
+                                {% elif r.status == 'IN_TRANSIT_RTO' %}
+                                <li>
+                                    <a class="dropdown-item py-2 text-warning" href="{% url 'operations:return-detail' r.pk %}">
+                                        <i class="ph-duotone ph-archive-box me-2 text-warning"></i>Terima Fisik di Hub Asal
+                                    </a>
+                                </li>
+                                {% elif r.status == 'RECEIVED_ORIGIN' %}
+                                <li>
+                                    <a class="dropdown-item py-2 text-success fw-bold" href="{% url 'operations:return-detail' r.pk %}">
+                                        <i class="ph-duotone ph-handshake me-2 text-success"></i>Serah Terima ke Pengirim
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </td>
+
+                    {% elif active_tab == 'selesai' %}
+                    <!-- RIWAYAT SELESAI -->
+                    <td class="ps-4">
+                        <span class="fw-bold text-dark">{{ r.rto_number }}</span>
+                    </td>
+                    <td>
+                        <a href="{% url 'operations:shipment-detail' r.shipment.pk %}" class="fw-bold text-decoration-none text-dark hover-danger">
+                            {{ r.shipment.resi_number }}
+                        </a>
+                    </td>
+                    <td>
+                        <div class="fw-semibold text-dark">{{ r.shipment.sender_name|default:r.shipment.client.name }}</div>
+                        <div class="text-muted small" style="font-size: 0.72rem;">{{ r.shipment.get_city_origin|title }} - {{ r.shipment.get_tlc_origin }}</div>
+                    </td>
+                    <td>
+                        <div class="fw-medium text-dark">{{ r.shipment.receiver_name }}</div>
+                        <div class="text-muted small" style="font-size: 0.72rem;">{{ r.shipment.get_city_dest|title }} - {{ r.shipment.get_tlc_dest }}</div>
+                    </td>
+                    <td>
+                        {% if r.status == 'CANCELLED_REDELIVERED' or r.shipment.status in 'POD,POD_BALIK' %}
+                        <span class="text-dark fw-bold">Terkirim (POD Berhasil)</span>
+                        <small class="d-block text-muted" style="font-size: 0.72rem;">Penerima: {{ r.shipment.pod_receiver_name|default:r.shipment.receiver_name }}</small>
+                        {% elif r.status == 'RETURNED_TO_SHIPPER' %}
+                        <span class="text-dark fw-bold">Retur ke Pengirim</span>
+                        <small class="d-block text-muted" style="font-size: 0.72rem;">Diterima Pengirim: {{ r.shipment.sender_name }}</small>
+                        {% else %}
+                        <span class="text-dark fw-bold">{{ r.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if r.status == 'CANCELLED_REDELIVERED' or r.shipment.status in 'POD,POD_BALIK' %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill fw-semibold">
+                            <i class="ph-bold ph-check me-1"></i>Selesai Terkirim
+                        </span>
+                        {% elif r.status == 'RETURNED_TO_SHIPPER' %}
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 rounded-pill fw-semibold">
+                            <i class="ph-bold ph-arrow-u-down-left me-1"></i>Selesai Retur
+                        </span>
+                        {% else %}
+                        <span class="badge bg-light text-dark border px-2 py-1 rounded-pill fw-semibold">Selesai</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="text-dark small fw-medium">{{ r.updated_at|date:"d M Y, H:i" }}</span>
+                    </td>
+                    <td class="text-center pe-4">
+                        <div class="dropdown">
+                            <button class="btn btn-action-table dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Aksi">
+                                <i class="ph-bold ph-list"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-2" style="z-index: 1050;">
+                                <li>
+                                    <a class="dropdown-item py-2" href="{% url 'operations:shipment-detail' r.shipment.pk %}">
+                                        <i class="ph-duotone ph-eye me-2 text-info"></i>Detail Resi / Alur
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item py-2" href="{% url 'operations:return-detail' r.pk %}">
+                                        <i class="ph-duotone ph-file-text me-2 text-secondary"></i>Log RTO Lengkap
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center py-5 text-muted">
+                        <div class="py-4">
+                            <i class="ph-duotone ph-package text-muted mb-2" style="font-size: 3rem; opacity: 0.4;"></i>
+                            <p class="mb-1 fw-semibold text-dark">Tidak ada data retur pada tab ini</p>
+                            <p class="text-muted small mb-0">Resi gagal antar akan otomatis muncul disini setelah dicatat pada menu POD.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Quick Decision (Tentukan Tindakan Triage) -->
+<div class="modal fade" id="modalDecision" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width: 840px;">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-bottom px-4 py-3 bg-light rounded-top-4">
+                <div class="d-flex align-items-center">
+                    <div class="bg-danger-subtle text-danger rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 38px; height: 38px;">
+                        <i class="ph-bold ph-arrows-split" style="font-size: 1.25rem;"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark fs-6 mb-0" id="modalTitle">Tentukan Tindakan Resi Gagal Antar</h5>
+                        <small class="text-muted">Konfirmasi pengantaran ulang atau retur ke pengirim asal</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'operations:return-decision-quick' %}">
+                {% csrf_token %}
+                <input type="hidden" name="resi_number" id="modalResiNumber">
+                <div class="modal-body p-4">
+                    <!-- Info Resi Card (Horizontal Grid) -->
+                    <div class="p-3 bg-light rounded-3 border mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                            <span class="badge bg-danger text-white px-3 py-1 rounded-pill fw-bold" id="dispResi">RESI...</span>
+                            <span class="text-dark fw-bold small" id="dispAttempts">Percobaan #1</span>
+                        </div>
+                        <div class="row g-3 small">
+                            <div class="col-md-4">
+                                <span class="text-muted d-block mb-1">Pengirim &amp; Asal:</span>
+                                <div class="fw-bold text-dark" id="dispSender">-</div>
+                                <div class="text-muted small" id="dispOrigin">-</div>
+                            </div>
+                            <div class="col-md-4">
+                                <span class="text-muted d-block mb-1">Penerima &amp; Tujuan:</span>
+                                <div class="fw-bold text-dark" id="dispReceiver">-</div>
+                                <div class="text-muted small" id="dispDestination">-</div>
+                            </div>
+                            <div class="col-md-4">
+                                <span class="text-muted d-block mb-1">Alasan Gagal Antar:</span>
+                                <div class="fw-bold text-dark" id="dispReason">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Decision Choice Options (Side-by-Side Horizontal Cards) -->
+                    <label class="form-label fw-bold text-dark mb-2">Pilih Keputusan Tindakan:</label>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 bg-light h-100 d-flex align-items-start" id="optRedeliverBox" style="cursor: pointer; transition: all 0.2s ease;" onclick="selectDecision('REDELIVER')">
+                                <input class="form-check-input mt-1 me-3 flex-shrink-0" type="radio" name="decision" id="decRedeliver" value="REDELIVER" checked onchange="toggleDecisionInputs()">
+                                <div>
+                                    <label class="form-check-label fw-bold text-dark mb-1" for="decRedeliver" style="cursor: pointer;">
+                                        <i class="ph-bold ph-arrows-clockwise me-1 text-info"></i> Opsi 1: Kirim Ulang ke Penerima
+                                    </label>
+                                    <small class="text-muted d-block lh-sm">Paket disimpan sementara di Hub Tujuan untuk dijadwalkan pengantaran ulang esok hari.</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 bg-light h-100 d-flex align-items-start" id="optReturnBox" style="cursor: pointer; transition: all 0.2s ease;" onclick="selectDecision('RETURN_TO_ORIGIN')">
+                                <input class="form-check-input mt-1 me-3 flex-shrink-0" type="radio" name="decision" id="decReturn" value="RETURN_TO_ORIGIN" onchange="toggleDecisionInputs()">
+                                <div>
+                                    <label class="form-check-label fw-bold text-dark mb-1" for="decReturn" style="cursor: pointer;">
+                                        <i class="ph-bold ph-arrow-u-down-left me-1 text-danger"></i> Opsi 2: Kembali ke Pengirim (RTO)
+                                    </label>
+                                    <small class="text-muted d-block lh-sm">Pengantaran dibatalkan permanen. Paket akan dibuatkan manifest retur kembali ke Hub Asal.</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Conditional Inputs: Redeliver (Horizontal Form Grid) -->
+                    <div id="inputGroupRedeliver" class="p-3 bg-light rounded-3 border mb-2">
+                        <div class="row g-3">
+                            <div class="col-md-5">
+                                <label class="form-label text-muted small fw-semibold">Jadwal Tanggal Kirim Ulang <span class="text-danger">*</span></label>
+                                <input type="date" name="scheduled_date" id="inputScheduledDate" class="form-control" value="{% now 'Y-m-d' %}">
+                            </div>
+                            <div class="col-md-7">
+                                <label class="form-label text-muted small fw-semibold">Catatan Khusus Pengantaran Ulang</label>
+                                <textarea name="cs_notes" class="form-control" rows="2" placeholder="Contoh: Penerima janji di rumah jam 2 siang..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Conditional Inputs: Return to Shipper (Horizontal Form Grid) -->
+                    <div id="inputGroupReturn" class="p-3 bg-light rounded-3 border mb-2" style="display: none;">
+                        <div class="row g-3">
+                            <div class="col-md-5">
+                                <label class="form-label text-muted small fw-semibold">Biaya Ongkir Retur (Opsional)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white">Rp</span>
+                                    <input type="number" name="return_fee" class="form-control" placeholder="0" value="0">
+                                </div>
+                            </div>
+                            <div class="col-md-7">
+                                <label class="form-label text-muted small fw-semibold">Catatan Konfirmasi Shipper / CS</label>
+                                <textarea name="cs_notes_return" class="form-control" rows="2" placeholder="Contoh: Pengirim sudah dihubungi via WA & setuju retur..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top px-4 py-3 bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-light px-4 border" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-danger px-4 fw-bold shadow-sm">
+                        <i class="ph-bold ph-check me-1"></i> Simpan Keputusan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function selectDecision(val) {
+    if (val === 'REDELIVER') {
+        document.getElementById('decRedeliver').checked = true;
+    } else {
+        document.getElementById('decReturn').checked = true;
+    }
+    toggleDecisionInputs();
+}
+
+function toggleDecisionInputs() {
+    var isRedeliver = document.getElementById('decRedeliver').checked;
+    if (isRedeliver) {
+        document.getElementById('inputGroupRedeliver').style.display = 'block';
+        document.getElementById('inputGroupReturn').style.display = 'none';
+        document.getElementById('optRedeliverBox').classList.add('border-info', 'bg-info-subtle');
+        document.getElementById('optRedeliverBox').classList.remove('bg-light');
+        document.getElementById('optReturnBox').classList.remove('border-danger', 'bg-danger-subtle');
+        document.getElementById('optReturnBox').classList.add('bg-light');
+    } else {
+        document.getElementById('inputGroupRedeliver').style.display = 'none';
+        document.getElementById('inputGroupReturn').style.display = 'block';
+        document.getElementById('optReturnBox').classList.add('border-danger', 'bg-danger-subtle');
+        document.getElementById('optReturnBox').classList.remove('bg-light');
+        document.getElementById('optRedeliverBox').classList.remove('border-info', 'bg-info-subtle');
+        document.getElementById('optRedeliverBox').classList.add('bg-light');
+    }
+}
+
+function openDecisionModal(resiNumber) {
+    fetch('/operations/returns/api/lookup/?resi=' + encodeURIComponent(resiNumber))
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                document.getElementById('modalResiNumber').value = data.resi_number;
+                document.getElementById('dispResi').textContent = data.resi_number;
+                document.getElementById('dispAttempts').textContent = 'Percobaan #' + data.attempts;
+                document.getElementById('dispSender').textContent = data.sender_name;
+                document.getElementById('dispOrigin').textContent = data.origin || '-';
+                document.getElementById('dispReceiver').textContent = data.receiver_name;
+                document.getElementById('dispDestination').textContent = data.destination || '-';
+                document.getElementById('dispReason').textContent = data.reason_display + (data.reason_detail ? ' - ' + data.reason_detail : '');
+                
+                selectDecision('REDELIVER');
+                var modal = new bootstrap.Modal(document.getElementById('modalDecision'));
+                modal.show();
+            } else {
+                alert(data.message || 'Resi tidak ditemukan.');
+            }
+        })
+        .catch(err => {
+            alert('Gagal memuat data resi: ' + err);
+        });
+}
+
+function handleQuickScanKey(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        triggerQuickScan();
+    }
+}
+
+function triggerQuickScan() {
+    var resi = document.getElementById('scanResiInput').value.trim();
+    if (!resi) return;
+    openDecisionModal(resi);
+    document.getElementById('scanResiInput').value = '';
+}
+</script>
+{% endblock %}

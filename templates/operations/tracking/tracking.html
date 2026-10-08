@@ -1,0 +1,476 @@
+{% extends 'base.html' %}
+
+{% block title %}Tracking Resi - ERP Paketin{% endblock %}
+{% block page_title %}Tracking Pencarian{% endblock %}
+{% block extra_css %}
+<style>
+    .timeline-dot {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        position: relative;
+        z-index: 2;
+    }
+    .timeline-line {
+        position: absolute;
+        left: 8px;
+        top: 30px;
+        bottom: -20px;
+        width: 2px;
+        z-index: 0;
+        opacity: 0.2;
+    }
+    .tracking-card {
+        transition: all 0.3s ease;
+    }
+    .tracking-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1) !important;
+    }
+    .status-badge-detail {
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    .event-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #0d6efd, #0a58ca);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- Search Section -->
+            <div class="card border-0 shadow-sm tracking-card mb-4" style="border-radius: 12px;">
+                <div class="card-body p-5 text-center position-relative overflow-hidden">
+                    <div class="position-absolute top-0 end-0 mt-3 me-3" style="opacity: 0.05;">
+                        <i class="ph-duotone ph-magnifying-glass" style="font-size: 8rem;"></i>
+                    </div>
+                    <i class="ph-duotone ph-truck mb-3 text-primary" style="font-size: 4rem;"></i>
+                    <h4 class="fw-bold mb-3">Lacak Pengiriman</h4>
+                    <p class="text-muted mb-4">Masukkan nomor resi untuk melihat status dan riwayat perjalanan barang Anda.</p>
+                    
+                    <form method="GET" action="" class="d-flex justify-content-center" style="max-width: 500px; margin: 0 auto;">
+                        <input type="text" name="resi" class="form-control form-control-lg me-2" 
+                               value="{{ query }}" 
+                               placeholder="Masukkan nomor resi (contoh: PKT-20260820-0001)" 
+                               style="border-radius: 10px 0 0 10px; border-right: none;">
+                        <button type="submit" class="btn btn-danger btn-lg" style="border-radius: 0 10px 10px 0; padding: 0.75rem 1.5rem;">
+                            <i class="ph-bold ph-magnifying-glass me-1"></i> Lacak
+                        </button>
+                    </form>
+                    
+                    {% if error_msg %}
+                    <div class="alert alert-danger mt-4 text-start mx-auto" style="max-width: 500px; border-radius: 10px;">
+                        <i class="ph-bold ph-warning-circle me-2"></i> {{ error_msg }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if shipment %}
+            <!-- Shipment Details -->
+            <div class="card border-0 shadow-sm tracking-card mb-4" style="border-radius: 12px;">
+                <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted text-uppercase small fw-bold mb-1">Nomor Resi</h6>
+                            <h4 class="fw-bold text-primary mb-0">{{ shipment.resi_number }}</h4>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            {% if request.user.is_superuser or request.user.is_staff or request.user.user_type in 'ADMIN,CS,OPS,MANAGER' %}
+                            <a href="{% url 'operations:shipment-detail' shipment.pk %}" class="btn btn-sm btn-outline-danger px-3 fw-semibold shadow-sm">
+                                <i class="ph-bold ph-sliders me-1"></i> Kelola Riwayat
+                            </a>
+                            {% endif %}
+                            <span class="badge 
+                                {% if shipment.status == 'POD' %}bg-success
+                                {% elif shipment.status == 'PENDING' %}bg-warning text-dark
+                                {% elif shipment.status == 'VOID' %}bg-dark
+                                {% elif shipment.status == 'RETURNED' %}bg-secondary
+                                {% elif shipment.status == 'TRANSIT' %}bg-danger
+                                {% else %}bg-primary{% endif %} 
+                                rounded-pill px-4 py-2 fs-6 status-badge-detail">
+                                {% if shipment.status == 'VOID' %}VOID{% else %}{{ shipment.get_status_display }}{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <!-- Route Visualization -->
+                    <div class="row mb-4">
+                        <!-- PENGIRIM -->
+                        <div class="col-md-5">
+                            <div class="p-3 bg-light-subtle rounded border h-100">
+                                <h6 class="text-muted small text-uppercase fw-bold mb-2">
+                                    <i class="ph ph-map-pin text-danger me-1"></i> PENGIRIM
+                                </h6>
+                                {% if shipment.client %}
+                                <h6 class="fw-bold mb-1 text-dark">{{ shipment.client.name }}</h6>
+                                {% if shipment.sender_attention or shipment.client.pic_account %}
+                                <p class="text-muted small mb-1">PIC: {{ shipment.sender_attention|default:shipment.client.pic_account }}</p>
+                                {% elif shipment.sender_name and shipment.sender_name != shipment.client.name %}
+                                <p class="text-muted small mb-1">PIC: {{ shipment.sender_name }}</p>
+                                {% endif %}
+                                <p class="text-muted small mb-0"><i class="ph ph-phone text-danger me-1"></i> {{ shipment.sender_phone|default:shipment.client.pic_phone|default:"-" }}</p>
+                                <p class="text-muted small mb-0"><i class="ph ph-map-pin text-danger me-1"></i> {{ shipment.get_tlc_origin }} - {{ shipment.get_city_origin }}</p>
+                                <p class="text-muted small mb-0 mt-1">{{ shipment.sender_address|default:shipment.client.office_address|default:"-" }}</p>
+                                {% else %}
+                                <h6 class="fw-bold mb-1 text-dark">{{ shipment.sender_name|default:"-" }}</h6>
+                                {% if shipment.sender_attention and shipment.sender_attention != shipment.sender_name %}
+                                <p class="text-muted small mb-1">PIC: {{ shipment.sender_attention }}</p>
+                                {% endif %}
+                                <p class="text-muted small mb-0"><i class="ph ph-phone text-danger me-1"></i> {{ shipment.sender_phone|default:"-" }}</p>
+                                <p class="text-muted small mb-0"><i class="ph ph-map-pin text-danger me-1"></i> {{ shipment.get_tlc_origin }} - {{ shipment.get_city_origin }}</p>
+                                <p class="text-muted small mb-0 mt-1">{{ shipment.sender_address|default:"-" }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-2 d-flex align-items-center justify-content-center">
+                            <div class="text-center">
+                                <i class="ph-bold ph-arrow-right-circle text-muted fs-3"></i>
+                                <div class="text-muted small mt-1">via {{ shipment.get_service_type_display }}</div>
+                            </div>
+                        </div>
+                        
+                        <!-- PENERIMA -->
+                        <div class="col-md-5">
+                            <div class="p-3 bg-light-subtle rounded border h-100">
+                                <h6 class="text-muted small text-uppercase fw-bold mb-2">
+                                    <i class="ph ph-map-pin text-danger me-1"></i> PENERIMA
+                                </h6>
+                                <h6 class="fw-bold mb-1 text-dark">{{ shipment.receiver_name|default:"-" }}</h6>
+                                {% if shipment.receiver_attention %}
+                                <p class="text-muted small mb-1">PIC: {{ shipment.receiver_attention }}</p>
+                                {% endif %}
+                                <p class="text-muted small mb-0"><i class="ph ph-phone text-danger me-1"></i> {{ shipment.receiver_phone|default:"-" }}</p>
+                                <p class="text-muted small mb-0"><i class="ph ph-map-pin text-danger me-1"></i> {{ shipment.get_tlc_dest }} - {{ shipment.get_city_dest }}</p>
+                                <p class="text-muted small mb-0 mt-1">{{ shipment.receiver_address|default:"-" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Shipment Details -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-3">
+                            <div class="p-2 bg-light-subtle rounded border text-center h-100">
+                                <div class="text-muted small text-uppercase fw-bold">Berat</div>
+                                <div class="fw-bold">{{ shipment.actual_weight|default:"0" }} Kg</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-2 bg-light-subtle rounded border text-center h-100">
+                                <div class="text-muted small text-uppercase fw-bold">Berat Volume</div>
+                                <div class="fw-bold">{{ shipment.calculated_volume_weight|default:"0"|floatformat:2 }} Kg</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-2 bg-light-subtle rounded border text-center h-100">
+                                <div class="text-muted small text-uppercase fw-bold">Koli</div>
+                                <div class="fw-bold">{{ shipment.total_colly }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-2 bg-light-subtle rounded border text-center h-100">
+                                <div class="text-muted small text-uppercase fw-bold">Dibuat</div>
+                                <div class="fw-bold small">{{ shipment.created_at|date:"d M Y" }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Horizontal Status Pipeline -->
+                    <style>
+                        .status-stepper {
+                            display: flex;
+                            justify-content: space-between;
+                            position: relative;
+                            margin: 20px 0 40px 0;
+                        }
+                        .status-stepper::before {
+                            content: '';
+                            position: absolute;
+                            top: 15px;
+                            height: 3px;
+                            background-color: #e9ecef;
+                            z-index: 0;
+                        }
+                        .status-stepper::after {
+                            content: '';
+                            position: absolute;
+                            top: 15px;
+                            height: 3px;
+                            background-color: #dc3545;
+                            z-index: 0;
+                            transition: width .35s ease;
+                        }
+                        /* 5 Steps (Normal / Failed) */
+                        .status-stepper.stepper-5::before { left: 10%; width: 80%; }
+                        .status-stepper.stepper-5::after { left: 10%; }
+                        .status-stepper.stepper-5.progress-25::after { width: 20%; }
+                        .status-stepper.stepper-5.progress-50::after { width: 40%; }
+                        .status-stepper.stepper-5.progress-75::after { width: 60%; }
+                        .status-stepper.stepper-5.progress-100::after { width: 80%; }
+
+                        /* 6 Steps (Return) */
+                        .status-stepper.stepper-6::before { left: 8.33%; width: 83.33%; }
+                        .status-stepper.stepper-6::after { left: 8.33%; }
+                        .status-stepper.stepper-6.progress-100::after { width: 83.33%; }
+
+                        /* 7 Steps (Re-delivery) */
+                        .status-stepper.stepper-7::before { left: 7.14%; width: 85.71%; }
+                        .status-stepper.stepper-7::after { left: 7.14%; }
+                        .status-stepper.stepper-7.progress-83::after { width: 71.43%; }
+                        .status-stepper.stepper-7.progress-100::after { width: 85.71%; }
+
+                        .step {
+                            position: relative;
+                            z-index: 1;
+                            text-align: center;
+                            flex: 1;
+                        }
+                        .step .icon {
+                            width: 32px;
+                            height: 32px;
+                            background-color: #e9ecef;
+                            border-radius: 50%;
+                            margin: 0 auto 10px auto;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            color: #adb5bd;
+                            border: 3px solid #fff;
+                        }
+                        .step.active .icon {
+                            background-color: #dc3545;
+                            color: #fff;
+                            animation: status-pulse 1.5s infinite;
+                        }
+                        .step.passed .icon {
+                            background-color: #dc3545;
+                            color: #fff;
+                        }
+                        .step.failed .icon {
+                            background-color: #dc3545;
+                            color: #fff;
+                            animation: status-pulse 1.5s infinite;
+                        }
+                        .step-text {
+                            font-size: 11px;
+                            font-weight: 600;
+                            color: #6c757d;
+                            white-space: nowrap;
+                        }
+                        .step.active .step-text, .step.passed .step-text {
+                            color: #000;
+                        }
+                        .step.failed .step-text {
+                            color: #dc3545;
+                            font-weight: 700;
+                        }
+                        @keyframes status-pulse {
+                            0%, 100% { box-shadow: 0 0 0 4px rgba(220, 53, 69, .18); }
+                            50% { box-shadow: 0 0 0 9px rgba(220, 53, 69, .08); }
+                        }
+                    </style>
+
+                    {% if shipment.is_redelivery %}
+                    <!-- Case: Kirim Ulang / Re-Delivery Flow (7 steps) -->
+                    <div class="status-stepper stepper-7 {% if shipment.status in 'POD,POD_BALIK' %}progress-100{% else %}progress-83{% endif %}">
+                        <!-- Penjemputan -->
+                        <div class="step passed">
+                            <div class="icon"><i class="ph-fill ph-package"></i></div>
+                            <div class="step-text">Penjemputan</div>
+                        </div>
+                        <!-- Gudang Asal -->
+                        <div class="step passed">
+                            <div class="icon"><i class="ph-fill ph-buildings"></i></div>
+                            <div class="step-text">Gudang Asal</div>
+                        </div>
+                        <!-- Perjalanan -->
+                        <div class="step passed">
+                            <div class="icon"><i class="ph-fill ph-truck"></i></div>
+                            <div class="step-text">Perjalanan</div>
+                        </div>
+                        <!-- Pengantaran -->
+                        <div class="step passed">
+                            <div class="icon"><i class="ph-fill ph-moped"></i></div>
+                            <div class="step-text">Pengantaran</div>
+                        </div>
+                        <!-- Gagal Antar -->
+                        <div class="step passed">
+                            <div class="icon"><i class="ph-fill ph-x-circle"></i></div>
+                            <div class="step-text">Gagal Antar</div>
+                        </div>
+                        <!-- Kirim Ulang -->
+                        <div class="step {% if shipment.status in 'POD,POD_BALIK' %}passed{% else %}active{% endif %}">
+                            <div class="icon"><i class="ph-fill ph-arrows-clockwise"></i></div>
+                            <div class="step-text">Kirim Ulang</div>
+                        </div>
+                        <!-- Terkirim -->
+                        <div class="step {% if shipment.status in 'POD,POD_BALIK' %}active{% endif %}">
+                            <div class="icon"><i class="ph-fill ph-check-circle"></i></div>
+                            <div class="step-text">Terkirim</div>
+                        </div>
+                    </div>
+
+                    {% elif shipment.is_returned_to_origin %}
+                    <!-- Case: Return Flow (6 steps) -->
+                    <div class="status-stepper stepper-6 progress-100">
+                        <!-- Penjemputan -->
+                        <div class="step passed">
+                            <div class="icon"><i class="ph-fill ph-package"></i></div>
+                            <div class="step-text">Penjemputan</div>
+                        </div>
+                        <!-- Gudang Asal -->
+                        <div class="step passed">
+                            <div class="icon"><i class="ph-fill ph-buildings"></i></div>
+                            <div class="step-text">Gudang Asal</div>
+                        </div>
+                        <!-- Perjalanan -->
+                        <div class="step passed">
+                            <div class="icon"><i class="ph-fill ph-truck"></i></div>
+                            <div class="step-text">Perjalanan</div>
+                        </div>
+                        <!-- Pengantaran -->
+                        <div class="step passed">
+                            <div class="icon"><i class="ph-fill ph-moped"></i></div>
+                            <div class="step-text">Pengantaran</div>
+                        </div>
+                        <!-- Gagal Antar -->
+                        <div class="step passed">
+                            <div class="icon"><i class="ph-fill ph-x-circle"></i></div>
+                            <div class="step-text">Gagal Antar</div>
+                        </div>
+                        <!-- Return -->
+                        <div class="step active failed">
+                            <div class="icon"><i class="ph-fill ph-arrow-u-up-left"></i></div>
+                            <div class="step-text">Return</div>
+                        </div>
+                    </div>
+
+                    {% elif shipment.status == 'DELIVERY_FAILED' or shipment.has_failed_delivery and not shipment.status in 'POD,POD_BALIK' %}
+                    <!-- Case: Gagal / Failed Delivery Flow (5 steps ending in Failed) -->
+                    <div class="status-stepper stepper-5 progress-100">
+                        <!-- Penjemputan -->
+                        <div class="step passed">
+                            <div class="icon"><i class="ph-fill ph-package"></i></div>
+                            <div class="step-text">Penjemputan</div>
+                        </div>
+                        <!-- Gudang Asal -->
+                        <div class="step passed">
+                            <div class="icon"><i class="ph-fill ph-buildings"></i></div>
+                            <div class="step-text">Gudang Asal</div>
+                        </div>
+                        <!-- Perjalanan -->
+                        <div class="step passed">
+                            <div class="icon"><i class="ph-fill ph-truck"></i></div>
+                            <div class="step-text">Perjalanan</div>
+                        </div>
+                        <!-- Pengantaran -->
+                        <div class="step passed">
+                            <div class="icon"><i class="ph-fill ph-moped"></i></div>
+                            <div class="step-text">Pengantaran</div>
+                        </div>
+                        <!-- Failed -->
+                        <div class="step active failed">
+                            <div class="icon"><i class="ph-fill ph-x-circle"></i></div>
+                            <div class="step-text">Failed</div>
+                        </div>
+                    </div>
+
+                    {% else %}
+                    <!-- Case: Standard Normal Delivery Flow (5 steps ending in Terkirim) -->
+                    {% with current=shipment.status %}
+                    <div class="status-stepper stepper-5 {% if current in 'PENDING,PICKUP,INBOUND_ORIGIN' %}progress-25{% elif current in 'OUTGOING,TRANSFER,TRANSIT' %}progress-50{% elif current in 'INCOMING_DESTINATION,DELIVERY' %}progress-75{% elif current in 'POD,POD_BALIK' %}progress-100{% else %}progress-25{% endif %}">
+                        <!-- Menunggu / Pickup -->
+                        <div class="step {% if current in 'PENDING,PICKUP,INBOUND_ORIGIN,OUTGOING,TRANSFER,TRANSIT,INCOMING_DESTINATION,DELIVERY,POD,POD_BALIK' %}passed{% endif %}">
+                            <div class="icon"><i class="ph-fill ph-package"></i></div>
+                            <div class="step-text">Penjemputan</div>
+                        </div>
+                        <!-- Gudang Asal -->
+                        <div class="step {% if current in 'PENDING,PICKUP,INBOUND_ORIGIN' %}active{% elif current in 'OUTGOING,TRANSFER,TRANSIT,INCOMING_DESTINATION,DELIVERY,POD,POD_BALIK' %}passed{% endif %}">
+                            <div class="icon"><i class="ph-fill ph-buildings"></i></div>
+                            <div class="step-text">Gudang Asal</div>
+                        </div>
+                        <!-- Perjalanan (Outgoing/Transfer) -->
+                        <div class="step {% if current in 'OUTGOING,TRANSFER,TRANSIT' %}active{% elif current in 'INCOMING_DESTINATION,DELIVERY,POD,POD_BALIK' %}passed{% endif %}">
+                            <div class="icon"><i class="ph-fill ph-truck"></i></div>
+                            <div class="step-text">Perjalanan</div>
+                        </div>
+                        <!-- Delivery / Kurir -->
+                        <div class="step {% if current in 'INCOMING_DESTINATION,DELIVERY' %}active{% elif current in 'POD,POD_BALIK' %}passed{% endif %}">
+                            <div class="icon"><i class="ph-fill ph-moped"></i></div>
+                            <div class="step-text">Pengantaran</div>
+                        </div>
+                        <!-- Selesai (POD) -->
+                        <div class="step {% if current in 'POD,POD_BALIK' %}active{% endif %}">
+                            <div class="icon"><i class="ph-fill ph-check-circle"></i></div>
+                            <div class="step-text">Terkirim</div>
+                        </div>
+                    </div>
+                    {% endwith %}
+                    {% endif %}
+                    
+                    <hr class="text-muted opacity-25 my-4">
+
+                    <hr class="text-muted opacity-25 my-4">
+                    <h6 class="fw-bold mb-3 fs-6">Detail Riwayat</h6>
+
+                    <!-- Riwayat vertikal, konsisten dengan detail POS/Resi -->
+                    <style>
+                        .tracking-history { position: relative; margin-left: 6px; }
+                        .tracking-history::before { content: ''; position: absolute; left: 6px; top: 10px; bottom: 10px; border-left: 2px solid #6c757d; opacity: .15; }
+                        .tracking-history-item { display:flex; position:relative; z-index:1; margin-bottom: 1.25rem; }
+                        .tracking-history-dot { width:14px; height:14px; flex:0 0 14px; margin-top:4px; border-radius:50%; box-shadow:0 0 0 3px #fff; }
+                        .tracking-history-item:first-child .tracking-history-dot { animation: history-pulse 1.5s infinite; }
+                        .tracking-history-content { margin-left: .75rem; width:100%; }
+                        .tracking-history-head { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; }
+                        .tracking-history-time { color:#dc3545; font-size:.75rem; font-weight:600; white-space:nowrap; }
+                        .tracking-history-location { color:#6c757d; font-size:.78rem; margin-top:2px; }
+                        .tracking-history-description { color:#6c757d; font-size:.78rem; margin-top:2px; line-height: 1.4; }
+                        @keyframes history-pulse { 0%,100% { box-shadow:0 0 0 3px #fff, 0 0 0 5px rgba(var(--bs-primary-rgb),.15); } 50% { box-shadow:0 0 0 3px #fff, 0 0 0 9px rgba(var(--bs-primary-rgb),.08); } }
+                    </style>
+                    <div class="tracking-history mt-3 mb-2">
+                        {% if tracking_history %}
+                            {% for history in tracking_history %}
+                            <div class="tracking-history-item">
+                                <div class="tracking-history-dot bg-danger"></div>
+                                <div class="tracking-history-content">
+                                    <div class="tracking-history-head">
+                                        <div>
+                                            <div class="fw-bold text-dark mb-1" style="font-size: 0.88rem;">
+                                                {{ history.get_status_display }}
+                                            </div>
+                                        </div>
+                                        <div class="tracking-history-time">{{ history.occurred_at|date:"d M Y, H:i" }}</div>
+                                    </div>
+                                    {% if history.location %}<div class="tracking-history-location"><i class="ph-fill ph-map-pin text-danger me-1"></i>{{ history.formatted_location }}</div>{% endif %}
+                                    {% if history.professional_description %}<div class="tracking-history-description">{{ history.professional_description }}</div>{% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="ph-duotone ph-clock" style="font-size: 2.5rem; opacity:0.4;"></i>
+                            <p class="mt-2 mb-0 small">Belum ada riwayat tracking tersedia.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

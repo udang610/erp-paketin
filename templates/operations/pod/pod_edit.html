@@ -1,0 +1,360 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit POD - {{ shipment.resi_number }} - ERP Paketin{% endblock %}
+{% block page_title %}Edit Data POD{% endblock %}
+
+{% block content %}
+<style>
+    .media-card {
+        transition: all 0.2s ease;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background-color: #fff;
+        overflow: hidden;
+    }
+    .media-card:hover {
+        border-color: #cbd5e1;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .media-thumbnail-wrapper {
+        position: relative;
+        width: 100%;
+        height: 120px;
+        background-color: #f8fafc;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+    .media-thumbnail-wrapper img, .media-thumbnail-wrapper video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .dropzone-box {
+        border: 2px dashed #cbd5e1;
+        border-radius: 12px;
+        background-color: #f8fafc;
+        padding: 24px 16px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .dropzone-box:hover, .dropzone-box.dragover {
+        border-color: #dc3545;
+        background-color: #fff5f5;
+    }
+    .badge-media-type {
+        font-size: 0.68rem;
+        letter-spacing: 0.5px;
+        font-weight: 700;
+        padding: 3px 7px;
+        border-radius: 4px;
+    }
+    .preview-chip {
+        position: relative;
+        width: 90px;
+        height: 90px;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+        background-color: #f1f5f9;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .preview-chip img, .preview-chip video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+</style>
+
+<div class="mb-3 px-4">
+    <a href="{% url 'operations:pod-detail' shipment.pk %}" class="btn btn-outline-secondary btn-sm">
+        <i class="ph-duotone ph-arrow-left me-1"></i> Kembali
+    </a>
+</div>
+
+<div class="container-fluid px-0">
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                <!-- Header Card -->
+                <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <div>
+                            <h5 class="mb-1 fw-bold text-dark">
+                                <i class="ph-duotone ph-pencil-simple me-2 text-danger"></i> Edit Bukti Serah Terima (POD)
+                            </h5>
+                            <p class="text-muted small mb-0">
+                                Mengubah data penerima, waktu serah terima, keterangan, dan berkas foto/video POD.
+                            </p>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-light text-dark border px-3 py-2 fs-6 font-monospace">
+                                <i class="ph-bold ph-barcode me-1 text-danger"></i> {{ shipment.resi_number }}
+                            </span>
+                            <span class="badge bg-danger rounded-pill px-3 py-2 fs-6">
+                                <i class="ph-bold ph-check-circle me-1"></i> {{ shipment.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Body Card -->
+                <div class="card-body p-4 bg-light mt-3 border-top">
+                    <form method="post" enctype="multipart/form-data" id="podEditForm">
+                        {% csrf_token %}
+
+                        <!-- Section 1: Informasi Penerima & Waktu -->
+                        <div class="row g-3 mb-4 p-3 rounded bg-white shadow-sm" style="border: 1px solid #dee2e6;">
+                            <div class="col-12 border-bottom pb-2 mb-1">
+                                <h6 class="fw-bold text-dark mb-0">
+                                    <i class="ph-duotone ph-user-check me-1 text-danger"></i> Informasi Penerima &amp; Waktu
+                                </h6>
+                            </div>
+
+                            <div class="col-md-12">
+                                <label class="form-label text-muted small fw-semibold">Nama Penerima Paket <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-muted"><i class="ph-bold ph-user"></i></span>
+                                    <input type="text" name="pod_receiver_name" class="form-control" value="{{ shipment.pod_receiver_name|default:shipment.receiver_name }}" required placeholder="Masukkan nama pihak yang menerima paket">
+                                </div>
+                                <small class="text-muted" style="font-size: 0.75rem;">Nama penerima sebenarnya di lapangan saat paket diserahkan.</small>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-semibold">Tanggal Serah Terima <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-muted"><i class="ph-bold ph-calendar"></i></span>
+                                    <input type="date" name="event_date" class="form-control" value="{{ initial_date }}" required>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-semibold">Jam Serah Terima <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-muted"><i class="ph-bold ph-clock"></i></span>
+                                    <input type="time" name="event_time" class="form-control" value="{{ initial_time }}" required>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label text-muted small fw-semibold">Keterangan / Catatan Penyerahan</label>
+                                <textarea name="description" class="form-control" rows="2" placeholder="Contoh: Diterima oleh security pos depan / tetangga sebelah / ybs">{{ desc_note }}</textarea>
+                            </div>
+                        </div>
+
+                        <!-- Section 2: Berkas Bukti POD (Foto & Video) -->
+                        <div class="row g-3 mb-4 p-3 rounded bg-white shadow-sm" style="border: 1px solid #dee2e6;">
+                            <div class="col-12 border-bottom pb-2 mb-1 d-flex justify-content-between align-items-center">
+                                <h6 class="fw-bold text-dark mb-0">
+                                    <i class="ph-duotone ph-image me-1 text-danger"></i> Bukti Lampiran POD (Foto &amp; Video)
+                                </h6>
+                                <span class="badge bg-light text-secondary border" id="slotCounterBadge">
+                                    Maksimal 5 Berkas
+                                </span>
+                            </div>
+
+                            <!-- Berkas yang Sudah Ada -->
+                            {% if pod_attachments or shipment.pod_image %}
+                            <div class="col-12">
+                                <label class="form-label text-muted small fw-semibold d-block mb-2">
+                                    Berkas Tersimpan Saat Ini (Centang untuk menghapus):
+                                </label>
+                                <div class="row g-3">
+                                    {% for att in pod_attachments %}
+                                    <div class="col-6 col-md-4 col-lg-3" id="att-card-{{ att.id }}">
+                                        <div class="media-card h-100 p-2 position-relative">
+                                            <div class="media-thumbnail-wrapper rounded">
+                                                {% if att.media_type == 'VIDEO' %}
+                                                <video src="{{ att.file.url }}" controls preload="metadata"></video>
+                                                <span class="position-absolute top-0 start-0 m-1 badge bg-dark bg-opacity-75 text-white badge-media-type">
+                                                    <i class="ph-fill ph-video-camera me-1"></i> VIDEO
+                                                </span>
+                                                {% else %}
+                                                <img src="{{ att.file.url }}" alt="Bukti Foto">
+                                                <span class="position-absolute top-0 start-0 m-1 badge bg-primary bg-opacity-75 text-white badge-media-type">
+                                                    <i class="ph-fill ph-image me-1"></i> FOTO
+                                                </span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="mt-2 pt-1 border-top">
+                                                <div class="form-check">
+                                                    <input class="form-check-input del-attachment-chk" type="checkbox" name="delete_attachment" value="{{ att.id }}" id="delAtt{{ att.id }}">
+                                                    <label class="form-check-label small text-danger fw-semibold" for="delAtt{{ att.id }}" style="font-size: 0.78rem;">
+                                                        <i class="ph-bold ph-trash me-1"></i> Hapus Berkas
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% empty %}
+                                        {% if shipment.pod_image %}
+                                        <div class="col-6 col-md-4 col-lg-3">
+                                            <div class="media-card h-100 p-2 position-relative">
+                                                <div class="media-thumbnail-wrapper rounded">
+                                                    <img src="{{ shipment.pod_image.url }}" alt="Bukti Foto">
+                                                    <span class="position-absolute top-0 start-0 m-1 badge bg-primary bg-opacity-75 text-white badge-media-type">
+                                                        <i class="ph-fill ph-image me-1"></i> FOTO UTAMA
+                                                    </span>
+                                                </div>
+                                                <div class="mt-2 pt-1 border-top">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" name="delete_image" value="1" id="delPrimaryImage">
+                                                        <label class="form-check-label small text-danger fw-semibold" for="delPrimaryImage" style="font-size: 0.78rem;">
+                                                            <i class="ph-bold ph-trash me-1"></i> Hapus Berkas
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Dropzone / Input Upload File Baru -->
+                            <div class="col-12 mt-3">
+                                <label class="form-label text-muted small fw-semibold d-block">
+                                    Tambah Berkas Foto / Video Baru:
+                                </label>
+                                
+                                <div class="dropzone-box" id="dropzoneContainer" onclick="document.getElementById('podMediaInput').click();">
+                                    <i class="ph-duotone ph-cloud-arrow-up text-danger" style="font-size: 2.5rem;"></i>
+                                    <div class="fw-bold text-dark mt-2" style="font-size: 0.95rem;">
+                                        Klik untuk memilih berkas atau geser &amp; letakkan ke sini
+                                    </div>
+                                    <p class="text-muted small mb-0 mt-1" style="font-size: 0.8rem;">
+                                        Mendukung <strong>Foto</strong> (JPG, PNG, WEBP) &amp; <strong>Video</strong> (MP4, WEBM, MOV). Maksimal total 5 berkas per resi.
+                                    </p>
+                                    <div class="mt-2">
+                                        <span class="badge bg-secondary bg-opacity-10 text-secondary border px-2 py-1" style="font-size: 0.72rem;">
+                                            <i class="ph-bold ph-printer me-1"></i> Catatan: Pada dokumen cetak E-POD, hanya lampiran <strong>Foto</strong> yang akan dicetak.
+                                        </span>
+                                    </div>
+                                    <input type="file" name="pod_media" id="podMediaInput" class="d-none" multiple accept="image/*,video/*">
+                                </div>
+
+                                <!-- Live Preview Files yang Dipilih -->
+                                <div id="selectedFilesPreview" class="mt-3 d-none">
+                                    <label class="form-label text-muted small fw-semibold d-block mb-2">
+                                        Pratinjau Berkas yang Baru Dipilih:
+                                    </label>
+                                    <div class="d-flex flex-wrap gap-2" id="previewList"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-end gap-2 mt-4 pt-2">
+                            <a href="{% url 'operations:pod-detail' shipment.pk %}" class="btn btn-light border px-4">
+                                <i class="ph-bold ph-x me-1"></i> Batal
+                            </a>
+                            <button type="submit" class="btn btn-danger px-4" id="btnSavePod">
+                                <i class="ph-bold ph-floppy-disk me-1"></i> Simpan Perubahan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('podMediaInput');
+    const dropzone = document.getElementById('dropzoneContainer');
+    const previewContainer = document.getElementById('selectedFilesPreview');
+    const previewList = document.getElementById('previewList');
+    const form = document.getElementById('podEditForm');
+
+    // Drag and drop events
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.add('dragover');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.remove('dragover');
+        }, false);
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files && files.length > 0) {
+            fileInput.files = files;
+            handleFiles(files);
+        }
+    });
+
+    fileInput.addEventListener('change', function() {
+        handleFiles(this.files);
+    });
+
+    function handleFiles(files) {
+        if (!files || files.length === 0) {
+            previewContainer.classList.add('d-none');
+            previewList.innerHTML = '';
+            return;
+        }
+
+        // Hitung file saat ini yang tidak dicentang hapus
+        const existingCount = document.querySelectorAll('.del-attachment-chk:not(:checked)').length + 
+                              (document.querySelector('#delPrimaryImage:not(:checked)') ? 1 : 0);
+        
+        if (existingCount + files.length > 5) {
+            alert(`Peringatan: Maksimal total berkas adalah 5. Anda saat ini memiliki ${existingCount} berkas tersimpan dan memilih ${files.length} berkas baru.`);
+        }
+
+        previewList.innerHTML = '';
+        previewContainer.classList.remove('d-none');
+
+        Array.from(files).forEach((file, idx) => {
+            const isVideo = file.type.startsWith('video/') || /\.(mp4|webm|mov|mkv)$/i.test(file.name);
+            const chip = document.createElement('div');
+            chip.className = 'preview-chip position-relative';
+            chip.title = file.name;
+
+            const url = URL.createObjectURL(file);
+
+            if (isVideo) {
+                const vid = document.createElement('video');
+                vid.src = url;
+                vid.muted = true;
+                chip.appendChild(vid);
+
+                const badge = document.createElement('span');
+                badge.className = 'position-absolute top-0 start-0 m-1 badge bg-dark bg-opacity-75 text-white';
+                badge.style.fontSize = '0.6rem';
+                badge.innerHTML = '<i class="ph-fill ph-video-camera"></i>';
+                chip.appendChild(badge);
+            } else {
+                const img = document.createElement('img');
+                img.src = url;
+                chip.appendChild(img);
+
+                const badge = document.createElement('span');
+                badge.className = 'position-absolute top-0 start-0 m-1 badge bg-primary bg-opacity-75 text-white';
+                badge.style.fontSize = '0.6rem';
+                badge.innerHTML = '<i class="ph-fill ph-image"></i>';
+                chip.appendChild(badge);
+            }
+
+            previewList.appendChild(chip);
+        });
+    }
+});
+</script>
+{% endblock %}

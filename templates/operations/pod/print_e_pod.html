@@ -1,0 +1,445 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>E POD - {{ shipment.resi_number }}</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <style>
+        @page {
+            size: 8.26in 4.28in;
+            margin: 0mm !important;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #000;
+            font-size: 8.5px;
+            background-color: #525659;
+            line-height: 1.2;
+        }
+
+        .no-print {
+            padding: 10px;
+            background: #e2e8f0;
+            text-align: center;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .no-print button, .no-print a {
+            padding: 6px 16px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-print {
+            background-color: #ed1c2e;
+            color: #fff;
+            border: 1px solid #ed1c2e;
+        }
+
+        .btn-back {
+            background-color: #fff;
+            color: #333;
+            border: 1px solid #ccc;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 8.26in;
+            min-height: 4.28in;
+            height: 4.28in;
+            margin: 15px auto;
+            position: relative;
+            background-color: #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            padding: 8px 14px;
+            box-sizing: border-box;
+        }
+
+        .footer-box {
+            position: absolute;
+            bottom: 6px;
+            left: 14px;
+            right: 14px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        td {
+            vertical-align: top;
+            padding: 0;
+        }
+
+        /* HEADER */
+        .header-table {
+            width: 100%;
+            margin-bottom: 2px;
+        }
+
+        .header-left {
+            width: 58%;
+            vertical-align: middle;
+        }
+
+        .header-logo-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-logo-row img {
+            height: 44px;
+            object-fit: contain;
+            flex-shrink: 0;
+        }
+
+        .company-title {
+            font-size: 10px;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 1px;
+        }
+
+        .company-addr {
+            font-size: 7px;
+            color: #333;
+            line-height: 1.2;
+        }
+
+        .company-addr strong {
+            color: #000;
+        }
+
+        .header-right {
+            width: 42%;
+            text-align: right;
+            vertical-align: middle;
+            padding-right: 2px;
+        }
+
+        .resi-title {
+            font-size: 10.5px;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 1px;
+            letter-spacing: 0.2px;
+        }
+
+        .barcode-wrap {
+            display: inline-block;
+            text-align: right;
+        }
+
+        .barcode-wrap svg {
+            height: 32px;
+            max-width: 240px;
+            display: block;
+        }
+
+        /* DASHED DIVIDER */
+        .dashed-divider {
+            border-top: 1px dashed #666;
+            margin: 3px 0 5px 0;
+        }
+
+        /* BODY CONTENT */
+        .label-col {
+            width: 100px;
+            font-size: 8.5px;
+            color: #000;
+            padding: 1.2px 0;
+        }
+
+        .sep-col {
+            width: 12px;
+            font-size: 8.5px;
+            font-weight: bold;
+            text-align: center;
+            padding: 1.2px 0;
+        }
+
+        .val-col {
+            font-size: 8.5px;
+            font-weight: bold;
+            color: #000;
+            padding: 1.2px 0;
+        }
+
+        .val-norm {
+            font-size: 8.5px;
+            font-weight: normal;
+            color: #000;
+            padding: 1.2px 0;
+        }
+
+        .photo-box-title {
+            font-size: 9px;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 4px;
+        }
+
+        .photo-img-frame {
+            max-height: 48mm;
+            max-width: 100%;
+            object-fit: contain;
+            border: 1px solid #ccc;
+            background: #fafafa;
+        }
+
+        .footer-text {
+            font-size: 7px;
+            color: #333;
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background-color: #fff;
+                margin: 0;
+                padding: 0;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .container {
+                box-shadow: none;
+                margin: 0;
+                width: 100%;
+                max-width: 100%;
+                min-height: auto;
+                padding: 4mm 6mm;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="no-print">
+        <a href="{% url 'operations:pod-detail' shipment.pk %}" class="btn-back">Kembali ke Detail POD</a>
+        <button onclick="window.print()" class="btn-print">Print E POD</button>
+    </div>
+
+    <div class="container">
+        <!-- HEADER -->
+        <table class="header-table">
+            <tr>
+                <!-- Header Left: Logo + Company Info (Vertically Centered) -->
+                <td class="header-left">
+                    <div class="header-logo-row">
+                        <img src="{% static 'img/logo-surat.webp' %}" alt="Paketin Cargo Logo" />
+                        <div>
+                            <div class="company-title">E POD PT. Amanah Cargo Jaya Mandiri</div>
+                            <div class="company-addr">
+                                Kantor Pusat : Jl. Arteri Jorr Jatiwarna No.55, RT.001/RW.002, Jatimelati, Kec. Pd. Melati, Kota Bks, Jawa Barat 17415, Telp. No : 0811 151 7716<br/>
+                                <strong>www.paketincargo.com</strong>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+
+                <!-- Header Right: Resi No + Barcode (Vertically Centered & Aligned Right) -->
+                <td class="header-right">
+                    <div class="resi-title">Resi No : {{ shipment.resi_number }}</div>
+                    <div class="barcode-wrap">
+                        <svg id="barcodeSvg"></svg>
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+        <!-- Dashed Divider -->
+        <div class="dashed-divider"></div>
+
+        <!-- MAIN BODY -->
+        <table style="width: 100%;">
+            <tr>
+                <!-- Left Details Column (56%) -->
+                <td style="width: 56%; vertical-align: top; padding-right: 8px;">
+                    <table style="width: 100%;">
+                        <tr>
+                            <td class="label-col" style="font-weight: bold;">No Reff :</td>
+                            <td class="sep-col"></td>
+                            <td class="val-col">{{ shipment.reference_no|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="label-col">Kode Pelanggan</td>
+                            <td class="sep-col">:</td>
+                            <td class="val-col">{{ shipment.client.customer_code|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="label-col">No. DRS</td>
+                            <td class="sep-col">:</td>
+                            <td class="val-col">{{ delivery_manifest.manifest_number|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="label-col">Nama Kurir</td>
+                            <td class="sep-col">:</td>
+                            <td class="val-col">
+                                {% if delivery_manifest and delivery_manifest.driver %}
+                                    {{ delivery_manifest.driver.username }} - {{ delivery_manifest.driver.get_full_name|default:delivery_manifest.driver.username }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" style="height: 4px;"></td>
+                        </tr>
+                        <tr>
+                            <td class="label-col">Nama Penerima</td>
+                            <td class="sep-col">:</td>
+                            <td class="val-col">{{ shipment.receiver_name }}</td>
+                        </tr>
+                        <tr>
+                            <td class="label-col">Alamat</td>
+                            <td class="sep-col">:</td>
+                            <td class="val-norm">
+                                {{ shipment.receiver_address|default:"-" }}
+                                {% if shipment.receiver_city %}, {{ shipment.receiver_city }}{% endif %}
+                                {% if shipment.receiver_postal_code %} - {{ shipment.receiver_postal_code }}{% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label-col"></td>
+                            <td class="sep-col"></td>
+                            <td class="val-norm">{{ shipment.receiver_phone|default:"" }}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" style="height: 4px;"></td>
+                        </tr>
+                        <tr>
+                            <td class="label-col">POD No.</td>
+                            <td class="sep-col">:</td>
+                            <td class="val-col">POD{{ shipment.resi_number }}</td>
+                        </tr>
+                        <tr>
+                            <td class="label-col">Diterima Oleh</td>
+                            <td class="sep-col">:</td>
+                            <td class="val-col">{{ shipment.pod_receiver_name|default:shipment.receiver_name|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="label-col">Hubungan</td>
+                            <td class="sep-col">:</td>
+                            <td class="val-col">PENERIMA LANGSUNG</td>
+                        </tr>
+                        <tr>
+                            <td class="label-col">Tanggal/Jam POD</td>
+                            <td class="sep-col">:</td>
+                            <td class="val-col">
+                                {% if effective_pod_date %}
+                                    {{ effective_pod_date|date:"d-m-Y H:i" }}
+                                {% elif shipment.pod_date %}
+                                    {{ shipment.pod_date|date:"d-m-Y H:i" }}
+                                {% elif pod_tracking.occurred_at %}
+                                    {{ pod_tracking.occurred_at|date:"d-m-Y H:i" }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label-col">Status POD</td>
+                            <td class="sep-col">:</td>
+                            <td class="val-col">{% if shipment.status == 'POD' or shipment.status == 'POD_BALIK' %}DELIVERED{% else %}{{ shipment.get_status_display|upper }}{% endif %}</td>
+                        </tr>
+                        <tr>
+                            <td class="label-col">Keterangan</td>
+                            <td class="sep-col">:</td>
+                            <td class="val-norm">{{ pod_tracking.description|default:"" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="label-col">Titik Kordinat</td>
+                            <td class="sep-col">:</td>
+                            <td class="val-norm">,</td>
+                        </tr>
+                    </table>
+                </td>
+
+                <!-- Right Photo & Signature Column (44%) -->
+                <td style="width: 44%; vertical-align: top; padding-left: 6px;">
+                    <div class="photo-box-title">Photo & Signature :</div>
+                    <div style="display: flex; gap: 4px; align-items: flex-start;">
+                        {% if photo_urls %}
+                            {% for p_url in photo_urls %}
+                            <img src="{{ p_url }}" class="photo-img-frame" style="max-height: 48mm; max-width: {% if photo_urls|length == 1 %}100%{% elif photo_urls|length == 2 %}48%{% else %}31%{% endif %};" alt="Bukti Foto POD" />
+                            {% endfor %}
+                        {% elif shipment.pod_image %}
+                        <img src="{{ shipment.pod_image.url }}" class="photo-img-frame" alt="Bukti Foto POD" />
+                        {% else %}
+                        <div style="width: 100%; height: 42mm; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; color: #999; font-size: 8px;">
+                            (Foto Bukti POD Tidak Tersedia)
+                        </div>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+        <!-- FOOTER DI PALING BAWAH -->
+        <div class="footer-box">
+            <div class="dashed-divider" style="margin-top: 0; margin-bottom: 2px;"></div>
+            <table style="width: 100%; margin-top: 2px;">
+                <tr>
+                    <td style="width: 38%;" class="footer-text">
+                        <span style="color: blue;">Copyright {% now "Y" %}</span> <strong>www.paketincargo.com</strong> All rights reserved
+                    </td>
+                    <td style="width: 32%; text-align: center;" class="footer-text">
+                        Tanggal Input : {{ shipment.created_at|date:"d-m-Y" }}, diinput oleh : 
+                        {% if shipment.created_by %}
+                            {{ shipment.created_by.get_full_name|default:shipment.created_by.username|upper }}
+                        {% else %}
+                            SYSTEM
+                        {% endif %}
+                    </td>
+                    <td style="width: 30%; text-align: right;" class="footer-text">
+                        Cetak Tanggal : {{ print_time|date:"d-m-Y" }} Oleh 
+                        {% if request.user.is_authenticated %}
+                            {{ request.user.username|upper }}
+                        {% else %}
+                            SYSTEM
+                        {% endif %}
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Generate Barcode matching AWB standard
+        JsBarcode("#barcodeSvg", "{{ shipment.resi_number }}", {
+            format: "CODE128",
+            width: 1.5,
+            height: 32,
+            displayValue: false,
+            margin: 0
+        });
+
+        // Auto print trigger on page load (Chrome standard preview)
+        window.onload = function() {
+            setTimeout(function() {
+                window.print();
+            }, 500);
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,227 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surat Perintah Pengambilan Barang (SPPB)</title>
+    <style>
+        * { box-sizing: border-box; }
+        @page { size: A4; margin: 0; } /* Set margin 0 to hide browser headers/footers */
+        body { font-family: Arial, sans-serif; font-size: 11px; margin: 0; padding: 12mm 10mm 10mm 10mm; }
+        .container { width: 100%; margin: 0 auto; }
+        
+        /* Header */
+        .header { position: relative; border-bottom: 2px solid #000; padding-top: 15px; padding-bottom: 12px; margin-bottom: 12px; min-height: 65px; }
+        .logo { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 160px; }
+        .logo img { width: 100%; display: block; }
+        .header-title { text-align: center; }
+        .header-title h2 { margin: 0; font-size: 16px; font-weight: bold; }
+        .header-title p { margin: 5px 0 0; font-size: 12px; }
+        
+        /* Barcode Area */
+        .barcode-container { text-align: center; margin: 15px 0; }
+        .barcode-container img { height: 50px; width: auto; }
+        .barcode-text { font-size: 10px; font-weight: bold; }
+
+        /* Meta Info */
+        .meta-info { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 12px; }
+        .meta-info table { width: 100%; }
+        .meta-info td { padding: 2px 0; vertical-align: top; }
+        .meta-info .col-left { width: 60%; }
+        .meta-info .col-right { width: 40%; }
+        .label-cell { width: 120px; }
+        .colon-cell { width: 10px; text-align: center; }
+
+        /* Main Table */
+        .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }
+        .items-table th, .items-table td { border: 1px solid #000; padding: 5px; vertical-align: top; }
+        .items-table th { background-color: #f0f0f0; text-align: left; }
+        
+        /* Signatures */
+        .signature-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .signature-table th, .signature-table td { border: 1px solid #000; padding: 5px; width: 33.33%; }
+        .signature-table th { background-color: #f0f0f0; }
+        .signature-box { height: 80px; display: flex; align-items: flex-end; padding: 5px; }
+        
+        @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 12mm 10mm 10mm 10mm; }
+            .no-print { display: none; }
+        }
+    </style>
+    <!-- Include JsBarcode for generating barcodes on the client side -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+</head>
+<body onload="window.print()">
+    <div class="container">
+        
+        <div class="no-print" style="margin-bottom: 20px;">
+            <button onclick="window.print()" style="padding: 8px 15px; cursor: pointer;">Print SPPB</button>
+            <a href="{% url 'operations:pickup-list' %}?tab=manifest" style="margin-left: 10px; text-decoration: none;">Kembali ke Pickup List</a>
+        </div>
+
+        <div class="header">
+            <div class="logo">
+                <img src="{% static 'img/logo-surat.webp' %}" alt="Paketin Cargo" style="width: 100%;">
+            </div>
+            <div class="header-title">
+                <h2>Surat Perintah Pengambilan Barang (SPPB)</h2>
+                <p>{% if manifest.branch %}PT. Paketin Cargo / {{ manifest.branch.name }}{% elif manifest.vendor %}{{ manifest.vendor.name }}{% else %}PT. Paketin Cargo / Internal{% endif %}</p>
+            </div>
+        </div>
+
+        <div class="barcode-container">
+            <svg id="manifest-barcode"></svg>
+            <div class="barcode-text">SPPB No : {{ manifest.manifest_number }}</div>
+        </div>
+
+        <div class="meta-info">
+            <table class="col-left">
+                <tr>
+                    <td class="label-cell">No. SPPB</td>
+                    <td class="colon-cell">:</td>
+                    <td><b>{{ manifest.manifest_number }}</b></td>
+                </tr>
+                <tr>
+                    <td class="label-cell">Nama Kurir</td>
+                    <td class="colon-cell">:</td>
+                    <td>{% if manifest.driver %}{{ manifest.driver.get_full_name|default:manifest.driver.username }}{% else %}-{% endif %}</td>
+                </tr>
+                <tr>
+                    <td class="label-cell">Nama Kendaraan</td>
+                    <td class="colon-cell">:</td>
+                    <td>{{ manifest.transport_mode|default:"-"|upper }}</td>
+                </tr>
+            </table>
+            <table class="col-right">
+                <tr>
+                    <td class="label-cell">Dibuat Oleh</td>
+                    <td class="colon-cell">:</td>
+                    <td>{{ request.user.get_full_name|default:request.user.username|upper }}</td>
+                </tr>
+                <tr>
+                    <td class="label-cell">Dicetak Oleh</td>
+                    <td class="colon-cell">:</td>
+                    <td>{{ request.user.get_full_name|default:request.user.username|upper }}</td>
+                </tr>
+                <tr>
+                    <td class="label-cell">Tanggal Cetak</td>
+                    <td class="colon-cell">:</td>
+                    <td>{% now "d M Y H:i" %}</td>
+                </tr>
+            </table>
+        </div>
+
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 25%;">No. Pickup</th>
+                    <th style="width: 35%;">Pelanggan</th>
+                    <th style="width: 15%;">Pickup Ready Time</th>
+                    <th style="width: 10%;">Jenis Barang</th>
+                    <th style="width: 5%;">Koli</th>
+                    <th style="width: 10%;">Berat (Kg)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pickup in manifest.pickup_orders.all %}
+                <tr>
+                    <td>
+                        <div style="font-weight: bold;">{{ pickup.pickup_number }}</div>
+                        <div style="margin-top: 3px;">Reff Doc No : <br>{{ pickup.reff_doc_no|default:"-" }}</div>
+                    </td>
+                    <td>
+                        <div style="font-weight: bold; font-size: 11px; text-transform: uppercase;">
+                            {% if pickup.client %}
+                                {{ pickup.client.customer_code }} - {{ pickup.client.name }}
+                            {% else %}
+                                {{ pickup.pic_name|default:"-" }}
+                            {% endif %}
+                        </div>
+                        {% if pickup.pic_name and pickup.client %}
+                        <div style="font-size: 10px; color: #333; margin-top: 2px;">
+                            PIC: {{ pickup.pic_name }} {% if pickup.pic_phone %}({{ pickup.pic_phone }}){% endif %}
+                        </div>
+                        {% endif %}
+                        <div style="margin-top: 3px; font-size: 10px;">
+                            <strong>Alamat :</strong><br>
+                            {{ pickup.pickup_address|default:"-" }}{% if pickup.district %}, {{ pickup.district }}{% endif %}{% if pickup.city %}, {{ pickup.city }}{% endif %}
+                        </div>
+                        
+                        <div style="margin-top: 8px; text-align: left;">
+                            <svg class="pickup-barcode" data-value="{{ pickup.pickup_number }}"></svg>
+                        </div>
+                    </td>
+                    <td>
+                        {{ pickup.pickup_time|time:"H:i"|default:"-" }}
+                    </td>
+                    <td>{{ pickup.shipment_type|default:"PAKET"|upper }}</td>
+                    <td style="text-align: center;">{{ pickup.colly }}</td>
+                    <td style="text-align: center;">{{ pickup.weight|default:"0" }} Kg</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center;">Tidak ada data pickup.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <table class="signature-table">
+            <thead>
+                <tr>
+                    <th>DISPATCHER</th>
+                    <th>KURIR</th>
+                    <th>PELANGGAN</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        <div class="signature-box">
+                            ( {{ request.user.get_full_name|default:request.user.username|upper }} )
+                        </div>
+                    </td>
+                    <td>
+                        <div class="signature-box">
+                            ( {% if manifest.driver %}{{ manifest.driver.get_full_name|default:manifest.driver.username }}{% else %}....................{% endif %} )
+                        </div>
+                    </td>
+                    <td>
+                        <div class="signature-box">
+                            ( .................................................. )
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+    </div>
+
+    <script>
+        // Generate barcodes
+        document.addEventListener("DOMContentLoaded", function() {
+            // Manifest barcode
+            JsBarcode("#manifest-barcode", "{{ manifest.manifest_number }}", {
+                format: "CODE128",
+                width: 2,
+                height: 40,
+                displayValue: false,
+                margin: 0
+            });
+
+            // Pickup barcodes
+            document.querySelectorAll('.pickup-barcode').forEach(function(svg) {
+                var val = svg.getAttribute('data-value');
+                JsBarcode(svg, val, {
+                    format: "CODE128",
+                    width: 1.5,
+                    height: 30,
+                    displayValue: false,
+                    margin: 0
+                });
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block page_title %}Vendor Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="mb-0">Daftar Vendor</h4>
+        <a href="/admin/finance/vendor/add/" class="btn btn-primary" target="_blank">
+            <i class="ph-bold ph-plus me-2"></i>Tambah Vendor
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Service Type</label>
+                    <input type="text" name="service_type" class="form-control" 
+                           value="{{ service_filter|default:'' }}" 
+                           placeholder="Filter by service type...">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select name="is_active" class="form-select">
+                        <option value="">Semua Status</option>
+                        <option value="true" {% if active_filter == 'true' %}selected{% endif %}>Aktif</option>
+                        <option value="false" {% if active_filter == 'false' %}selected{% endif %}>Tidak Aktif</option>
+                    </select>
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Vendor Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-enterprise">
+                    <thead>
+                        <tr>
+                            <th>Nama Vendor</th>
+                            <th>Service Type</th>
+                            <th>Kontak</th>
+                            <th>Email</th>
+                            <th class="text-end">Transaksi Terakhir</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-end">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vendor in vendors %}
+                        <tr>
+                            <td><span class="fw-semibold text-dark">{{ vendor.name }}</span></td>
+                            <td>{{ vendor.service_type|default:"-" }}</td>
+                            <td>{{ vendor.contact_person|default:"-" }}</td>
+                            <td>{{ vendor.email|default:"-" }}</td>
+                            <td class="text-end">{{ vendor.last_transaction|date:"d M Y"|default:"-" }}</td>
+                            <td class="text-center">
+                                {% if vendor.is_active %}
+                                <span class="badge bg-success-subtle text-success">Aktif</span>
+                                {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary">Non-aktif</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-action-group justify-content-end">
+                                    <a href="/admin/finance/vendor/{{ vendor.id }}/change/" 
+                                       class="btn-action btn-action-view" title="Edit" target="_blank">
+                                        <i class="ph-bold ph-pencil"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted" style="border:none;">
+                                <i class="ph-duotone ph-truck-text text-muted mb-3" style="font-size: 3rem; opacity: 0.5;"></i>
+                                <p class="mb-0">Belum ada data vendor.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if vendors %}
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div class="text-muted">
+                    Menampilkan {{ vendors|length }} vendor
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

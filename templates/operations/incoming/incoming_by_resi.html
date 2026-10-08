@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+
+{% block title %}Incoming By Resi - ERP Paketin{% endblock %}
+{% block page_title %}Incoming By Resi{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'operations:incoming-list' %}" class="btn btn-outline-secondary bg-white px-3 shadow-sm btn-sm">
+            <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+        </a>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        
+        <div class="card bg-white border-0 shadow-sm rounded-4">
+            
+            <div class="card-body p-4">
+                <h5 class="fw-bold text-dark border-bottom pb-3 mb-4">Incoming Destination By Resi</h5>
+
+                <form method="post" action="{% url 'operations:incoming-by-resi' %}">
+                    {% csrf_token %}
+                    
+                    <div class="row g-3 mb-4 p-3 rounded" style="background-color: #fff; border: 1px solid #dee2e6;">
+                        <h6 class="fw-bold mb-2">Konfigurasi Status Saat Ini:</h6>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Status (Update) <span class="text-dark">*</span></label>
+                            <input type="text" class="form-control" name="location" placeholder="Misal: Tiba di Gudang, Sedang Disortir, dll" value="{{ default_location }}" required>
+                            <div class="form-text small">Status yang Anda ketik akan menjadi status berkelanjutan di riwayat.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-semibold">Keterangan Tambahan (Opsional)</label>
+                            <input type="text" class="form-control" name="description" placeholder="Misal: Kondisi paket aman, hujan, dll" value="{{ default_description }}">
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark">Scan Add Resi No (Masukkan)</label>
+                            <div class="input-group input-group-lg shadow-sm">
+                                <span class="input-group-text bg-white border-end-0"><i class="ph-bold ph-scan text-success"></i></span>
+                                <input type="text" id="addScanNo" class="form-control border-start-0 ps-0" placeholder="Arahkan Barcode Scanner kesini..." autofocus>
+                                <button class="btn btn-success" type="button" id="btnAddScan">Scan & Simpan</button>
+                            </div>
+                            <small class="text-muted mt-1 d-block">Tekan <b>Enter</b> pada scanner.</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark">Scan Delete Resi No (Keluarkan)</label>
+                            <div class="input-group input-group-lg shadow-sm">
+                                <span class="input-group-text bg-white border-end-0"><i class="ph-bold ph-trash text-dark"></i></span>
+                                <input type="text" id="delScanNo" class="form-control border-start-0 ps-0" placeholder="Scan untuk membatalkan...">
+                                <button class="btn btn-dark" type="button" id="btnDelScan">Hapus</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="hiddenInputs"></div>
+
+                    <div class="d-flex justify-content-end gap-2 mb-4">
+                        <button type="button" class="btn btn-light border px-4" onclick="location.reload()">Reset</button>
+                        <button type="submit" id="btnSubmit" class="btn btn-primary px-4" disabled><i class="ph-bold ph-check-circle me-2"></i> Process Incoming</button>
+                    </div>
+                </form>
+
+                <div class="table-responsive bg-white rounded-3 shadow-sm border border-light">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light text-secondary">
+                            <tr>
+                                <th class="ps-4">Aksi</th>
+                                <th>No. Resi (AWB)</th>
+                                <th>Destination</th>
+                                <th>Service</th>
+                                <th>Volumetric</th>
+                                <th class="pe-4">Weight (kg)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scanTableBody">
+                            <tr id="emptyRow">
+                                <td colspan="6" class="text-center text-muted py-4">Belum ada data resi yang discan.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+        let scannedIds = new Set();
+
+        const updateCounter = () => {
+            const count = scannedIds.size;
+            if(count > 0) {
+                $('#emptyRow').hide();
+                $('#btnSubmit').prop('disabled', false);
+            } else {
+                $('#emptyRow').show();
+                $('#btnSubmit').prop('disabled', true);
+            }
+        };
+
+        const appendToTable = (data) => {
+            if(scannedIds.has(data.resi_number)) {
+                alert('Resi sudah ada di dalam list!');
+                return;
+            }
+            
+            scannedIds.add(data.resi_number);
+            
+            const tr = `
+                <tr id="row-${data.resi_number}">
+                    <td class="ps-4">
+                        <button type="button" class="btn btn-sm btn-outline-dark btn-remove" data-id="${data.resi_number}">
+                            <i class="ph-bold ph-trash"></i>
+                        </button>
+                    </td>
+                    <td class="fw-bold text-primary">${data.resi_number}</td>
+                    <td>${data.destination}</td>
+                    <td>${data.service}</td>
+                    <td>${data.volume}</td>
+                    <td>${data.weight} Kg</td>
+                </tr>
+            `;
+            $('#scanTableBody').append(tr);
+            
+            $('#hiddenInputs').append(`
+                <input type="hidden" name="scanned_items" value="${data.resi_number}" id="input-${data.resi_number}">
+            `);
+            
+            updateCounter();
+        };
+
+        const removeRow = (id) => {
+            scannedIds.delete(id);
+            $(`#row-${id}`).remove();
+            $(`#input-${id}`).remove();
+            updateCounter();
+        };
+
+        const processAddScan = () => {
+            const resi = $('#addScanNo').val().trim();
+            if(!resi) return;
+
+            $.ajax({
+                url: '{% url "operations:api-verify-resi" %}',
+                data: { resi_number: resi, purpose: 'incoming' },
+                success: function(response) {
+                    if(response.status === 'success') {
+                        appendToTable(response.data);
+                        $('#addScanNo').val('');
+                    } else {
+                        alert(response.message);
+                    }
+                },
+                error: function(xhr) {
+                    let msg = 'Gagal memverifikasi resi.';
+                    if(xhr.responseJSON && xhr.responseJSON.message) {
+                        msg = xhr.responseJSON.message;
+                    }
+                    alert(msg);
+                }
+            });
+        };
+
+        const processDelScan = () => {
+            const resi = $('#delScanNo').val().trim();
+            if(!resi) return;
+            
+            if(scannedIds.has(resi)) {
+                removeRow(resi);
+                $('#delScanNo').val('');
+            } else {
+                alert('Resi tidak ditemukan di list scan!');
+            }
+        };
+
+        $('#btnAddScan').click(processAddScan);
+        $('#addScanNo').keypress(function(e) {
+            if(e.which == 13) {
+                e.preventDefault();
+                processAddScan();
+            }
+        });
+
+        $('#btnDelScan').click(processDelScan);
+        $('#delScanNo').keypress(function(e) {
+            if(e.which == 13) {
+                e.preventDefault();
+                processDelScan();
+            }
+        });
+
+        $(document).on('click', '.btn-remove', function() {
+            removeRow($(this).data('id'));
+        });
+        
+        // Prevent enter submitting the main form on configuration fields
+        $('#location, #description').keypress(function(e) {
+            if(e.which == 13) {
+                e.preventDefault();
+                $('#addScanNo').focus();
+            }
+        });
+    });
+</script>
+{% endblock %}

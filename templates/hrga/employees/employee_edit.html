@@ -1,0 +1,313 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - ERP Paketin{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="mb-3">
+        <a href="{% url 'employees:employee_list' %}" class="btn btn-outline-secondary bg-white px-3 shadow-sm btn-sm">
+            <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+        </a>
+    </div>
+
+    
+
+    <form method="POST" enctype="multipart/form-data" id="employeeForm">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-4 shadow-sm mb-3">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- CARD 1: Hubungkan Akun Pengguna (Konsep seperti field customer pada resi) -->
+        <div class="card bg-white border-0 shadow-sm rounded-4 p-4 mb-3">
+            <h5 class="fw-bold text-dark border-bottom pb-3 mb-4">{{ title }}</h5>
+
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                <div class="rounded-3 d-flex align-items-center justify-content-center" style="width:36px;height:36px;background:#fef2f2;color:#dc2626;">
+                    <i class="ph-duotone ph-user-check fs-5"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-0 text-dark">Koneksi Akun Pengguna (User Account)</h6>
+                    <span class="text-muted small" style="font-size:0.75rem;">Pilih akun login yang sudah dibuat untuk dihubungkan dengan data pegawai ini</span>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label text-muted fw-semibold small">Pilih Akun User Terdaftar <span class="text-danger">*</span></label>
+                    {{ form.user }}
+                    {% if form.user.help_text %}<div class="form-text small" style="font-size:0.72rem;">{{ form.user.help_text }}</div>{% endif %}
+                    {% if form.user.errors %}<div class="text-danger small mt-1">{{ form.user.errors|striptags }}</div>{% endif %}
+                </div>
+                
+                <!-- Live Preview Info Box (Auto-Populated) -->
+                <div class="col-12" id="userPreviewCard" style="display: none;">
+                    <div class="p-3 rounded-3 bg-light border d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center bg-white border text-primary fw-bold" style="width:42px;height:42px;font-size:1rem;" id="prevAvatar">
+                                U
+                            </div>
+                            <div>
+                                <div class="fw-bold text-dark" id="prevName">-</div>
+                                <div class="text-muted small" style="font-size:0.75rem;">
+                                    <span id="prevUsername">@user</span> · <span id="prevEmail">email@paketin.com</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-white text-danger border px-3 py-2 rounded-pill fw-semibold" id="prevRole">
+                                Role: -
+                            </span>
+                            <span class="badge bg-white text-dark border px-3 py-2 rounded-pill fw-medium" id="prevPhone">
+                                HP: -
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CARD 2: Data Identitas Pegawai -->
+        <div class="card bg-white border-0 shadow-sm rounded-4 p-4 mb-3">
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                <div class="rounded-3 d-flex align-items-center justify-content-center" style="width:36px;height:36px;background:#eef2ff;color:#4f46e5;">
+                    <i class="ph-duotone ph-identification-card fs-5"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-0 text-dark">Data Identitas Pegawai</h6>
+                    <span class="text-muted small" style="font-size:0.75rem;">NIP, nama lengkap resmi, NIK, dan dokumen identitas</span>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label text-muted fw-semibold small">NIP / ID Pegawai <span class="text-danger">*</span></label>
+                    {{ form.employee_id }}
+                    {% if form.employee_id.errors %}<div class="text-danger small mt-1">{{ form.employee_id.errors|striptags }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted fw-semibold small">Nama Lengkap (Sesuai KTP) <span class="text-danger">*</span></label>
+                    {{ form.full_name }}
+                    {% if form.full_name.errors %}<div class="text-danger small mt-1">{{ form.full_name.errors|striptags }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted fw-semibold small">Nomor HP</label>
+                    {{ form.phone_number }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted fw-semibold small">NIK / No. KTP</label>
+                    {{ form.nik }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted fw-semibold small">NPWP</label>
+                    {{ form.npwp }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted fw-semibold small">Foto Profil Pegawai</label>
+                    {{ form.profile_picture }}
+                </div>
+            </div>
+        </div>
+
+        <!-- CARD 3: Penempatan & Struktur Organisasi -->
+        <div class="card bg-white border-0 shadow-sm rounded-4 p-4 mb-3">
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                <div class="rounded-3 d-flex align-items-center justify-content-center" style="width:36px;height:36px;background:#f0fdf4;color:#16a34a;">
+                    <i class="ph-duotone ph-buildings fs-5"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-0 text-dark">Penempatan &amp; Struktur Organisasi</h6>
+                    <span class="text-muted small" style="font-size:0.75rem;">Penempatan cabang kerja, departemen, dan jabatan</span>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label text-muted fw-semibold small">Cabang Penempatan</label>
+                    {{ form.branch }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted fw-semibold small">Departemen</label>
+                    {{ form.department }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted fw-semibold small">Posisi / Jabatan</label>
+                    {{ form.position }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted fw-semibold small">Atasan Langsung (Supervisor)</label>
+                    {{ form.supervisor }}
+                </div>
+            </div>
+        </div>
+
+        <!-- CARD 4: Status Kepegawaian & Berkas Kontrak -->
+        <div class="card bg-white border-0 shadow-sm rounded-4 p-4 mb-3">
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                <div class="rounded-3 d-flex align-items-center justify-content-center" style="width:36px;height:36px;background:#fdf4ff;color:#a855f7;">
+                    <i class="ph-duotone ph-file-text fs-5"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-0 text-dark">Status Kepegawaian &amp; Berkas Kontrak</h6>
+                    <span class="text-muted small" style="font-size:0.75rem;">Masa berlaku kontrak, status kerja, dan unggah dokumen perjanjian</span>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label text-muted fw-semibold small">Status Kepegawaian</label>
+                    {{ form.status }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted fw-semibold small">Tanggal Bergabung</label>
+                    {{ form.join_date }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted fw-semibold small">Tanggal Berakhir Kontrak</label>
+                    {{ form.contract_end_date }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted fw-semibold small">Dokumen KTP (PDF / JPG / PNG)</label>
+                    {{ form.document_ktp }}
+                    {% if form.instance.document_ktp %}
+                    <div class="small mt-1"><a href="{{ form.instance.document_ktp.url }}" target="_blank" class="text-primary"><i class="ph-bold ph-file me-1"></i>Lihat Dokumen KTP Saat Ini</a></div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted fw-semibold small">Berkas Kontrak / CV (PDF)</label>
+                    {{ form.document_contract }}
+                    {% if form.instance.document_contract %}
+                    <div class="small mt-1"><a href="{{ form.instance.document_contract.url }}" target="_blank" class="text-primary"><i class="ph-bold ph-file me-1"></i>Lihat Berkas Kontrak Saat Ini</a></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- CARD 5: Payroll & Kontak Darurat -->
+        <div class="card bg-white border-0 shadow-sm rounded-4 p-4 mb-4">
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                <div class="rounded-3 d-flex align-items-center justify-content-center" style="width:36px;height:36px;background:#fefce8;color:#ca8a04;">
+                    <i class="ph-duotone ph-bank fs-5"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-0 text-dark">Data Payroll &amp; Kontak Darurat</h6>
+                    <span class="text-muted small" style="font-size:0.75rem;">Informasi rekening penggajian dan kontak penting saat darurat</span>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label text-muted fw-semibold small">Nama Bank</label>
+                    {{ form.bank_name }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted fw-semibold small">Nomor Rekening</label>
+                    {{ form.bank_account_number }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted fw-semibold small">Atas Nama Rekening</label>
+                    {{ form.bank_account_holder }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted fw-semibold small">Nama Kontak Darurat</label>
+                    {{ form.emergency_contact_name }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted fw-semibold small">Hubungan</label>
+                    {{ form.emergency_contact_relation }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted fw-semibold small">No. HP Darurat</label>
+                    {{ form.emergency_contact_phone }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex justify-content-end align-items-center gap-2 mb-4">
+            <a href="{% url 'employees:employee_list' %}" class="btn btn-light px-4 fw-semibold border">
+                Batal
+            </a>
+            <button type="submit" class="btn btn-danger px-5 fw-bold shadow-sm">
+                <i class="ph-bold ph-floppy-disk me-2"></i>
+                {% if is_create %}Simpan Data Pegawai{% else %}Simpan Perubahan Pegawai{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Auto-fill JavaScript (Like Customer selection in POS Resi) -->
+<script>
+    const usersData = {{ users_json|safe }};
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        const userSelect = document.getElementById('id_user_select');
+        const previewCard = document.getElementById('userPreviewCard');
+        const prevAvatar = document.getElementById('prevAvatar');
+        const prevName = document.getElementById('prevName');
+        const prevUsername = document.getElementById('prevUsername');
+        const prevEmail = document.getElementById('prevEmail');
+        const prevRole = document.getElementById('prevRole');
+        const prevPhone = document.getElementById('prevPhone');
+
+        const fullNameInput = document.getElementById('id_full_name');
+        const phoneInput = document.getElementById('id_phone_number');
+        const nipInput = document.getElementById('id_employee_id');
+        const branchSelect = document.getElementById('id_branch');
+        const bankHolderInput = document.getElementById('id_bank_account_holder');
+
+        function updateUserData(userId) {
+            if (!userId || !usersData[userId]) {
+                if (previewCard) previewCard.style.display = 'none';
+                return;
+            }
+            const data = usersData[userId];
+            
+            // Show preview card
+            if (previewCard) {
+                previewCard.style.display = 'block';
+                if (prevName) prevName.textContent = data.full_name;
+                if (prevUsername) prevUsername.textContent = '@' + data.username;
+                if (prevEmail) prevEmail.textContent = data.email;
+                if (prevRole) prevRole.textContent = 'Role: ' + (data.role_name || '-');
+                if (prevPhone) prevPhone.textContent = 'HP: ' + (data.phone_number || '-');
+                if (prevAvatar) prevAvatar.textContent = data.full_name.charAt(0).toUpperCase();
+            }
+
+            // Auto-fill form fields if empty or newly selected
+            {% if is_create %}
+            if (fullNameInput && (!fullNameInput.value || fullNameInput.value === '')) {
+                fullNameInput.value = data.full_name;
+            }
+            if (phoneInput && (!phoneInput.value || phoneInput.value === '')) {
+                phoneInput.value = data.phone_number;
+            }
+            if (nipInput && (!nipInput.value || nipInput.value === '')) {
+                nipInput.value = data.suggested_nip;
+            }
+            if (branchSelect && data.branch_id) {
+                branchSelect.value = data.branch_id;
+            }
+            if (bankHolderInput && (!bankHolderInput.value || bankHolderInput.value === '')) {
+                bankHolderInput.value = data.full_name;
+            }
+            {% endif %}
+        }
+
+        if (userSelect) {
+            userSelect.addEventListener('change', function() {
+                updateUserData(this.value);
+            });
+            // Trigger on page load if already selected
+            if (userSelect.value) {
+                updateUserData(userSelect.value);
+            }
+        }
+    });
+</script>
+{% endblock %}

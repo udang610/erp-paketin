@@ -1,0 +1,739 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Report POD & Rekapitulasi Resi - ERP Paketin{% endblock %}
+{% block page_title %}Report{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-filter-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+    }
+    .report-filter-card .form-control,
+    .report-filter-card .form-select,
+    .report-filter-card .input-group-text {
+        background-color: #ffffff !important;
+        border-color: #cbd5e1;
+    }
+    .report-filter-card .form-control:focus,
+    .report-filter-card .form-select:focus {
+        border-color: #ed1c2e;
+        box-shadow: 0 0 0 3px rgba(237, 28, 46, 0.15);
+    }
+    .select2-selection__clear,
+    .select2-container--bootstrap-5 .select2-selection--single .select2-selection__clear {
+        display: none !important;
+    }
+    .table-report-wrapper {
+        overflow-x: auto;
+        max-width: 100%;
+    }
+    .table-report th {
+        font-size: 0.74rem;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        font-weight: 700;
+        color: #1e293b;
+        background-color: #f1f5f9;
+        white-space: nowrap;
+        border-bottom: 2px solid #cbd5e1;
+        padding: 9px 12px;
+        text-align: left;
+    }
+    .table-report td {
+        font-size: 0.82rem;
+        vertical-align: middle;
+        padding: 8px 12px;
+        color: #1e293b;
+        white-space: nowrap;
+    }
+    .table-report tfoot td {
+        background-color: #ffffff !important;
+        font-weight: 700;
+        font-size: 0.84rem;
+        border-top: 2px solid #94a3b8;
+        color: #1e293b;
+        white-space: nowrap;
+    }
+    .pod-thumb {
+        width: 36px;
+        height: 36px;
+        object-fit: cover;
+        cursor: pointer;
+        transition: transform 0.15s ease-in-out;
+    }
+    .pod-thumb:hover {
+        transform: scale(1.15);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-2">
+    <!-- Header Section -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+        <div>
+            <h4 class="fw-bold mb-1 text-dark">Report POD &amp; Rekapitulasi Resi</h4>
+            <p class="text-muted small mb-0">Filter dan pratinjau rekap data lengkap pengiriman operasional, berat tonase, omset, SLA, manifest drop point, dan bukti foto POD.</p>
+        </div>
+    </div>
+
+    <!-- 1. Filter Card (Simple & Practical) -->
+    <div class="card report-filter-card shadow-sm mb-4">
+        <div class="card-body p-4">
+            <form method="get" id="reportFilterForm">
+                <div class="row g-3">
+                    <!-- Tanggal -->
+                    <div class="col-md-3 col-sm-6">
+                        <label class="form-label text-muted small fw-semibold mb-1">Dari Tanggal</label>
+                        <input type="text" name="start_date" class="form-control form-control-sm flatpickr-date bg-white" placeholder="dd/mm/yyyy" value="{{ start_date }}">
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <label class="form-label text-muted small fw-semibold mb-1">Sampai Tanggal</label>
+                        <input type="text" name="end_date" class="form-control form-control-sm flatpickr-date bg-white" placeholder="dd/mm/yyyy" value="{{ end_date }}">
+                    </div>
+
+                    <!-- Asal & Tujuan -->
+                    <div class="col-md-3 col-sm-6">
+                        <label class="form-label text-muted small fw-semibold mb-1">Kota Asal (Origin)</label>
+                        <select name="origin" class="form-select form-select-sm select2-city bg-white">
+                            <option value="">Semua Kota Asal</option>
+                            {% for c in cities %}
+                            <option value="{{ c.value }}" {% if origin == c.value %}selected{% endif %}>{{ c.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <label class="form-label text-muted small fw-semibold mb-1">Kota Tujuan (Destination)</label>
+                        <select name="destination" class="form-select form-select-sm select2-city bg-white">
+                            <option value="">Semua Kota Tujuan</option>
+                            {% for c in cities %}
+                            <option value="{{ c.value }}" {% if destination == c.value %}selected{% endif %}>{{ c.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Layanan, Pembayaran, Status, SLA Status -->
+                    <div class="col-md-3 col-sm-6">
+                        <label class="form-label text-muted small fw-semibold mb-1">Layanan</label>
+                        <select name="service_type" class="form-select form-select-sm bg-white">
+                            <option value="">Semua Layanan</option>
+                            {% for code, label in service_choices %}
+                            <option value="{{ code }}" {% if service_type == code %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <label class="form-label text-muted small fw-semibold mb-1">Tipe Pembayaran</label>
+                        <select name="payment_type" class="form-select form-select-sm bg-white">
+                            <option value="">Semua Tipe</option>
+                            {% for code, label in payment_choices %}
+                            <option value="{{ code }}" {% if payment_type == code %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <label class="form-label text-muted small fw-semibold mb-1">Status Resi</label>
+                        <select name="status" class="form-select form-select-sm bg-white">
+                            <option value="">Semua Status</option>
+                            {% for code, label in status_choices %}
+                            <option value="{{ code }}" {% if status_filter == code %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <label class="form-label text-muted small fw-semibold mb-1">Kategori SLA</label>
+                        <select name="sla_status" class="form-select form-select-sm bg-white">
+                            <option value="">Semua Kategori</option>
+                            <option value="ON_TIME" {% if sla_filter == 'ON_TIME' %}selected{% endif %}>Tepat Waktu</option>
+                            <option value="LATE" {% if sla_filter == 'LATE' %}selected{% endif %}>Terlambat</option>
+                            <option value="IN_PROGRESS" {% if sla_filter == 'IN_PROGRESS' %}selected{% endif %}>On Track</option>
+                            <option value="OVERDUE" {% if sla_filter == 'OVERDUE' %}selected{% endif %}>Overdue</option>
+                        </select>
+                    </div>
+
+                    <!-- Search Input & Action Buttons -->
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small fw-semibold mb-1">Cari Kata Kunci (No. Resi / Referensi / Pengirim / Penerima)</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white text-dark"><i class="ph-bold ph-magnifying-glass"></i></span>
+                            <input type="text" name="q" class="form-control bg-white" placeholder="Ketik No AWB, No Ref, Pengirim, PT..." value="{{ search_query }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end justify-content-md-end gap-2">
+                        <a href="{% url 'operations:report-sla' %}" class="btn btn-outline-secondary btn-sm px-3" title="Reset Filter">
+                            <i class="ph-bold ph-arrow-clockwise me-1"></i> Reset
+                        </a>
+                        <button type="submit" class="btn btn-danger btn-sm px-4 fw-bold shadow-sm" style="background-color: #ed1c2e; border-color: #ed1c2e;">
+                            <i class="ph-bold ph-funnel me-1"></i> Preview
+                        </button>
+                        <a href="{% url 'operations:report-sla-export-excel' %}?start_date={{ start_date }}&end_date={{ end_date }}&origin={{ origin }}&destination={{ destination }}&service_type={{ service_type }}&payment_type={{ payment_type }}&status={{ status_filter }}&sla_status={{ sla_filter }}&q={{ search_query }}" class="btn btn-success btn-sm px-4 fw-bold shadow-sm">
+                            <i class="ph-bold ph-file-xls me-1"></i> Export Excel
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. List Data Card (Tabel Data Resi Lengkap Sesuai Format Preview) -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+            <h6 class="fw-bold mb-0 text-dark">
+                <i class="ph-bold ph-list-dashes text-dark me-2"></i>Daftar Data Laporan Resi (POD Preview)
+            </h6>
+            <span class="text-muted small fw-semibold">
+                Total: <strong class="text-dark">{{ filtered_count }}</strong> Data Resi
+            </span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-report-wrapper">
+                <table class="table table-hover table-bordered table-report align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="text-center" style="width: 40px;">No</th>
+                            <th>No. Resi</th>
+                            <th>Referensi</th>
+                            <th>No Pickup</th>
+                            <th>Tanggal</th>
+                            <th>Asal</th>
+                            <th>Kode Akun</th>
+                            <th>Nama Akun</th>
+                            <th>Nama Pengirim</th>
+                            <th class="text-center">Koli</th>
+                            <th class="text-end">Berat</th>
+                            <th class="text-end">Nilai COD</th>
+                            <th>Layanan</th>
+                            <th>Jenis Kiriman</th>
+                            <th>Tujuan</th>
+                            <th>Kota Tujuan</th>
+                            <th>Nama Penerima</th>
+                            <th>Pic Penerima</th>
+                            <th>Alamat Tujuan</th>
+                            <th>No Hp Penerima</th>
+                            <th>Deskripsi Barang</th>
+                            <th>Intruksi Khusus</th>
+                            <th>Tipe Transaksi</th>
+                            <th>Tipe Industri</th>
+                            <th>User Entry</th>
+                            <th class="text-center">Status Terakhir</th>
+                            <th>Status Pod</th>
+                            <th>Keterangan Pod</th>
+                            <th>Di Terima Oleh</th>
+                            <th>Status Penerima</th>
+                            <th>POD Date</th>
+                            <th class="text-center">POD Photo</th>
+                            <th>Entry Date</th>
+                            <th>Verified Date</th>
+                            <th>Outgoing Date</th>
+                            <th>No Manifest Outgoing</th>
+                            <th>Incoming Date</th>
+                            <th>No Manifest Incoming</th>
+                            <th>Incoming Transit Date</th>
+                            <th>No Manifest Incoming Transit</th>
+                            <th>Outgoing Transit Date</th>
+                            <th>No Manifest Outgoing Transit</th>
+                            <th>Delivery Date</th>
+                            <th>Delivery Return Date</th>
+                            <th>POD Return Date</th>
+                            <th>No Manifest Delivery</th>
+                            <th>No POD</th>
+                            <th>Transfer Location No</th>
+                            <th>List Mile Drop Point</th>
+                            <th>Middle Mile Drop Point</th>
+                            <th>Booking ID Drop Point</th>
+                            <th>Connote Drop Point</th>
+                            <th>Courier Delivery</th>
+                            <th>Courier Delivery Return</th>
+                            <th>Aging OS</th>
+                            <th>Pod Longlate</th>
+                            <th class="text-center" style="width: 60px;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in page_obj %}
+                        <tr id="row-shipment-{{ s.pk }}">
+                            <td class="text-center text-muted small">
+                                {{ forloop.counter0|add:page_obj.start_index }}
+                            </td>
+                            <td class="fw-bold text-dark">
+                                <a href="javascript:void(0)" onclick="openShipmentPreview({{ s.pk }})" class="text-dark text-decoration-underline fw-bold">
+                                    {{ s.resi_number }}
+                                </a>
+                                {% if s.is_cod %}
+                                <span class="text-muted small fw-semibold ms-1">(COD)</span>
+                                {% endif %}
+                            </td>
+                            <td class="fw-medium text-dark">
+                                {{ s.reference_no|default:"" }}
+                            </td>
+                            <td class="text-muted small">
+                                {{ s.pickup_number_ref|default:"" }}
+                            </td>
+                            <td>
+                                {{ s.created_at|date:"d/m/Y" }}
+                            </td>
+                            <td class="fw-bold text-dark">
+                                {{ s.get_tlc_origin }}
+                            </td>
+                            <td class="text-muted small">
+                                {{ s.client.customer_code|default:"" }}
+                            </td>
+                            <td class="fw-semibold text-dark text-truncate" style="max-width: 150px;" title="{{ s.client.name|default:'' }}">
+                                {{ s.client.name|default:"" }}
+                            </td>
+                            <td class="text-truncate" style="max-width: 150px;" title="{% if s.client %}{{ s.client.name }}{% else %}{{ s.sender_name|default:'' }}{% endif %}">
+                                {% if s.client %}{{ s.client.name }}{% else %}{{ s.sender_name|default:"" }}{% endif %}
+                            </td>
+                            <td class="text-center fw-semibold text-dark">
+                                {{ s.total_colly|default:"1" }}
+                            </td>
+                            <td class="text-end fw-semibold text-dark">
+                                {{ s.weight_formatted }}
+                            </td>
+                            <td class="text-end">
+                                {{ s.cod_value_formatted|default:"" }}
+                            </td>
+                            <td class="fw-semibold">
+                                {{ s.get_service_type_display }}
+                            </td>
+                            <td>
+                                {{ s.get_shipment_type_detail_display }}
+                            </td>
+                            <td class="fw-bold text-dark">
+                                {{ s.get_tlc_dest }}
+                            </td>
+                            <td>
+                                {{ s.get_city_dest }}
+                            </td>
+                            <td class="fw-semibold text-dark text-truncate" style="max-width: 140px;" title="{{ s.receiver_name|default:'' }}">
+                                {{ s.receiver_name|default:"" }}
+                            </td>
+                            <td class="text-muted small">
+                                {{ s.receiver_attention|default:s.receiver_name|default:"" }}
+                            </td>
+                            <td class="text-truncate text-muted small" style="max-width: 180px;" title="{{ s.receiver_address|default:'' }}">
+                                {{ s.receiver_address|default:"" }}
+                            </td>
+                            <td class="text-muted small">
+                                {{ s.receiver_phone|default:"" }}
+                            </td>
+                            <td class="text-truncate text-muted small" style="max-width: 150px;" title="{{ s.description_item|default:'' }}">
+                                {{ s.description_item|default:"" }}
+                            </td>
+                            <td class="text-truncate text-muted small" style="max-width: 140px;" title="{{ s.special_instruction|default:'' }}">
+                                {{ s.special_instruction|default:"" }}
+                            </td>
+                            <td>
+                                {{ s.get_payment_type_display }}
+                            </td>
+                            <td class="text-muted small">
+                                {{ s.client.get_type_industry_display|default:"" }}
+                            </td>
+                            <td class="text-muted small">
+                                {% if s.created_by %}{{ s.created_by.get_full_name|default:s.created_by.username }}{% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if s.status == 'PENDING' %}
+                                <span class="badge bg-warning text-dark rounded-pill px-2 py-1 fw-bold">PENDING</span>
+                                {% elif s.status == 'PICKUP' %}
+                                <span class="badge text-white rounded-pill px-2 py-1 fw-bold" style="background-color: #06b6d4;">PICKUP</span>
+                                {% elif s.status == 'INBOUND_ORIGIN' %}
+                                <span class="badge text-white rounded-pill px-2 py-1 fw-bold" style="background-color: #3b82f6;">INBOUND</span>
+                                {% elif s.status == 'OUTGOING' %}
+                                <span class="badge text-white rounded-pill px-2 py-1 fw-bold" style="background-color: #2563eb;">OUTGOING</span>
+                                {% elif s.status == 'TRANSFER' %}
+                                <span class="badge bg-secondary text-white rounded-pill px-2 py-1 fw-bold">TRANSFER</span>
+                                {% elif s.status == 'TRANSIT' %}
+                                <span class="badge text-white rounded-pill px-2 py-1 fw-bold" style="background-color: #8b5cf6;">TRANSIT</span>
+                                {% elif s.status == 'INCOMING_DESTINATION' %}
+                                <span class="badge text-white rounded-pill px-2 py-1 fw-bold" style="background-color: #0d9488;">INCOMING</span>
+                                {% elif s.status == 'DELIVERY' %}
+                                <span class="badge text-white rounded-pill px-2 py-1 fw-bold" style="background-color: #f97316;">DELIVERY</span>
+                                {% elif s.status == 'POD' or s.status == 'POD_BALIK' %}
+                                <span class="badge bg-success text-white rounded-pill px-2 py-1 fw-bold">TERKIRIM</span>
+                                {% elif s.status == 'PARTIAL_DELIVERED' %}
+                                <span class="badge bg-warning text-dark rounded-pill px-2 py-1 fw-bold">PARTIAL</span>
+                                {% elif s.status == 'RETURNED' %}
+                                <span class="badge bg-danger text-white rounded-pill px-2 py-1 fw-bold">RETUR</span>
+                                {% elif s.status == 'VOID' %}
+                                <span class="badge bg-dark text-white rounded-pill px-2 py-1 fw-bold">VOID</span>
+                                {% else %}
+                                <span class="badge bg-secondary rounded-pill px-2 py-1 fw-bold">{{ s.get_status_display|upper }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if s.pod_date or s.status == 'POD' or s.status == 'POD_BALIK' %}
+                                <span class="text-success fw-semibold">TERKIRIM</span>
+                                {% else %}
+                                <span class="text-muted small">{{ s.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if s.sla_info.sla_status == 'ON_TIME' %}
+                                <span class="text-success fw-semibold">Tepat Waktu</span>
+                                {% elif s.sla_info.sla_status == 'LATE' %}
+                                <span class="text-danger fw-semibold">Terlambat</span>
+                                {% elif s.sla_info.sla_status == 'OVERDUE' %}
+                                <span class="text-warning fw-semibold">Overdue</span>
+                                {% else %}
+                                <span class="text-primary fw-semibold">On Track</span>
+                                {% endif %}
+                            </td>
+                            <td class="fw-medium text-dark">
+                                {{ s.pod_receiver_name|default:"" }}
+                            </td>
+                            <td class="text-muted small">
+                                {% if s.pod_receiver_name %}Penerima Langsung{% endif %}
+                            </td>
+                            <td class="text-muted small">
+                                {{ s.pod_date|date:"d/m/Y H:i"|default:"" }}
+                            </td>
+                            <td class="text-center">
+                                {% if s.pod_photo_url %}
+                                <img src="{{ s.pod_photo_url }}" class="rounded shadow-sm border pod-thumb" alt="Foto POD" onclick="openPodPhotoModal('{{ s.pod_photo_url|escapejs }}', '{{ s.resi_number|escapejs }}', '{% if s.pod_receiver_name %}{{ s.pod_receiver_name|escapejs }}{% else %}{{ s.receiver_name|default:''|escapejs }}{% endif %}', '{% if s.pod_date %}{{ s.pod_date|date:'d M Y H:i' }}{% endif %}')" title="Klik untuk perbesar foto POD">
+                                {% endif %}
+                            </td>
+                            <td class="text-muted small">{{ s.entry_date|default:"" }}</td>
+                            <td class="text-muted small">{{ s.verified_date|default:"" }}</td>
+                            <td class="text-muted small">{{ s.outgoing_date|default:"" }}</td>
+                            <td class="text-muted small">{{ s.outgoing_manifest_no|default:"" }}</td>
+                            <td class="text-muted small">{{ s.incoming_date|default:"" }}</td>
+                            <td class="text-muted small">{{ s.incoming_manifest_no|default:"" }}</td>
+                            <td class="text-muted small">{{ s.incoming_transit_date|default:"" }}</td>
+                            <td class="text-muted small">{{ s.incoming_transit_manifest_no|default:"" }}</td>
+                            <td class="text-muted small">{{ s.outgoing_transit_date|default:"" }}</td>
+                            <td class="text-muted small">{{ s.outgoing_transit_manifest_no|default:"" }}</td>
+                            <td class="text-muted small">{{ s.delivery_date|default:"" }}</td>
+                            <td class="text-muted small">{{ s.delivery_return_date|default:"" }}</td>
+                            <td class="text-muted small">{{ s.pod_return_date|default:"" }}</td>
+                            <td class="text-muted small">{{ s.delivery_manifest_no|default:"" }}</td>
+                            <td class="text-muted small">{{ s.resi_number }}</td>
+                            <td class="text-muted small">{{ s.transfer_manifest_no|default:"" }}</td>
+                            <td class="text-muted small">{{ s.last_mile_drop_point|default:"" }}</td>
+                            <td class="text-muted small">{{ s.middle_mile_drop_point|default:"" }}</td>
+                            <td class="text-muted small">{{ s.booking_id_drop_point|default:"" }}</td>
+                            <td class="text-muted small">{{ s.connote_drop_point|default:"" }}</td>
+                            <td class="text-muted small">{{ s.delivery_courier|default:"" }}</td>
+                            <td class="text-muted small">{{ s.courier_delivery_return|default:"" }}</td>
+                            <td class="text-muted small">{{ s.aging_os|default:"" }}</td>
+                            <td class="text-muted small">{{ s.pod_longlate|default:"" }}</td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-outline-dark btn-sm px-2 py-1" onclick="openShipmentPreview({{ s.pk }})" title="Quick Preview">
+                                    <i class="ph-bold ph-eye"></i>
+                                </button>
+
+                                <!-- Hidden payload for quick preview modal -->
+                                <script type="application/json" id="data-shipment-{{ s.pk }}">
+                                {
+                                    "pk": {{ s.pk }},
+                                    "resi_number": "{{ s.resi_number }}",
+                                    "ref_number": "{{ s.reference_no|default:'-'|escapejs }}",
+                                    "pickup_no": "{{ s.pickup_number_ref|default:'-'|escapejs }}",
+                                    "created_at": "{{ s.created_at|date:'d M Y H:i' }}",
+                                    "account_code": "{{ s.client.customer_code|default:'-'|escapejs }}",
+                                    "account_name": "{{ s.client.name|default:'-'|escapejs }}",
+                                    "sender": "{% if s.client %}{{ s.client.name|escapejs }}{% else %}{{ s.sender_name|default:'-'|escapejs }}{% endif %}",
+                                    "sender_phone": "{{ s.sender_phone|default:'-'|escapejs }}",
+                                    "sender_address": "{{ s.sender_address|default:'-'|escapejs }}",
+                                    "receiver": "{{ s.receiver_name|default:'-'|escapejs }}",
+                                    "receiver_attention": "{{ s.receiver_attention|default:'-'|escapejs }}",
+                                    "receiver_phone": "{{ s.receiver_phone|default:'-'|escapejs }}",
+                                    "receiver_address": "{{ s.receiver_address|default:'-'|escapejs }}",
+                                    "origin": "{{ s.get_tlc_origin }} - {{ s.get_city_origin|escapejs }}",
+                                    "destination": "{{ s.get_tlc_dest }} - {{ s.get_city_dest|escapejs }}",
+                                    "service": "{{ s.get_service_type_display|escapejs }}",
+                                    "shipment_type": "{{ s.get_shipment_type_detail_display|escapejs }}",
+                                    "payment": "{{ s.get_payment_type_display|escapejs }}",
+                                    "weight": "{{ s.weight_formatted }} Kg",
+                                    "colly": "{{ s.total_colly|default:'1' }} Koli",
+                                    "cod_value": "{{ s.cod_value_formatted|default:'-' }}",
+                                    "price": "{{ s.price_formatted }}",
+                                    "description": "{{ s.description_item|default:'-'|escapejs }}",
+                                    "instruction": "{{ s.special_instruction|default:'-'|escapejs }}",
+                                    "status": "{{ s.get_status_display|escapejs }}",
+                                    "sla_target": "{{ s.sla_info.target_days }} Hari",
+                                    "sla_lead_time": "{{ s.sla_info.lead_time_display|escapejs }}",
+                                    "sla_label": "{{ s.sla_info.sla_label|escapejs }}",
+                                    "sla_status": "{{ s.sla_info.sla_status }}",
+                                    "pod_date": "{% if s.pod_date %}{{ s.pod_date|date:'d M Y H:i' }}{% else %}-{% endif %}",
+                                    "pod_receiver": "{{ s.pod_receiver_name|default:'-'|escapejs }}",
+                                    "pod_photo_url": "{{ s.pod_photo_url|default:''|escapejs }}"
+                                }
+                                </script>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="57" class="text-center py-5 text-muted">
+                                <i class="ph-duotone ph-package-x fs-1 d-block mb-2 text-secondary"></i>
+                                Tidak ada data resi ditemukan untuk parameter filter yang dipilih.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    {% if page_obj %}
+                    <tfoot>
+                        <tr>
+                            <td colspan="9" class="ps-3 text-end text-uppercase text-muted small fw-bold">
+                                Total (Seluruh Filter):
+                            </td>
+                            <td class="text-center text-dark fw-bold">
+                                {{ total_colly|default:"0" }}
+                            </td>
+                            <td class="text-end text-dark fw-bold">
+                                {{ total_weight_display }} Kg
+                            </td>
+                            <td colspan="46" class="text-dark fw-bold">
+                                {{ total_omset_display }} ({{ filtered_count }} Resi Terfilter)
+                            </td>
+                        </tr>
+                    </tfoot>
+                    {% endif %}
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <div class="card-footer bg-white border-top py-3 px-4 d-flex justify-content-between align-items-center">
+                <span class="text-muted small">
+                    Halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }} (Total {{ filtered_count }} data)
+                </span>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link text-dark" href="?page={{ page_obj.previous_page_number }}&start_date={{ start_date }}&end_date={{ end_date }}&origin={{ origin }}&destination={{ destination }}&service_type={{ service_type }}&payment_type={{ payment_type }}&status={{ status_filter }}&sla_status={{ sla_filter }}&q={{ search_query }}">Prev</a>
+                    </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link bg-dark border-dark text-white">{{ page_obj.number }}</span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link text-dark" href="?page={{ page_obj.next_page_number }}&start_date={{ start_date }}&end_date={{ end_date }}&origin={{ origin }}&destination={{ destination }}&service_type={{ service_type }}&payment_type={{ payment_type }}&status={{ status_filter }}&sla_status={{ sla_filter }}&q={{ search_query }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Quick Preview Modal -->
+<div class="modal fade" id="shipmentPreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-bottom-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="bg-light text-dark p-2 rounded-3 border">
+                        <i class="ph-bold ph-package fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0" id="prevResiNumber">AWB-PREVIEW</h5>
+                        <span class="text-muted small" id="prevCreatedAt">Tanggal Dibuat</span>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Status Banner -->
+                <div class="p-3 bg-light rounded-3 mb-3 d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-muted small fw-semibold d-block">Status Pengiriman</span>
+                        <h6 class="fw-bold mb-0 text-dark" id="prevStatus">DELIVERED</h6>
+                    </div>
+                    <div>
+                        <span class="fw-bold" id="prevSlaBadge">Tepat Waktu</span>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <!-- Pengirim / Akun -->
+                    <div class="col-md-6">
+                        <div class="p-3 bg-light rounded-3 h-100">
+                            <h6 class="fw-bold text-secondary mb-2" style="font-size: 0.8rem;"><i class="ph-bold ph-user me-1 text-dark"></i> Pengirim / Akun Customer</h6>
+                            <div class="fw-bold text-dark" id="prevSender">PT Contoh</div>
+                            <div class="text-muted small mb-1" id="prevSenderRef">No Ref: - | No Pickup: -</div>
+                            <div class="text-muted small mb-1" id="prevSenderPhone">08123456789</div>
+                            <div class="text-muted small" style="font-size: 0.75rem;" id="prevSenderAddress">Alamat...</div>
+                        </div>
+                    </div>
+                    <!-- Penerima -->
+                    <div class="col-md-6">
+                        <div class="p-3 bg-light rounded-3 h-100">
+                            <h6 class="fw-bold text-secondary mb-2" style="font-size: 0.8rem;"><i class="ph-bold ph-map-pin me-1 text-dark"></i> Penerima / Consignee</h6>
+                            <div class="fw-bold text-dark" id="prevReceiver">Penerima Contoh</div>
+                            <div class="text-muted small mb-1" id="prevReceiverPhone">08987654321</div>
+                            <div class="text-muted small" style="font-size: 0.75rem;" id="prevReceiverAddress">Alamat...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-light rounded-3 mb-3">
+                    <h6 class="fw-bold text-secondary mb-3" style="font-size: 0.8rem;"><i class="ph-bold ph-truck me-1 text-dark"></i> Rute, Layanan &amp; Metrik SLA</h6>
+                    <div class="row g-3">
+                        <div class="col-4">
+                            <span class="text-muted small d-block">Rute Asal → Tujuan</span>
+                            <strong class="text-dark" id="prevRoute">-</strong>
+                        </div>
+                        <div class="col-4">
+                            <span class="text-muted small d-block">Layanan &amp; Jenis</span>
+                            <strong class="text-dark" id="prevServicePayment">-</strong>
+                        </div>
+                        <div class="col-4">
+                            <span class="text-muted small d-block">Berat &amp; Koli</span>
+                            <strong class="text-dark" id="prevWeightColly">-</strong>
+                        </div>
+                        <div class="col-4">
+                            <span class="text-muted small d-block">Nilai COD</span>
+                            <strong class="text-dark" id="prevCodValue">-</strong>
+                        </div>
+                        <div class="col-4">
+                            <span class="text-muted small d-block">Target SLA</span>
+                            <strong class="text-dark" id="prevSlaTarget">-</strong>
+                        </div>
+                        <div class="col-4">
+                            <span class="text-muted small d-block">Realisasi Lead Time</span>
+                            <strong class="text-dark" id="prevSlaLeadTime">-</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Foto POD Section in Preview Modal -->
+                <div class="p-3 bg-light rounded-3 mb-3" id="prevPodPhotoContainer" style="display: none;">
+                    <h6 class="fw-bold text-secondary mb-2" style="font-size: 0.8rem;"><i class="ph-bold ph-camera me-1 text-dark"></i> Bukti Foto Penerimaan (POD)</h6>
+                    <div class="d-flex align-items-center gap-3">
+                        <img id="prevPodPhotoImg" src="" class="rounded shadow-sm border" style="width: 80px; height: 80px; object-fit: cover; cursor: pointer;" alt="Foto POD" onclick="openPodPhotoModal(this.src, document.getElementById('prevResiNumber').textContent, document.getElementById('prevReceiver').textContent, document.getElementById('prevCreatedAt').textContent)">
+                        <div>
+                            <div class="small fw-bold text-dark" id="prevPodReceiverName">Penerima: -</div>
+                            <div class="small text-muted" id="prevPodDate">Waktu POD: -</div>
+                            <button type="button" class="btn btn-outline-dark btn-sm px-3 py-1 mt-1 small" onclick="openPodPhotoModal(document.getElementById('prevPodPhotoImg').src, document.getElementById('prevResiNumber').textContent, document.getElementById('prevReceiver').textContent, document.getElementById('prevCreatedAt').textContent)">
+                                <i class="ph-bold ph-arrows-out me-1"></i> Perbesar Foto
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Tutup</button>
+                    <a href="#" id="prevDetailLink" class="btn btn-dark px-4 fw-bold">
+                        <i class="ph-bold ph-arrow-square-out me-1"></i> Buka Detail Resi
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- POD Photo Zoom Lightbox Modal -->
+<div class="modal fade" id="podPhotoZoomModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-bottom py-3 px-4">
+                <div>
+                    <h6 class="modal-title fw-bold text-dark mb-0" id="zoomModalTitle">Bukti Foto POD</h6>
+                    <small class="text-muted" id="zoomModalSubtitle"></small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3 text-center bg-dark rounded-bottom-4">
+                <img id="zoomModalImg" src="" class="img-fluid rounded shadow" style="max-height: 70vh; width: auto; object-fit: contain;" alt="Foto Bukti POD">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openPodPhotoModal(imgUrl, resiNumber, receiverName, podDate) {
+    if (!imgUrl) return;
+    document.getElementById('zoomModalImg').src = imgUrl;
+    document.getElementById('zoomModalTitle').textContent = 'Bukti Foto POD - ' + resiNumber;
+    document.getElementById('zoomModalSubtitle').textContent = 'Penerima: ' + receiverName + (podDate ? ' | Tanggal: ' + podDate : '');
+    
+    const zoomModal = new bootstrap.Modal(document.getElementById('podPhotoZoomModal'));
+    zoomModal.show();
+}
+
+function openShipmentPreview(pk) {
+    const rawDataEl = document.getElementById('data-shipment-' + pk);
+    if (!rawDataEl) return;
+    try {
+        const data = JSON.parse(rawDataEl.textContent);
+        document.getElementById('prevResiNumber').textContent = data.resi_number;
+        document.getElementById('prevCreatedAt').textContent = 'Dibuat: ' + data.created_at;
+        document.getElementById('prevStatus').textContent = data.status;
+        document.getElementById('prevSender').textContent = data.account_name !== '-' ? data.account_name : data.sender;
+        document.getElementById('prevSenderRef').textContent = 'No Ref: ' + data.ref_number + ' | No Pickup: ' + data.pickup_no;
+        document.getElementById('prevSenderPhone').textContent = data.sender_phone;
+        document.getElementById('prevSenderAddress').textContent = data.sender_address;
+        document.getElementById('prevReceiver').textContent = data.receiver + (data.receiver_attention !== '-' ? ' (' + data.receiver_attention + ')' : '');
+        document.getElementById('prevReceiverPhone').textContent = data.receiver_phone;
+        document.getElementById('prevReceiverAddress').textContent = data.receiver_address;
+        document.getElementById('prevRoute').textContent = data.origin + ' → ' + data.destination;
+        document.getElementById('prevServicePayment').textContent = data.service + ' (' + data.shipment_type + ' - ' + data.payment + ')';
+        document.getElementById('prevWeightColly').textContent = data.weight + ' / ' + data.colly;
+        document.getElementById('prevCodValue').textContent = data.cod_value;
+        document.getElementById('prevSlaTarget').textContent = data.sla_target;
+        document.getElementById('prevSlaLeadTime').textContent = data.sla_lead_time;
+
+        const badgeEl = document.getElementById('prevSlaBadge');
+        badgeEl.textContent = data.sla_label;
+        if (data.sla_status === 'ON_TIME') {
+            badgeEl.className = 'fw-bold text-success';
+        } else if (data.sla_status === 'LATE') {
+            badgeEl.className = 'fw-bold text-danger';
+        } else if (data.sla_status === 'OVERDUE') {
+            badgeEl.className = 'fw-bold text-warning';
+        } else {
+            badgeEl.className = 'fw-bold text-primary';
+        }
+
+        // POD Photo in Quick Preview Modal
+        const photoContainer = document.getElementById('prevPodPhotoContainer');
+        if (data.pod_photo_url && data.pod_photo_url.length > 0) {
+            photoContainer.style.display = 'block';
+            document.getElementById('prevPodPhotoImg').src = data.pod_photo_url;
+            document.getElementById('prevPodReceiverName').textContent = 'Penerima: ' + (data.pod_receiver || data.receiver);
+            document.getElementById('prevPodDate').textContent = 'Waktu POD: ' + data.pod_date;
+        } else {
+            photoContainer.style.display = 'none';
+        }
+
+        document.getElementById('prevDetailLink').href = '/operations/shipments/' + pk + '/';
+
+        const modal = new bootstrap.Modal(document.getElementById('shipmentPreviewModal'));
+        modal.show();
+    } catch (e) {
+        console.error('Error opening preview:', e);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Flatpickr
+    if (typeof flatpickr !== 'undefined') {
+        flatpickr('.flatpickr-date', {
+            dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'd/m/Y',
+            allowInput: true
+        });
+    }
+
+    // Initialize Select2 for City
+    if (typeof jQuery !== 'undefined' && typeof jQuery.fn.select2 !== 'undefined') {
+        $('.select2-city').select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            allowClear: false
+        });
+    }
+});
+</script>
+{% endblock %}

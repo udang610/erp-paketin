@@ -1,0 +1,512 @@
+{% extends 'base.html' %}
+
+{% block title %}Entry POD - ERP Paketin{% endblock %}
+{% block page_title %}Entry POD{% endblock %}
+{% block content %}
+<style>
+    .popover.custom-popover-wide {
+        max-width: 420px !important;
+        min-width: 320px !important;
+        width: min(420px, calc(100vw - 32px)) !important;
+        overflow: hidden;
+    }
+    .popover.custom-popover-wide .popover-body {
+        padding: 12px 16px;
+        max-width: 100%;
+        overflow: hidden;
+    }
+    .custom-popover-wide .popover-inner { width: 100%; }
+    .custom-popover-wide .popover-body > div { box-sizing: border-box; max-width: 100% !important; min-width: 0 !important; overflow-x: hidden !important; }
+    .transit-history-steps { display:flex; flex-direction:column; gap:0; width:100%; max-width:100%; overflow:hidden; padding:8px 0 4px; min-width:0; box-sizing:border-box; }
+    .transit-history-step { position:relative; display:grid; grid-template-columns:16px minmax(0, 1fr); column-gap:10px; min-width:0; text-align:left; padding:0 4px 18px; box-sizing:border-box; }
+    .transit-history-step:not(:last-child)::after { content:''; position:absolute; z-index:0; top:12px; bottom:0; left:11px; width:1px; background:#f2b8bd; }
+    .transit-history-dot { position:relative; z-index:1; grid-column:1; grid-row:1 / span 3; margin:4px 0 0 1px; width:11px; height:11px; border-radius:50%; background:#c51f2a; color:transparent; display:flex; align-items:center; justify-content:center; box-shadow:none; }
+    .transit-history-step:first-child .transit-history-dot { animation: transit-pulse 1.5s infinite; }
+    @keyframes transit-pulse { 0%,100% { box-shadow:0 0 0 4px rgba(220,53,69,.18); } 50% { box-shadow:0 0 0 9px rgba(220,53,69,.08); } }
+    .transit-history-label { display:block; grid-column:2; margin-top:0; color:#151515; font-size:12px; line-height:1.25; font-weight:700; overflow-wrap:anywhere; }
+    .transit-history-meta { grid-column:2; display:flex; justify-content:space-between; gap:8px; margin-top:4px; color:#6c757d; font-size:10px; line-height:1.25; overflow-wrap:anywhere; }
+    .transit-history-location { min-width:0; }
+    .transit-history-date { flex:0 0 auto; color:#c51f2a; font-weight:700; white-space:nowrap; }
+    .transit-history-description { grid-column:2; margin-top:4px; color:#777; font-size:10px; line-height:1.25; font-style:normal; overflow-wrap:anywhere; }
+    .pod-img-preview { max-width: 80px; max-height: 60px; object-fit: cover; border-radius: 6px; border: 1px solid #dee2e6; cursor: pointer; }
+</style>
+
+<div class="mb-3">
+    <a href="{% url 'operations:pod_list' %}" class="btn btn-outline-secondary bg-white px-3 shadow-sm btn-sm">
+            <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+        </a>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        
+        <div class="card bg-white border-0 shadow-sm rounded-4 mb-4">
+
+            <div class="card-body p-4">
+                <h5 class="fw-bold text-dark border-bottom pb-3 mb-4">{% if pod_type == 'POD_BALIK' %} Entry POD Balik {% else %} Entry POD (Tanda Terima) {% endif %}</h5>
+
+                <form method="post" action="{% if pod_type == 'POD_BALIK' %}{% url 'operations:entry_pod_return' %}{% else %}{% url 'operations:entry_pod' %}{% endif %}" id="podScanForm" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="pod_type" value="{{ pod_type|default:'POD' }}">
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark">Scan Barcode (No. Resi / No. Delivery)</label>
+                            <div class="input-group input-group-lg shadow-sm">
+                                <span class="input-group-text bg-white border-end-0"><i class="ph-bold ph-scan text-success"></i></span>
+                                <input type="text" id="addScanNo" class="form-control border-start-0 ps-0" placeholder="Scan No. Resi atau No. Delivery..." autofocus>
+                                <button class="btn btn-success" type="button" id="btnAddScan">Scan &amp; Tambah</button>
+                            </div>
+                            <small class="text-muted mt-1 d-block">Scan No. Resi atau No. Delivery. Tekan <b>Enter</b> pada scanner untuk scan berulang.</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark">Hapus dari Antrean (Batal)</label>
+                            <div class="input-group input-group-lg shadow-sm">
+                                <span class="input-group-text bg-white border-end-0"><i class="ph-bold ph-trash text-dark"></i></span>
+                                <input type="text" id="delScanNo" class="form-control border-start-0 ps-0" placeholder="Scan untuk membatalkan...">
+                                <button class="btn btn-danger" type="button" id="btnDelScan">Hapus</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Unified Detail Card -->
+                    <div class="p-3 rounded mb-4 shadow-sm" id="podDetailCard" style="background-color: #fff; border: 1px solid #dee2e6;">
+                        <h6 class="fw-bold mb-3" id="podDetailTitle">
+                            <i class="ph-bold ph-user-check me-1 text-success" id="podDetailIcon"></i>
+                            <span id="podDetailHeading" class="text-success">Detail Penerima (POD Sukses):</span>
+                        </h6>
+
+                        <div class="row g-3">
+                            <!-- Field 1: Hasil Pengantaran Kurir (col-md-6) -->
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-semibold">Hasil Pengantaran Kurir <span class="text-danger">*</span></label>
+                                <select name="delivery_outcome" id="selectDeliveryOutcome" class="form-select" onchange="updateOutcomeUI()">
+                                    <option value="DELIVERED" selected>Terkirim / POD Sukses (Delivered)</option>
+                                    <option value="FAILED">Gagal Antar (Failed / Undelivered)</option>
+                                </select>
+                            </div>
+
+                            <!-- Field 2: Samping Hasil Pengantaran -->
+                            <!-- Jika DELIVERED: Hubungan / Keterangan Penerima -->
+                            <div class="col-md-6" id="fieldWrapDescription">
+                                <label class="form-label text-muted small fw-semibold">Hubungan / Keterangan Penerima (Opsional)</label>
+                                <select name="description" class="form-select select2-tags" data-placeholder="Ketik keterangan tambahan...">
+                                    <option value=""></option>
+                                    <option value="Diterima oleh yang bersangkutan">Diterima oleh yang bersangkutan</option>
+                                    <option value="Diterima oleh penghuni rumah">Diterima oleh penghuni rumah</option>
+                                    <option value="Diterima oleh satpam/security">Diterima oleh satpam/security</option>
+                                    <option value="Diterima oleh rekan kerja">Diterima oleh rekan kerja</option>
+                                    <option value="Diterima oleh resepsionis">Diterima oleh resepsionis</option>
+                                    <option value="Dititipkan ke tetangga">Dititipkan ke tetangga</option>
+                                </select>
+                            </div>
+
+                            <!-- Jika FAILED: Alasan Gagal Antar -->
+                            <div class="col-md-6" id="fieldWrapFailedReason" style="display: none;">
+                                <label class="form-label text-muted small fw-semibold">Alasan Gagal Antar (Reason) <span class="text-danger">*</span></label>
+                                <select name="failed_reason" id="selectFailedReason" class="form-select">
+                                    {% for r_code, r_label in reason_choices %}
+                                    <option value="{{ r_code }}" {% if r_code == 'RECIPIENT_NOT_HOME' %}selected{% endif %}>{{ r_label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- DELIVERED SPECIFIC FIELDS -->
+                            <div class="col-md-6" id="fieldWrapReceiverName">
+                                <label class="form-label text-muted small fw-semibold">Nama Penerima <span class="text-danger">*</span></label>
+                                <input type="text" name="pod_receiver_name" id="inputReceiverName" class="form-control" placeholder="Masukkan nama penerima..." required>
+                            </div>
+                            <div class="col-md-6" id="fieldWrapPodImage">
+                                <label class="form-label text-muted small fw-semibold">Bukti Foto / TTD e-POD (Maks. 5)</label>
+                                <input type="file" name="pod_image" id="podImageInput" class="form-control" multiple accept="image/*,video/*">
+                                <small class="text-muted" style="font-size: 0.72rem;">Bisa pilih hingga 5 foto/video.</small>
+                            </div>
+
+                            <!-- FAILED SPECIFIC FIELDS -->
+                            <div class="col-md-6" id="fieldWrapFailedImage" style="display: none;">
+                                <label class="form-label text-muted small fw-semibold">Foto Bukti Gagal Antar (Rumah Tutup / Lokasi)</label>
+                                <input type="file" name="failed_image_upload" id="failedImageInput" class="form-control" accept="image/*">
+                            </div>
+                            <div class="col-md-6" id="fieldWrapFailedDetail" style="display: none;">
+                                <label class="form-label text-muted small fw-semibold">Catatan Detail Kurir (Opsional)</label>
+                                <input type="text" name="failed_detail" class="form-control" placeholder="Contoh: Rumah tutup, telepon tidak aktif...">
+                            </div>
+
+                            <!-- COMMON FIELDS (Tanggal & Jam) -->
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-semibold">Tanggal Kejadian</label>
+                                <input type="date" name="event_date" class="form-control" value="{{ event_date }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-semibold">Jam Kejadian</label>
+                                <input type="time" name="event_time" class="form-control" value="{{ event_time }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preview Foto -->
+                    <div id="imagePreviewContainer" class="mb-4" style="display: none;">
+                        <div class="p-3 bg-white rounded border">
+                            <label class="form-label fw-semibold small text-muted">Preview Foto:</label>
+                            <div><img id="imagePreview" class="pod-img-preview" src="#" alt="Preview"></div>
+                        </div>
+                    </div>
+
+                    <!-- Table Antrean -->
+                    <div class="table-responsive bg-white rounded-3 shadow-sm border border-light mb-4">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light text-secondary">
+                                <tr>
+                                    <th class="ps-4">No. Resi</th>
+                                    <th>Asal</th>
+                                    <th>Tujuan</th>
+                                    <th>Layanan</th>
+                                    <th>Koli</th>
+                                    <th>Berat (Kg)</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scanTableBody">
+                                <tr id="emptyRow">
+                                    <td colspan="7" class="text-center text-muted py-4">Belum ada item yang discan.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div id="hiddenInputs"></div>
+
+                    <div class="d-flex justify-content-end gap-2 mb-2">
+                        <button type="button" class="btn btn-light border px-4" onclick="location.reload()">Reset</button>
+                        <button type="submit" id="btnSubmit" class="btn btn-danger px-4" disabled>
+                            <i class="ph-bold ph-check-circle me-2"></i>
+                            {% if pod_type == 'POD_BALIK' %}Simpan POD Balik{% else %}Simpan POD{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- History POD Terakhir -->
+        <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+            <div class="card-header bg-white border-bottom pt-4 pb-3 px-4">
+                <h5 class="mb-0 fw-bold text-dark">
+                    <i class="ph-duotone ph-clock-counter-clockwise me-2 text-secondary"></i> History POD Terakhir
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light text-secondary">
+                            <tr>
+                                <th class="ps-4">Waktu POD</th>
+                                <th>No. Resi</th>
+                                <th>Tipe</th>
+                                <th>Penerima</th>
+                                <th>Lokasi</th>
+                                <th>Keterangan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for history in recent_pods %}
+                            <tr>
+                                <td class="ps-4">{{ history.occurred_at|date:"d M Y H:i" }}</td>
+                                <td class="fw-bold text-dark">
+                                    <a tabindex="0" class="text-dark text-decoration-none fw-bold" role="button" data-bs-toggle="popover" data-bs-trigger="hover focus" title="Detail Pengiriman" data-bs-html="true" data-bs-custom-class="custom-popover-wide"
+                                    data-bs-content="
+                                    <div style='max-height: 420px; overflow-y: auto; overflow-x: hidden; width: 100%; min-width: 0;'>
+                                        <div class='border-bottom pb-2 mb-2'>
+                                            <strong>Resi:</strong> {{ history.shipment.resi_number }}<br>
+                                    <strong>Asal:</strong> {{ history.shipment.get_tlc_origin }} - {{ history.shipment.get_city_origin }}<br>
+                                    <strong>Tujuan:</strong> {{ history.shipment.get_tlc_dest }} - {{ history.shipment.get_city_dest }}<br>
+                                    <strong>Status Saat Ini:</strong> {{ history.shipment.get_status_display }}<br>
+                                    <strong>Penerima:</strong> {{ history.shipment.pod_receiver_name|default:'-' }}<br>
+                                        </div>
+                                        <div class='transit-history-steps'>
+                                            {% for tr in history.shipment.tracking_history.all %}
+                                             <div class='transit-history-step'>
+                                                <div class='transit-history-dot'><i class='ph-fill ph-truck'></i></div>
+                                                <strong class='transit-history-label text-primary'>{{ tr.get_status_display }}</strong>
+                                                <div class='transit-history-meta'>
+                                                    <span class='transit-history-location'><i class='ph-fill ph-map-pin text-danger me-1'></i>{{ tr.formatted_location|default:'-' }}</span>
+                                                    <span class='transit-history-date'>{{ tr.occurred_at|date:'d M Y, H:i' }}</span>
+                                                </div>
+                                                {% if tr.description %}<div class='transit-history-description'>{{ tr.description }}</div>{% endif %}
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    ">
+                                        {{ history.shipment.resi_number }}
+                                    </a>
+                                </td>
+                                <td class="text-secondary">
+                                    {% if history.status == 'POD_BALIK' %}
+                                    POD Balik
+                                    {% else %}
+                                    POD
+                                    {% endif %}
+                                </td>
+                                <td>{{ history.shipment.pod_receiver_name|default:"-" }}</td>
+                                <td>{{ history.location|default:"-" }}</td>
+                                <td>{{ history.description|default:"-" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">Belum ada riwayat POD.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if recent_pods.has_other_pages %}
+                <div class="card-footer bg-white border-top border-0 pt-3 pb-3">
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination pagination-sm justify-content-center mb-0">
+                            {% if recent_pods.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link text-dark border-0 shadow-none px-3" href="?page={{ recent_pods.previous_page_number }}"><i class="ph-bold ph-caret-left"></i></a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <a class="page-link text-muted border-0 shadow-none px-3 bg-transparent" tabindex="-1"><i class="ph-bold ph-caret-left"></i></a>
+                            </li>
+                            {% endif %}
+                            <li class="page-item disabled d-none d-md-block">
+                                <span class="page-link text-dark fw-medium px-4 border-0 shadow-none bg-transparent">Halaman {{ recent_pods.number }} dari {{ recent_pods.paginator.num_pages }}</span>
+                            </li>
+                            {% if recent_pods.has_next %}
+                            <li class="page-item">
+                                <a class="page-link text-dark border-0 shadow-none px-3" href="?page={{ recent_pods.next_page_number }}"><i class="ph-bold ph-caret-right"></i></a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <a class="page-link text-muted border-0 shadow-none px-3 bg-transparent" tabindex="-1"><i class="ph-bold ph-caret-right"></i></a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    $(document).ready(function() {
+        // Initialize popovers
+        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+        popoverTriggerList.map(function (el) { return new bootstrap.Popover(el); });
+
+        // Image preview
+        $('#podImageInput').on('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    $('#imagePreview').attr('src', e.target.result);
+                    $('#imagePreviewContainer').show();
+                };
+                reader.readAsDataURL(file);
+            } else {
+                $('#imagePreviewContainer').hide();
+            }
+        });
+
+        // Auto set current time and date to browser local time
+        const setAutoTime = () => {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            $('input[name="event_time"]').val(`${hours}:${minutes}`);
+            
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            $('input[name="event_date"]').val(`${year}-${month}-${day}`);
+        };
+        setAutoTime();
+
+        let scannedIds = new Set();
+
+        const updateCounter = () => {
+            const count = scannedIds.size;
+            if(count > 0) {
+                $('#emptyRow').hide();
+                $('#btnSubmit').prop('disabled', false);
+            } else {
+                $('#emptyRow').show();
+                $('#btnSubmit').prop('disabled', true);
+            }
+        };
+
+        const appendToTable = (resiNo, origin, destination, service, colly, weight, rtoNo) => {
+            const key = resiNo;
+            if(scannedIds.has(key)) {
+                alert('Resi / RTO ' + (rtoNo ? rtoNo + ' (' + resiNo + ')' : resiNo) + ' sudah ada di dalam antrean!');
+                return;
+            }
+
+            scannedIds.add(key);
+
+            let labelDisplay = `<span class="fw-bold text-dark">${resiNo}</span>`;
+            if (rtoNo && rtoNo !== '-' && rtoNo !== resiNo) {
+                labelDisplay = `<span class="fw-bold text-dark">${rtoNo}</span><small class="d-block text-muted" style="font-size: 0.72rem;">AWB: ${resiNo}</small>`;
+            }
+
+            const tr = `
+                <tr id="row-${resiNo}">
+                    <td class="ps-4">${labelDisplay}</td>
+                    <td>${origin || '-'}</td>
+                    <td>${destination || '-'}</td>
+                    <td class="text-secondary">${service || '-'}</td>
+                    <td>${colly || '1'}</td>
+                    <td>${weight || '1'} Kg</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-remove border-0" data-id="${resiNo}">
+                            <i class="ph-bold ph-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+            $('#scanTableBody').append(tr);
+            $('#hiddenInputs').append(`<input type="hidden" name="scanned_items" value="${resiNo}" id="input-${resiNo}">`);
+            updateCounter();
+        };
+
+        const removeRow = (id) => {
+            scannedIds.delete(id);
+            $(`#row-${id}`).remove();
+            $(`#input-${id}`).remove();
+            updateCounter();
+        };
+
+        const processAddScan = () => {
+            const scanNo = $('#addScanNo').val().trim();
+            if(!scanNo) return;
+
+            // Verifikasi AJAX: coba cari resi / No. RTO dulu
+            $.ajax({
+                url: '{% url "operations:api-verify-resi" %}',
+                data: { resi_number: scanNo, purpose: 'pod' },
+                success: function(response) {
+                    if(response.status === 'success') {
+                        appendToTable(response.data.resi_number, response.data.origin, response.data.destination, response.data.service, response.data.colly, response.data.weight, response.data.rto_number);
+                        $('#addScanNo').val('');
+                    } else {
+                        verifyDeliveryManifest(scanNo);
+                    }
+                },
+                error: function(xhr) {
+                    verifyDeliveryManifest(scanNo);
+                }
+            });
+        };
+
+        const verifyDeliveryManifest = (manifestNo) => {
+            $.ajax({
+                url: '{% url "operations:api-verify-manifest" %}',
+                data: { manifest_number: manifestNo, purpose: 'pod' },
+                success: function(response) {
+                    if(response.status === 'success' && response.data && response.data.shipments) {
+                        let addedCount = 0;
+                        response.data.shipments.forEach(function(s) {
+                            if(!scannedIds.has(s.resi_number)) {
+                                appendToTable(s.resi_number, s.origin, s.destination, s.service, s.colly, s.weight);
+                                addedCount++;
+                            }
+                        });
+                        if (addedCount === 0 && response.data.shipments.length > 0) {
+                            alert('Semua resi dari Delivery ' + manifestNo + ' sudah ada di antrean!');
+                        }
+                        $('#addScanNo').val('');
+                    } else {
+                        alert(response.message || 'No. Resi atau No. Delivery tidak ditemukan.');
+                        $('#addScanNo').val('');
+                    }
+                },
+                error: function(xhr) {
+                    let msg = 'No. Resi atau No. Delivery tidak ditemukan.';
+                    if(xhr.responseJSON && xhr.responseJSON.message) {
+                        msg = xhr.responseJSON.message;
+                    }
+                    alert(msg);
+                    $('#addScanNo').val('');
+                }
+            });
+        };
+
+        const processDelScan = () => {
+            const scanNo = $('#delScanNo').val().trim();
+            if(!scanNo) return;
+
+            if(scannedIds.has(scanNo)) {
+                removeRow(scanNo);
+                $('#delScanNo').val('');
+            } else {
+                alert('Item tidak ditemukan di antrean!');
+            }
+        };
+
+        $('#btnAddScan').click(processAddScan);
+        $('#addScanNo').keypress(function(e) {
+            if(e.which == 13) { e.preventDefault(); processAddScan(); }
+        });
+
+        $('#btnDelScan').click(processDelScan);
+        $('#delScanNo').keypress(function(e) {
+            if(e.which == 13) { e.preventDefault(); processDelScan(); }
+        });
+
+        // Outcome UI Toggle Logic
+        window.updateOutcomeUI = function() {
+            var val = $('#selectDeliveryOutcome').val();
+            var isFailed = (val === 'FAILED');
+
+            if (isFailed) {
+                $('#podDetailCard').css('border-color', '#f5c2c7');
+                $('#podDetailHeading').text('Detail Laporan Gagal Antar (Failed Delivery):').removeClass('text-success').addClass('text-danger');
+                $('#podDetailIcon').removeClass('ph-user-check text-success').addClass('ph-warning-octagon text-danger');
+                
+                $('#fieldWrapDescription').hide();
+                $('#fieldWrapReceiverName').hide();
+                $('#fieldWrapPodImage').hide();
+                $('#inputReceiverName').prop('required', false);
+
+                $('#fieldWrapFailedReason').show();
+                $('#fieldWrapFailedImage').show();
+                $('#fieldWrapFailedDetail').show();
+
+                $('button[type="submit"]').html('<i class="ph-bold ph-warning-octagon me-1"></i> Catat Gagal Antar & Alihkan ke Retur').removeClass('btn-success').addClass('btn-danger');
+            } else {
+                $('#podDetailCard').css('border-color', '#dee2e6');
+                $('#podDetailHeading').text('Detail Penerima (POD Sukses):').removeClass('text-danger').addClass('text-success');
+                $('#podDetailIcon').removeClass('ph-warning-octagon text-danger').addClass('ph-user-check text-success');
+
+                $('#fieldWrapFailedReason').hide();
+                $('#fieldWrapFailedImage').hide();
+                $('#fieldWrapFailedDetail').hide();
+
+                $('#fieldWrapDescription').show();
+                $('#fieldWrapReceiverName').show();
+                $('#fieldWrapPodImage').show();
+                $('#inputReceiverName').prop('required', true);
+
+                $('button[type="submit"]').html('<i class="ph-bold ph-floppy-disk me-1"></i> Simpan POD Terkirim').removeClass('btn-danger').addClass('btn-success');
+            }
+        };
+        updateOutcomeUI();
+
+        // Prevent enter submitting form on config fields
+        $('select[name="description"], input[name="pod_receiver_name"]').keypress(function(e) {
+            if(e.which == 13) { e.preventDefault(); $('#addScanNo').focus(); }
+        });
+    });
+</script>
+{% endblock %}

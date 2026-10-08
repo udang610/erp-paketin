@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}404 - Halaman Tidak Ditemukan{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-center" style="min-height: 70vh;">
+    <div class="text-center" style="max-width: 500px;">
+        <div class="mb-4">
+            <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 90px; height: 90px; background: #fff1f2; color: #ed1c2e; font-size: 2.5rem; font-weight: 800; box-shadow: 0 4px 14px rgba(237, 28, 46, 0.15);">
+                404
+            </span>
+        </div>
+        <h3 class="fw-bold text-dark mb-2">Halaman Tidak Ditemukan</h3>
+        <p class="text-muted mb-4" style="font-size: 0.92rem; line-height: 1.6;">
+            Halaman atau dokumen yang Anda cari mungkin telah dipindahkan, dihapus, atau tautan yang Anda masukkan salah.
+        </p>
+        <div class="d-flex justify-content-center gap-3">
+            <a href="javascript:history.back()" class="btn btn-outline-secondary px-4 py-2" style="border-radius: 8px;">
+                <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+            </a>
+            <a href="/" class="btn btn-danger px-4 py-2" style="background-color: #ed1c2e; border-color: #ed1c2e; border-radius: 8px;">
+                <i class="ph-bold ph-house me-1"></i> Dashboard Utama
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

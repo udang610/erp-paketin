@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Void Inbound - {{ session.inbound_number }}{% endblock %}
+{% block page_title %}Void Data Inbound{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card border-0 shadow-sm" style="border-radius: 12px; max-width: 500px; margin: 0 auto;">
+        <div class="card-body p-4 text-center">
+            <div class="mb-4 text-danger">
+                <i class="ph-fill ph-warning-circle" style="font-size: 4rem;"></i>
+            </div>
+            <h5 class="fw-bold mb-3">Void Dokumen Inbound?</h5>
+            <p class="text-muted mb-4">
+                Anda yakin ingin membatalkan (void) proses Inbound untuk dokumen <strong>{{ session.inbound_number }}</strong>?<br>
+                Tindakan ini akan menghapus riwayat kedatangan pada <b>{{ session.shipments.count }} resi</b> dan mengembalikan status mereka. Tindakan ini tidak dapat dibatalkan.
+            </p>
+            
+            <form method="POST">
+                {% csrf_token %}
+                <div class="d-flex justify-content-center gap-2">
+                    <a href="{% url 'operations:incoming-list' %}" class="btn btn-light px-4">Batal</a>
+                    <button type="submit" class="btn btn-danger px-4">Ya, Void Inbound</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

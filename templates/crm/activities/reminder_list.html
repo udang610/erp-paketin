@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+
+{% block title %}Daftar Reminder (CRM) - ERP Paketin{% endblock %}
+{% block page_title %}Reminder &amp; Jadwal{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h4 class="mb-1 fw-bold text-dark">Data Reminder &amp; Pengingat</h4>
+            <p class="text-muted small mb-0">Jadwal pengingat follow-up, janji temu, dan agenda kerja sales</p>
+        </div>
+        <div class="d-flex gap-2">
+            <div class="dropdown d-inline-block">
+                <button type="button" class="btn btn-outline-secondary bg-white px-4 shadow-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ph-bold ph-download-simple me-2"></i> Export
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="min-width: 180px;">
+                    <li><a class="dropdown-item py-2 fw-medium" href="{% url 'crm:reminder-export-excel' %}?show={{ current_show }}&sales_id={{ current_sales_filter }}"><i class="ph-duotone ph-file-xls me-2 text-success"></i> Excel (.xlsx)</a></li>
+                </ul>
+            </div>
+            <a href="{% url 'crm:reminder-create' %}" class="btn btn-danger px-4 fw-bold shadow-sm">
+                <i class="ph-bold ph-plus me-1"></i> Buat Baru
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Active Chips -->
+    {% if current_sales_filter or current_show %}
+    <div class="shipment-filter-summary d-flex flex-wrap align-items-center gap-2 mb-3 shadow-xs">
+        <span class="small text-muted fw-semibold me-1"><i class="ph-bold ph-funnel me-1"></i>Filter aktif:</span>
+        {% if current_show %}<span class="filter-chip">Status: {{ current_show|upper }}</span>{% endif %}
+        {% if current_sales_filter %}<span class="filter-chip">Sales ID: {{ current_sales_filter }}</span>{% endif %}
+        <a href="{% url 'crm:reminder-list' %}" class="small text-danger fw-semibold text-decoration-none ms-1">Reset semua</a>
+    </div>
+    {% endif %}
+
+    <!-- Filter Toggle & Form -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <a href="#" class="text-muted small fw-semibold text-decoration-none" onclick="var p=document.getElementById('filterPanel'); p.style.display=(p.style.display==='none'?'block':'none'); return false;">
+            <i class="ph-bold ph-funnel me-1"></i> Filter / Pencarian
+        </a>
+    </div>
+
+    <!-- Filter Panel (Collapsible) -->
+    <div class="mb-3" id="filterPanel" style="{% if current_sales_filter or current_show %}display: block;{% else %}display: none;{% endif %}">
+        <form method="get" class="row g-3 bg-white p-3 rounded-4 shadow-sm border mb-3">
+            <div class="col-md-4">
+                <label class="form-label text-muted fw-semibold small">Status Tampilan</label>
+                <select name="show" class="form-select form-select-sm">
+                    <option value="active" {% if current_show == 'active' or not current_show %}selected{% endif %}>Aktif (Belum Selesai)</option>
+                    <option value="completed" {% if current_show == 'completed' %}selected{% endif %}>Selesai</option>
+                    <option value="all" {% if current_show == 'all' %}selected{% endif %}>Semua Reminder</option>
+                </select>
+            </div>
+            {% if sales_filter_users %}
+            <div class="col-md-4">
+                <label class="form-label text-muted fw-semibold small">Sales PIC</label>
+                <select name="sales_id" class="form-select form-select-sm">
+                    <option value="">Semua Sales</option>
+                    {% for su in sales_filter_users %}
+                    <option value="{{ su.id }}" {% if current_sales_filter == su.id|stringformat:"s" %}selected{% endif %}>{{ su.first_name }} {{ su.last_name }} ({{ su.username }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+            <div class="col-md-4 d-flex align-items-end justify-content-end gap-2">
+                <button type="submit" class="btn btn-sm btn-primary px-4">Terapkan</button>
+                <a href="{% url 'crm:reminder-list' %}" class="btn btn-sm btn-light border px-3">Reset</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Table Container -->
+    <div class="table-responsive rounded-4 shadow-sm bg-white border" style="font-size: 0.85rem;">
+        <style>
+            .table-premium {
+                border-collapse: separate;
+                border-spacing: 0;
+                width: 100%;
+                font-size: 0.875rem;
+            }
+            .table-premium thead th {
+                background-color: #f8f9fa;
+                color: #6c757d;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                padding: 12px 16px;
+                border-bottom: 2px solid #e9ecef;
+                border-top: 1px solid #e9ecef;
+            }
+            .table-premium thead th:first-child {
+                border-top-left-radius: 8px;
+                border-left: 1px solid #e9ecef;
+            }
+            .table-premium thead th:last-child {
+                border-top-right-radius: 8px;
+                border-right: 1px solid #e9ecef;
+            }
+            .table-premium tbody td {
+                padding: 16px;
+                vertical-align: middle;
+                border-bottom: 1px solid #e9ecef;
+                color: #212529;
+                background-color: #fff;
+                transition: background-color 0.2s ease;
+            }
+            .table-premium tbody tr:hover td {
+                background-color: #f8f9fa;
+            }
+            .table-premium tbody tr:last-child td {
+                border-bottom: 1px solid #e9ecef;
+            }
+            .filter-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 999px; background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; font-size: .72rem; font-weight: 600; text-decoration: none; }
+            .filter-chip:hover { color: #9f1239; background: #ffe4e6; }
+        </style>
+
+        <table class="table table-premium mb-0">
+            <thead>
+                <tr>
+                    <th class="ps-3 text-nowrap text-secondary fw-semibold">JUDUL REMINDER</th>
+                    <th class="text-nowrap text-secondary fw-semibold">TANGGAL JATUH TEMPO</th>
+                    <th class="text-nowrap text-secondary fw-semibold">WAKTU</th>
+                    {% if is_admin or is_supervisor or is_kepala_cabang %}
+                    <th class="text-nowrap text-secondary fw-semibold">SALES PIC</th>
+                    {% endif %}
+                    <th class="text-nowrap text-secondary fw-semibold text-center">STATUS</th>
+                    <th class="text-center text-nowrap text-secondary fw-semibold">AKSI</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rem in reminders %}
+                <tr>
+                    <td class="ps-3 fw-semibold text-dark">{{ rem.title }}</td>
+                    <td class="text-muted small text-nowrap">{{ rem.due_date|date:"d M Y" }}</td>
+                    <td class="text-muted small text-nowrap">{{ rem.reminder_time|time:"H:i"|default:"-" }}</td>
+                    {% if is_admin or is_supervisor or is_kepala_cabang %}
+                    <td>
+                        <span class="text-dark">{{ rem.owner.get_full_name|default:rem.owner.username|default:"-" }}</span>
+                    </td>
+                    {% endif %}
+                    <td class="text-center">
+                        {% if rem.completed %}
+                        <span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold">SELESAI</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark rounded-pill px-3 py-1 fw-bold">PENDING</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <div class="dropdown">
+                            <button class="btn btn-action-table dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Aksi">
+                                <i class="ph-bold ph-list"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                <li>
+                                    <form method="post" action="{% url 'crm:reminder-toggle' rem.pk %}" class="m-0">
+                                        {% csrf_token %}
+                                        {% if rem.completed %}
+                                        <button type="submit" class="dropdown-item py-2 text-warning"><i class="ph-duotone ph-arrow-counter-clockwise me-2 text-warning"></i>Aktifkan Kembali</button>
+                                        {% else %}
+                                        <button type="submit" class="dropdown-item py-2 text-success"><i class="ph-duotone ph-check-circle me-2 text-success"></i>Tandai Selesai</button>
+                                        {% endif %}
+                                    </form>
+                                </li>
+                                <li><a class="dropdown-item py-2" href="{% url 'crm:reminder-update' rem.pk %}"><i class="ph-duotone ph-pencil-simple me-2 text-warning"></i>Ubah</a></li>
+                                {% if is_admin or request.user.is_superuser %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item py-2 text-danger" href="{% url 'crm:reminder-delete' rem.pk %}"><i class="ph-duotone ph-trash me-2 text-danger"></i>Hapus</a></li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-5 text-muted">
+                        <div class="mb-3"><i class="ph-duotone ph-bell-slash text-secondary" style="font-size: 3rem;"></i></div>
+                        <h6 class="fw-semibold text-dark">Tidak ada data reminder</h6>
+                        <p class="small mb-3">Buat jadwal pengingat tugas follow up klien Anda.</p>
+                        <a href="{% url 'crm:reminder-create' %}" class="btn btn-danger btn-sm px-4">Buat Reminder Pertama</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if is_paginated %}
+    <div class="mt-3">
+        {% include 'components/pagination.html' %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

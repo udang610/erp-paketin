@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Hasil Pencarian - ERP Paketin{% endblock %}
+{% block page_title %}Hasil Pencarian{% endblock %}
+
+{% block content %}
+<div class="container-xxl px-4 py-4">
+    <div class="card border-0 shadow-sm rounded-4 mb-4 search-hero">
+        <div class="card-body p-4">
+            <div class="text-uppercase small fw-bold text-primary mb-2"><i class="ph-bold ph-magnifying-glass me-1"></i> Universal Search</div>
+            <h3 class="fw-bold mb-1">Hasil untuk “{{ query }}”</h3>
+            <p class="text-muted mb-0">Menampilkan {{ result_count }} hasil dari modul yang dapat diakses oleh role Anda.</p>
+        </div>
+    </div>
+
+    {% if result_groups %}
+    <div class="row g-4">
+        {% for group in result_groups %}
+        <div class="col-12 col-xl-6">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-white border-bottom px-4 py-3 d-flex align-items-center gap-2">
+                    <span class="search-group-icon"><i class="ph-bold {{ group.icon }}"></i></span>
+                    <h6 class="mb-0 fw-bold">{{ group.label }}</h6>
+                    <span class="badge bg-light text-dark ms-auto">{{ group.items|length }}</span>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for item in group.items %}
+                    <a href="{{ item.url }}" class="list-group-item list-group-item-action px-4 py-3 d-flex justify-content-between align-items-center">
+                        <span><strong class="d-block text-dark">{{ item.title }}</strong><small class="text-muted">{{ item.subtitle }}</small></span>
+                        <i class="ph-bold ph-arrow-up-right text-primary"></i>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card border-0 shadow-sm rounded-4 text-center py-5">
+        <i class="ph-duotone ph-file-magnifying-glass display-5 text-muted"></i>
+        <h5 class="fw-bold mt-3">Tidak ada hasil</h5>
+        <p class="text-muted mb-0">Coba kata kunci lain atau hubungi administrator jika membutuhkan akses modul tambahan.</p>
+    </div>
+    {% endif %}
+</div>
+<style>
+    .search-hero { background: linear-gradient(120deg, #fff 0%, #eef4ff 100%); }
+    .search-group-icon { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; background: #eef2ff; color: #4f46e5; }
+</style>
+{% endblock %}

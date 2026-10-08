@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Import Harga Publish - ERP Paketin{% endblock %}
+{% block page_title %}Import Harga Publish{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="mb-3">
+        <a href="{% url 'master:price' %}" class="btn btn-outline-secondary bg-white px-3 shadow-sm btn-sm">
+            <i class="ph-bold ph-arrow-left me-1"></i> Kembali ke Daftar Tarif
+        </a>
+    </div>
+
+    
+
+    <div class="row g-4">
+        <!-- Form Upload Card -->
+        <div class="col-lg-7">
+            <div class="card bg-white border-0 shadow-sm rounded-4 p-4">
+            <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4">
+                <h5 class="fw-bold text-dark mb-0">Import Harga Publish (Publish Rate)</h5>
+                <div>
+            <a href="{% url 'master:price_download_template' %}" class="btn btn-success px-4 fw-bold shadow-sm">
+                <i class="ph-bold ph-download-simple me-2"></i> Download Template Excel
+            </a>
+        </div>
+            </div>
+
+                <h5 class="fw-bold text-dark mb-3"><i class="ph-bold ph-file-arrow-up text-danger me-2"></i>Upload File Template</h5>
+                
+                <form method="post" enctype="multipart/form-data" id="formImportPrice">
+                    {% csrf_token %}
+                    
+                    <!-- File Input Box -->
+                    <div class="mb-4">
+                        <label class="form-label text-dark fw-bold small">Pilih File Excel (.xlsx) <span class="text-danger">*</span></label>
+                        <div class="p-4 border border-2 border-dashed rounded-4 text-center bg-light" id="dropArea" style="cursor: pointer;">
+                            <i class="ph-duotone ph-file-xls text-success display-4 mb-2"></i>
+                            <p class="text-dark fw-semibold mb-1" id="fileUploadLabel">Klik untuk memilih file Excel atau seret ke sini</p>
+                            <span class="text-muted small">Mendukung format .xlsx atau .xls (Maks. 25 MB)</span>
+                            <input type="file" name="excel_file" id="excelFileInput" class="d-none" accept=".xlsx, .xls" required onchange="handleFileSelected(this)">
+                        </div>
+                    </div>
+
+                    <!-- Configuration Options -->
+                    <div class="bg-light p-3 rounded-4 mb-4 border">
+                        <h6 class="fw-bold text-dark small mb-3"><i class="ph-bold ph-gear text-primary me-1"></i>Opsi Pengaturan Impor</h6>
+                        
+                        <div class="mb-3">
+                            <label class="form-label text-muted fw-semibold small">Asal Pengiriman Default (Jika di Excel bernilai null / kosong)</label>
+                            <select name="default_origin_id" class="form-select form-select-sm rounded-3">
+                                {% for h in hub_coverages %}
+                                <option value="{{ h.id }}" {% if 'Jakarta' in h.city %}selected{% endif %}>{{ h.label }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text small text-muted">Akan digunakan jika kolom <code>origin</code> pada baris Excel tidak spesifik.</div>
+                        </div>
+
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" name="auto_create_coverage" value="1" id="checkAutoCoverage" checked>
+                            <label class="form-check-label small fw-semibold text-dark" for="checkAutoCoverage">
+                                Otomatis lengkapi data Coverage baru dari <code>Sheet2</code> jika belum terdaftar
+                            </label>
+                        </div>
+
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="overwrite_existing" value="1" id="checkOverwrite" checked>
+                            <label class="form-check-label small fw-semibold text-dark" for="checkOverwrite">
+                                Perbarui / Timpa harga jika rute dan layanan yang sama sudah ada di sistem
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-2">
+                        <a href="{% url 'master:price' %}" class="btn btn-light px-4 border fw-semibold">Batal</a>
+                        <button type="submit" class="btn btn-danger px-4 fw-bold shadow-sm" id="btnSubmitImport">
+                            <i class="ph-bold ph-upload-simple me-2"></i> Mulai Proses Impor
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Guidelines / Information Card -->
+        <div class="col-lg-5">
+            <div class="card bg-white border-0 shadow-sm rounded-4 p-4">
+                <h5 class="fw-bold text-dark mb-3"><i class="ph-bold ph-info text-primary me-2"></i>Struktur Template</h5>
+                
+                <div class="mb-3">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge bg-primary text-white rounded-pill px-3 py-1 fw-bold">Sheet 1</span>
+                        <span class="fw-bold text-dark">Data Tarif (Harga Publish)</span>
+                    </div>
+                    <ul class="text-muted small ps-3 mb-0" style="line-height: 1.6;">
+                        <li><strong>service_code</strong>: Kode layanan (contoh: <code>REG</code>, <code>UDRREG</code>, <code>ODS</code>).</li>
+                        <li><strong>origin</strong>: Kode wilayah asal atau kode TLC.</li>
+                        <li><strong>destination_name</strong>: Nama tujuan format <code>KOTA, KECAMATAN</code>.</li>
+                        <li><strong>destination_district_code</strong>: Kode unik kecamatan tujuan.</li>
+                        <li><strong>sla_min / sla_max</strong>: Estimasi hari pengiriman.</li>
+                        <li><strong>price_kg</strong>: Nominal tarif per kilogram.</li>
+                    </ul>
+                </div>
+
+                <hr class="my-3 text-muted">
+
+                <div class="mb-3">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge bg-secondary text-white rounded-pill px-3 py-1 fw-bold">Sheet 2</span>
+                        <span class="fw-bold text-dark">Master Referensi Wilayah</span>
+                    </div>
+                    <p class="text-muted small mb-2">
+                        Memuat data wilayah resmi BPS/Kemendagri lengkap dengan Kode Kecamatan, TLC, Provinsi, Kota, dan Kode Pos untuk referensi auto-matching otomatis.
+                    </p>
+                </div>
+
+                <div class="alert alert-warning rounded-4 border-0 p-3 small mb-0">
+                    <div class="d-flex gap-2">
+                        <i class="ph-bold ph-lightbulb fs-5 text-warning flex-shrink-0 mt-1"></i>
+                        <div>
+                            <strong>Tips Cepat:</strong><br>
+                            Gunakan tombol <strong>"Download Template Excel"</strong> di pojok kanan atas untuk mendapatkan format resmi yang siap diisi.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const dropArea = document.getElementById('dropArea');
+    const fileInput = document.getElementById('excelFileInput');
+    const fileLabel = document.getElementById('fileUploadLabel');
+
+    dropArea.addEventListener('click', () => fileInput.click());
+
+    dropArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropArea.classList.add('border-danger', 'bg-white');
+    });
+
+    dropArea.addEventListener('dragleave', () => {
+        dropArea.classList.remove('border-danger', 'bg-white');
+    });
+
+    dropArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropArea.classList.remove('border-danger', 'bg-white');
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            handleFileSelected(fileInput);
+        }
+    });
+
+    function handleFileSelected(input) {
+        if (input.files && input.files[0]) {
+            const fileName = input.files[0].name;
+            const fileSize = (input.files[0].size / 1024 / 1024).toFixed(2);
+            fileLabel.innerHTML = `<span class="text-success fw-bold"><i class="ph-bold ph-check-circle me-1"></i>${fileName} (${fileSize} MB)</span>`;
+            dropArea.classList.add('bg-white', 'border-success');
+        }
+    }
+
+    document.getElementById('formImportPrice').addEventListener('submit', function() {
+        const btn = document.getElementById('btnSubmitImport');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Memproses Import...';
+    });
+</script>
+{% endblock %}

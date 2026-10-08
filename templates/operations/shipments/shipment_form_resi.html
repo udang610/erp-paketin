@@ -1,0 +1,940 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title|default:"Buat Resi Baru" }}{% endblock %}
+{% block page_title %}{{ title|default:"Buat Resi Baru" }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="mb-3">
+        <a href="{% url 'operations:shipment-list' %}" class="btn btn-secondary btn-sm shadow-sm">
+            <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+    <div class="col-12">
+        <form method="post" id="resiForm">
+            {% csrf_token %}
+
+            {% if form.errors %}
+            <div class="alert alert-danger">
+                <strong>Terdapat kesalahan:</strong>
+                <ul class="mb-0">{% for field, errors in form.errors.items %}{% for error in errors %}<li>{{ field }}: {{ error }}</li>{% endfor %}{% endfor %}</ul>
+            </div>
+            {% endif %}
+
+            <!-- ===== DETAIL SHIPPER & RECEIVER (2 Cards Layout) ===== -->
+            <div class="row g-4 mb-4">
+                <!-- LEFT: SHIPPER -->
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+                            <h6 class="fw-bold text-dark mb-0"><i class="ph-duotone ph-user me-2 text-dark"></i>Detail Pengirim</h6>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold small text-dark mb-1">Pelanggan / Pengirim</label>
+                                    <select name="client" id="id_client" class="form-select ">
+                                        <option value="">-- Pilih Pelanggan --</option>
+                                        {% for c in clients %}
+                                        <option value="{{ c.id }}" 
+                                            data-name="{{ c.name|default:'' }}"
+                                            data-contact="{{ c.pic_account|default:'' }}"
+                                            data-phone="{{ c.pic_phone|default:'' }}"
+                                            data-address="{{ c.office_address|default:'' }}"
+                                            data-city="{{ c.city|default:'' }}"
+                                            data-district="{{ c.district|default:'' }}"
+                                            data-postal="{{ c.postal_code|default:'' }}"
+                                            {% if form.client.value|stringformat:"s" == c.id|stringformat:"s" %}selected{% endif %}>
+                                            {{ c.customer_code }} - {{ c.name }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label fw-semibold small text-dark mb-1">Nama Pengirim <span class="text-danger">*</span></label>
+                                    <input type="text" name="sender_name" class="form-control " value="{{ form.sender_name.value|default:'' }}" placeholder="Nama Pengirim / Perusahaan" required>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label fw-semibold small text-dark mb-1">No. Telepon <span class="text-danger">*</span></label>
+                                    <input type="text" name="sender_phone" class="form-control " value="{{ form.sender_phone.value|default:'' }}" placeholder="No. Telepon / HP PIC" required>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold small text-dark mb-1">Pengirim (UP / PIC)</label>
+                                    <input type="text" name="sender_attention" class="form-control " value="{{ form.sender_attention.value|default:'' }}" placeholder="Nama PIC / Kontak Penanggung Jawab">
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label fw-semibold small text-dark mb-1">Kota <span class="text-danger">*</span></label>
+                                    {{ form.sender_city }}
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label fw-semibold small text-dark mb-1">Kecamatan <span class="text-danger">*</span></label>
+                                    {{ form.sender_district }}
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label fw-semibold small text-dark mb-1">Kode Pos</label>
+                                    <input type="text" name="sender_postal_code" class="form-control " value="{{ form.sender_postal_code.value|default:'' }}" placeholder="Kode Pos">
+                                </div>
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <label class="form-label fw-semibold small text-dark mb-0">Alamat Pengirim <span class="text-danger">*</span></label>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="text-muted" style="font-size:0.75rem;">Sama dengan pick up</span>
+                                            <div class="form-check form-check-inline mb-0">
+                                                <input class="form-check-input" type="radio" name="shipper_same_as_pickup" id="same_yes" value="True" {% if form.shipper_same_as_pickup.value != False and form.shipper_same_as_pickup.value != 'False' %}checked{% endif %}>
+                                                <label class="form-check-label" style="font-size:0.75rem;" for="same_yes">Ya</label>
+                                            </div>
+                                            <div class="form-check form-check-inline mb-0 me-0">
+                                                <input class="form-check-input" type="radio" name="shipper_same_as_pickup" id="same_no" value="False" {% if form.shipper_same_as_pickup.value == False or form.shipper_same_as_pickup.value == 'False' %}checked{% endif %}>
+                                                <label class="form-check-label" style="font-size:0.75rem;" for="same_no">Tidak</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <textarea name="sender_address" class="form-control " rows="2" placeholder="Alamat Lengkap">{{ form.sender_address.value|default:'' }}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT: RECEIVER -->
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+                            <h6 class="fw-bold text-dark mb-0"><i class="ph-duotone ph-map-pin me-2 text-dark"></i>Detail Penerima</h6>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label class="form-label fw-semibold small text-dark mb-1">Nama Penerima <span class="text-danger">*</span></label>
+                                    <input type="text" name="receiver_name" class="form-control " value="{{ form.receiver_name.value|default:'' }}" placeholder="Nama Penerima" required>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label fw-semibold small text-dark mb-1">No. Telepon <span class="text-danger">*</span></label>
+                                    <input type="text" name="receiver_phone" class="form-control " value="{{ form.receiver_phone.value|default:'' }}" placeholder="No. Telepon" maxlength="20" required>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold small text-dark mb-1">Penerima (UP)</label>
+                                    <input type="text" name="receiver_attention" class="form-control " value="{{ form.receiver_attention.value|default:'' }}" placeholder="Nama Kontak Alternatif">
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label fw-semibold small text-dark mb-1">Kota <span class="text-danger">*</span></label>
+                                    {{ form.receiver_city }}
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label fw-semibold small text-dark mb-1">Kecamatan <span class="text-danger">*</span></label>
+                                    {{ form.receiver_district }}
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label fw-semibold small text-dark mb-1">Kode Pos</label>
+                                    <input type="text" name="receiver_postal_code" class="form-control " value="{{ form.receiver_postal_code.value|default:'' }}" placeholder="Kode Pos">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold small text-dark mb-1">Alamat Penerima <span class="text-danger">*</span></label>
+                                    <textarea name="receiver_address" class="form-control " rows="2" placeholder="Alamat Lengkap" required>{{ form.receiver_address.value|default:'' }}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- ===== SHIPMENT INFO (No COD) ===== -->
+            <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold text-dark mb-3"><i class="ph-duotone ph-info me-2 text-dark"></i>Informasi Pengiriman</h6>
+                    <div class="row g-2">
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold small text-dark mb-1">Asuransi ?</label>
+                            <select name="insurance_type" class="form-select ">
+                                <option value="NO" {% if form.insurance_type.value != 'YES' %}selected{% endif %}>Tidak</option>
+                                <option value="YES" {% if form.insurance_type.value == 'YES' %}selected{% endif %}>Ya</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold small text-dark mb-1">Nilai Barang</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-light">Rp.</span>
+                                <input type="number" name="item_value" class="form-control" step="1000" value="{{ form.item_value.value|default:'0' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold small text-dark mb-1">Biaya Tambahan</label>
+                            <select name="surcharge_type" class="form-select ">
+                                <option value="NO" {% if form.surcharge_type.value != 'YES' %}selected{% endif %}>Tidak</option>
+                                <option value="YES" {% if form.surcharge_type.value == 'YES' %}selected{% endif %}>Ya</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold small text-dark mb-1">Nominal Tambahan</label>
+                            <input type="number" name="surcharge_cost" class="form-control " step="1000" value="{{ form.surcharge_cost.value|default:'0' }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold small text-dark mb-1">Biaya Penanganan</label>
+                            <input type="number" name="handling_cost" class="form-control " step="1000" value="{{ form.handling_cost.value|default:'0' }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold text-dark mb-3"><i class="ph-duotone ph-package me-2 text-dark"></i>Detail Paket</h6>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold small text-dark mb-1">Tipe Kiriman</label>
+                            <select name="shipment_type_detail" class="form-select ">
+                                <option value="PACKAGE" {% if form.shipment_type_detail.value == 'PACKAGE' %}selected{% endif %}>Paket</option>
+                                <option value="DOCUMENT" {% if form.shipment_type_detail.value == 'DOCUMENT' %}selected{% endif %}>Dokumen</option>
+                                <option value="PALLET" {% if form.shipment_type_detail.value == 'PALLET' %}selected{% endif %}>Pallet</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold small text-dark mb-1">No. Pickup</label>
+                            <input type="text" name="pickup_number_ref" class="form-control " id="pickupNoInput" value="{{ form.pickup_number_ref.value|default:'' }}" placeholder="No Pickup">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold small text-dark mb-1">No. Resi</label>
+                            <input type="text" name="resi_number" class="form-control " value="{{ form.instance.resi_number|default:'' }}" placeholder="Otomatis / Manual">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold small text-dark mb-1">Referensi</label>
+                            <input type="text" name="reference_no" id="id_reference_no" class="form-control" value="{{ form.reference_no.value|default:form.instance.reference_no|default:'' }}" placeholder="No. Referensi">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold small text-dark mb-1">Instruksi Khusus</label>
+                            <input type="text" name="special_instruction" class="form-control " value="{{ form.special_instruction.value|default:'' }}" placeholder="Instruksi">
+                        </div>
+                    </div>
+
+                    <hr class="my-3">
+
+                    <!-- Calculation Summary Bar -->
+                    <div class="bg-white border rounded-3 p-3 mb-3">
+                        <div class="row align-items-center">
+                            <div class="col-md-4 d-flex align-items-center">
+                                <label class="form-label fw-semibold small text-dark mb-0 me-2 text-nowrap"><i class="ph-duotone ph-info text-info me-1" data-bs-toggle="tooltip" data-bs-html="true" title="<b>Rumus Perhitungan:</b><br>Berat Vol = (P x L x T) / Pembagi Layanan<br>Total Charge = Max(Berat Aktual, Berat Vol)<br>Biaya Packing = ((P+L+T+15)/3) * Tarif<br><br><b>Pembagi Volume (Layanan):</b><br>{% for s in services %}• {{ s.name }}: {{ s.divisor }}<br>{% endfor %}<br><b>Tarif Packing:</b><br>Full: Rp 4.000<br>Kayu: Rp 2.500<br>Busa Kardus: Rp 2.000"></i>Layanan:</label>
+                                <div class="w-100">
+                                    <select name="service_type" id="id_service_type" class="form-select calc-trigger w-100">
+                                        {% for val, label in service_choices %}
+                                        <option value="{{ val }}" {% if form.service_type.value == val %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-auto ms-auto">
+                                <span class="text-dark small fw-semibold me-4">Pembagi: <strong id="displayDivisor" class="text-dark">5.000</strong></span>
+                                <span class="text-dark small fw-semibold me-4">Total Koli: <strong id="displayTotalKoli" class="text-dark">{% if shipment %}{{ shipment.total_colly|default:1 }}{% else %}{{ form.total_colly.value|default:1 }}{% endif %}</strong></span>
+                                <span class="text-dark small fw-semibold me-4">Berat Charge: <strong id="displayWeightCharge" class="text-danger">{% if shipment %}{{ shipment.chargeable_weight|default:shipment.weight|default:'0.00' }}{% else %}{{ form.weight.value|default:'0.00' }}{% endif %} kg</strong></span>
+                                <span class="text-dark small fw-semibold">Total Packing: <strong id="displayTotalPacking" class="text-success">Rp {% if shipment %}{{ shipment.packing_cost|default:0|floatformat:0 }}{% else %}0{% endif %}</strong></span>
+                            </div>
+                            <div class="col-auto ms-3">
+                                <button class="btn btn-sm btn-danger px-4 fw-bold" type="button" id="btnCalc">
+                                    <i class="ph-bold ph-arrows-clockwise me-1"></i> Hitung Ulang
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Colly Input -->
+                    <div class="bg-white border rounded-3 p-3 mb-3">
+                        <div class="row g-3 align-items-end">
+                            <div class="col">
+                                <label class="form-label fw-bold small text-dark mb-2">Berat Aktual (kg)</label>
+                                <input type="number" name="weight" id="id_weight" class="form-control calc-trigger" step="0.01" value="{{ form.weight.value|default:'0' }}">
+                            </div>
+                            <div class="col">
+                                <label class="form-label fw-bold small text-dark mb-2">Panjang (cm)</label>
+                                <input type="number" name="length" id="id_length" class="form-control calc-trigger" step="0.01" value="{{ form.length.value|default:'0' }}">
+                            </div>
+                            <div class="col">
+                                <label class="form-label fw-bold small text-dark mb-2">Lebar (cm)</label>
+                                <input type="number" name="width" id="id_width" class="form-control calc-trigger" step="0.01" value="{{ form.width.value|default:'0' }}">
+                            </div>
+                            <div class="col">
+                                <label class="form-label fw-bold small text-dark mb-2">Tinggi (cm)</label>
+                                <input type="number" name="height" id="id_height" class="form-control calc-trigger" step="0.01" value="{{ form.height.value|default:'0' }}">
+                            </div>
+                            <div class="col">
+                                <label class="form-label fw-bold small text-dark mb-2">Koli</label>
+                                <input type="number" name="main_colly" id="id_main_colly" class="form-control calc-trigger" min="1" value="{{ form.total_colly.value|default:'1' }}">
+                            </div>
+                            <div class="col-3">
+                                <label class="form-label fw-bold small text-dark mb-2">Deskripsi Barang</label>
+                                <input type="text" name="description_item" class="form-control" value="{{ form.description_item.value|default:'' }}">
+                            </div>
+                            <div class="col-2">
+                                <label class="form-label fw-bold small text-dark mb-2">Packing</label>
+                                <select name="main_packing" id="id_main_packing" class="form-select calc-trigger">
+                                    <option value="NONE">Tidak Ada</option>
+                                    <option value="BUSA_KARDUS">Busa & Kardus</option>
+                                    <option value="KAYU">Kayu</option>
+                                    <option value="FULL">Full Packing</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Multiple Colly Accordion -->
+                    <div class="mt-3">
+                        <button class="btn btn-light bg-light w-100 border text-secondary fw-semibold py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseColly" style="border-radius: 6px; box-shadow: none;">
+                            <i class="ph-bold ph-caret-up me-1"></i> Jika membutuhkan input multi koli
+                        </button>
+                        <div id="collapseColly" class="collapse {% if is_edit and shipment %}{% if shipment.items.exists or shipment.total_colly > 1 %}show{% endif %}{% endif %}">
+                            <div class="pt-3">
+                                {{ items_formset.management_form }}
+
+                                <div class="table-responsive">
+                                    <table class="table table-borderless table-sm align-middle" id="collyTable">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th width="12%" class="fw-bold">Berat Aktual (kg)</th>
+                                                <th width="10%" class="fw-bold">Panjang (cm)</th>
+                                                <th width="10%" class="fw-bold">Lebar (cm)</th>
+                                                <th width="10%" class="fw-bold">Tinggi (cm)</th>
+                                                <th width="8%" class="fw-bold">Koli</th>
+                                                <th class="fw-bold">Deskripsi Barang</th>
+                                                <th width="15%" class="fw-bold">Packing</th>
+                                                <th width="15%" class="fw-bold text-center">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="collyTableBody">
+                                            {% for item_form in items_formset %}
+                                            <tr class="colly-row">
+                                                <td>{{ item_form.actual_weight }}</td>
+                                                <td>{{ item_form.panjang }}</td>
+                                                <td>{{ item_form.lebar }}</td>
+                                                <td>{{ item_form.tinggi }}</td>
+                                                <td>{{ item_form.quantity }}</td>
+                                                <td>{{ item_form.description }}</td>
+                                                <td class="position-static align-middle">
+                                                    {{ item_form.packing }}
+                                                </td>
+                                                <td class="text-center align-middle text-nowrap">
+                                                    {{ item_form.id }}
+                                                    <div class="d-none delete-checkbox-wrapper">{{ item_form.DELETE }}</div>
+                                                    <span class="badge bg-light text-dark border me-1 chargeable-weight-display" title="Berat Charge" style="font-size: 0.85rem; padding: 0.4rem 0.5rem;">0 kg</span>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary me-1 copy-colly-row" title="Salin"><i class="ph-bold ph-copy"></i></button>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger remove-colly-row" title="Hapus"><i class="ph-bold ph-trash"></i></button>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+
+                                    <div class="mt-3 text-center">
+                                        <button type="button" class="btn btn-sm btn-danger px-4 fw-bold shadow-sm" id="addCollyBtn">
+                                            <i class="ph-bold ph-plus me-1"></i> Tambah Item
+                                        </button>
+                                    </div>
+
+                                    <table class="d-none">
+                                        <tbody id="emptyFormTemplate">
+                                            <tr class="colly-row">
+                                                <td>{{ items_formset.empty_form.actual_weight }}</td>
+                                                <td>{{ items_formset.empty_form.panjang }}</td>
+                                                <td>{{ items_formset.empty_form.lebar }}</td>
+                                                <td>{{ items_formset.empty_form.tinggi }}</td>
+                                                <td>{{ items_formset.empty_form.quantity }}</td>
+                                                <td>{{ items_formset.empty_form.description }}</td>
+                                                <td class="position-static align-middle">
+                                                    {{ items_formset.empty_form.packing }}
+                                                </td>
+                                                <td class="text-center align-middle text-nowrap">
+                                                    {{ items_formset.empty_form.id }}
+                                                    <div class="d-none delete-checkbox-wrapper">{{ items_formset.empty_form.DELETE }}</div>
+                                                    <span class="badge bg-light text-dark border me-1 chargeable-weight-display" title="Chargeable Weight" style="font-size: 0.85rem; padding: 0.4rem 0.5rem;">0 kg</span>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary me-1 copy-colly-row" title="Copy"><i class="ph-bold ph-copy"></i></button>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger remove-colly-row" title="Hapus"><i class="ph-bold ph-trash"></i></button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hidden fields for backend processing -->
+            <input type="hidden" name="origin" id="id_origin" value="{{ form.origin.value|default:'' }}">
+            <input type="hidden" name="destination" id="id_destination" value="{{ form.destination.value|default:'' }}">
+            <input type="hidden" name="total_colly" id="id_total_colly" value="{{ form.total_colly.value|default:'1' }}">
+            <input type="hidden" name="price" id="id_price" value="{{ form.price.value|default:'0' }}">
+
+            <!-- Submit -->
+            <div class="d-flex justify-content-end gap-2 mb-5">
+                <a href="{% url 'operations:shipment-list' %}" class="btn btn-light px-4">Batal</a>
+                <button type="submit" class="btn btn-danger px-4 fw-bold">
+                    <i class="ph-bold ph-floppy-disk me-2"></i> Simpan Resi
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Service divisors from database
+    const SERVICE_DIVISOR_DB = {{ service_divisors|safe }};
+    // Fallback divisors
+    const SERVICE_DIVISOR_FALLBACK = {
+        'REG': 5000, 'ODS': 5000, 'SDS': 5000,
+        'RD': 4000, 'RL': 1000000, 'RUC': 6000,
+        'RU': 5000, 'TRK': 4000
+    };
+
+    function getDivisor(service) {
+        return SERVICE_DIVISOR_DB[service] || SERVICE_DIVISOR_FALLBACK[service] || 5000;
+    }
+
+    // Packing cost multipliers
+    const PACKING_MULTIPLIER = { 'FULL': 4000, 'KAYU': 2500, 'BUSA_KARDUS': 2000, 'NONE': 0 };
+
+    // ======= AUTO-FILL SHIPPER FROM CUSTOMER =======
+    const $clientSelect = $('#id_client');
+    if ($clientSelect.length) {
+        // Prevent accidental submit on Enter
+        const formEl = document.getElementById('resiForm');
+        if (formEl) {
+            formEl.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                }
+            });
+        }
+        
+        // Handle Yes/No detail shipper
+        const $sameAsPickup = $('input[name="shipper_same_as_pickup"]');
+        if ($sameAsPickup.length) {
+            $sameAsPickup.on('change', function() {
+                if ($('input[name="shipper_same_as_pickup"]:checked').val() === 'True') {
+                    $('#id_client').trigger('change');
+                } else {
+                    // Kosongkan field alamat jika user memilih Tidak
+                    $('[name="sender_address"]').val('');
+                }
+            });
+        }
+
+        $clientSelect.on('change', function() {
+            const sameAsPickup = $('input[name="shipper_same_as_pickup"]:checked').val();
+            if (sameAsPickup === 'False') {
+                return; // Do not auto-fill if user explicitly chose 'No'
+            }
+            
+            const $opt = $(this).find('option:selected');
+            if ($opt.val()) {
+                const name = $opt.data('name') || '';
+                const contact = $opt.data('contact') || '';
+                const phone = $opt.data('phone') || '';
+                const city = $opt.data('city') || '';
+                const district = $opt.data('district') || '';
+                const postal = $opt.data('postal') || '';
+                const address = $opt.data('address') || '';
+                
+                $('[name="sender_name"]').val(name);
+                $('[name="sender_phone"]').val(phone);
+                $('[name="sender_attention"]').val(contact);
+                $('[name="sender_postal_code"]').val(postal);
+                $('[name="sender_address"]').val(address);
+                
+                const $cityField = $('[name="sender_city"]');
+                const $districtField = $('[name="sender_district"]');
+                $districtField.attr('data-current-val', district); // Save intended district for when updateDistrictList finishes
+                
+                if ($cityField.find("option[value='" + city + "']").length) {
+                    $cityField.val(city).trigger('change');
+                } else if ($cityField.is('select')) {
+                    const newCityOption = new Option(city, city, true, true);
+                    $cityField.append(newCityOption).trigger('change');
+                } else {
+                    $cityField.val(city);
+                }
+                
+                if ($districtField.find("option[value='" + district + "']").length) {
+                    $districtField.val(district).trigger('change');
+                } else if ($districtField.is('select')) {
+                    const newDistrictOption = new Option(district, district, true, true);
+                    $districtField.append(newDistrictOption).trigger('change');
+                } else {
+                    $districtField.val(district);
+                }
+                
+                $('[name="sender_postal_code"]').val(postal);
+                $('[name="sender_address"]').val(address);
+                
+                // Trigger sync origin/dest
+                syncOriginDest();
+            }
+        });
+    }
+
+    // ======= SYNC ORIGIN/DESTINATION =======
+    function syncOriginDest() {
+        const sc = document.querySelector('[name="sender_city"]');
+        const rc = document.querySelector('[name="receiver_city"]');
+        if (sc) document.getElementById('id_origin').value = sc.value;
+        if (rc) document.getElementById('id_destination').value = rc.value;
+    }
+    document.querySelector('[name="sender_city"]')?.addEventListener('change', syncOriginDest);
+    document.querySelector('[name="sender_city"]')?.addEventListener('input', syncOriginDest);
+    document.querySelector('[name="receiver_city"]')?.addEventListener('change', syncOriginDest);
+    document.querySelector('[name="receiver_city"]')?.addEventListener('input', syncOriginDest);
+
+    // ======= SERVICE CHANGE -> PEMBAGI AUTO UPDATE =======
+    const serviceSelect = document.getElementById('id_service_type');
+    function updateDivisorDisplay() {
+        const service = serviceSelect ? serviceSelect.value : 'REG';
+        const divisor = getDivisor(service);
+        const el = document.getElementById('displayDivisor');
+        if (el) el.textContent = divisor.toLocaleString('id-ID');
+    }
+    if (serviceSelect) {
+        serviceSelect.addEventListener('change', function() {
+            updateDivisorDisplay();
+            calculateAll();
+        });
+    }
+    updateDivisorDisplay();
+
+    // ======= CALCULATION ENGINE =======
+    function calculateAll() {
+        const service = serviceSelect ? serviceSelect.value : 'REG';
+        const divisor = getDivisor(service);
+
+        // Multiple colly rows
+        const rows = document.querySelectorAll('#collyTableBody .colly-row:not(.d-none)');
+        let extraChargeable = 0;
+        let extraKoli = 0;
+        let totalPackingCost = 0;
+        let hasMultiCollyData = false;
+
+        rows.forEach(row => {
+            const aw = parseFloat(row.querySelector('input[name$="-actual_weight"]')?.value) || 0;
+            const qty = parseInt(row.querySelector('input[name$="-quantity"]')?.value) || 0;
+            const rp = parseFloat(row.querySelector('input[name$="-panjang"]')?.value) || 0;
+            const rl = parseFloat(row.querySelector('input[name$="-lebar"]')?.value) || 0;
+            const rt = parseFloat(row.querySelector('input[name$="-tinggi"]')?.value) || 0;
+            const packSelect = row.querySelector('select[name$="-packing"]');
+            const packVal = packSelect ? packSelect.value : 'NONE';
+
+            if (aw > 0 || qty > 0 || rp > 0 || rl > 0 || rt > 0) {
+                hasMultiCollyData = true;
+                const effectiveQty = qty > 0 ? qty : 1;
+                const rowVol = (rp * rl * rt) / divisor;
+                const rowMax = Math.max(aw, rowVol);
+                const rowChargeable = rowMax * effectiveQty;
+                extraChargeable += rowChargeable;
+                extraKoli += effectiveQty;
+
+                const badge = row.querySelector('.chargeable-weight-display');
+                if (badge) {
+                    badge.textContent = rowChargeable.toFixed(2) + ' kg';
+                }
+
+                const mult = PACKING_MULTIPLIER[packVal] || 0;
+                if (mult > 0) {
+                    totalPackingCost += ((rp + rl + rt + 15) / 3) * mult * effectiveQty;
+                }
+            }
+        });
+
+        // Main row
+        const w = parseFloat(document.getElementById('id_weight')?.value) || 0;
+        const p = parseFloat(document.getElementById('id_length')?.value) || 0;
+        const l = parseFloat(document.getElementById('id_width')?.value) || 0;
+        const t = parseFloat(document.getElementById('id_height')?.value) || 0;
+        const mainColly = parseInt(document.getElementById('id_main_colly')?.value) || 1;
+        const mainPacking = document.getElementById('id_main_packing')?.value || 'NONE';
+        
+        let mainChargeable = 0;
+        let actualMainColly = 0;
+
+        if (!hasMultiCollyData || w > 0 || p > 0 || l > 0 || t > 0) {
+            const volMain = (p * l * t) / divisor;
+            const effectiveMainColly = mainColly > 0 ? mainColly : 1;
+            mainChargeable = Math.max(w, volMain) * (w > 0 || volMain > 0 ? effectiveMainColly : (hasMultiCollyData ? 0 : effectiveMainColly));
+            actualMainColly = (w > 0 || volMain > 0) ? effectiveMainColly : (hasMultiCollyData ? 0 : effectiveMainColly);
+
+            // Main packing cost
+            const mainMult = PACKING_MULTIPLIER[mainPacking] || 0;
+            if (mainMult > 0 && actualMainColly > 0) {
+                totalPackingCost += ((p + l + t + 15) / 3) * mainMult * actualMainColly;
+            }
+        }
+
+        let totalChargeable = mainChargeable + extraChargeable;
+        let totalKoli = actualMainColly + extraKoli;
+
+        // Fallback if calculated 0 but actual weight exists
+        if (totalChargeable === 0 && w > 0) {
+            totalChargeable = w;
+        }
+
+        // Update displays
+        const displayWeight = document.getElementById('displayWeightCharge');
+        if (displayWeight) displayWeight.textContent = totalChargeable.toFixed(2) + ' kg';
+        const displayKoli = document.getElementById('displayTotalKoli');
+        if (displayKoli) displayKoli.textContent = totalKoli > 0 ? totalKoli : 1;
+        const displayPacking = document.getElementById('displayTotalPacking');
+        if (displayPacking) displayPacking.textContent = 'Rp ' + Math.round(totalPackingCost).toLocaleString('id-ID');
+        const displayDiv = document.getElementById('displayDivisor');
+        if (displayDiv) displayDiv.textContent = divisor.toLocaleString('id-ID');
+
+        // Update hidden total_colly
+        const hiddenColly = document.getElementById('id_total_colly');
+        if (hiddenColly) hiddenColly.value = totalKoli > 0 ? totalKoli : 1;
+    }
+
+    $('.calc-trigger').on('change input', calculateAll);
+    document.getElementById('btnCalc')?.addEventListener('click', calculateAll);
+    $('#collapseColly').on('shown.bs.collapse hidden.bs.collapse', calculateAll);
+
+    // Initial calculation
+    calculateAll();
+
+    // ======= FORMSET LOGIC =======
+    const tableBody = document.getElementById('collyTableBody');
+    const totalFormsInput = document.getElementById('id_items-TOTAL_FORMS');
+    const emptyFormTemplate = document.getElementById('emptyFormTemplate')?.innerHTML;
+    const addCollyBtn = document.getElementById('addCollyBtn');
+
+    function updateRowIndices() {
+        if (!tableBody) return;
+        const rows = tableBody.querySelectorAll('.colly-row');
+        let index = 0;
+        rows.forEach(row => {
+            row.querySelectorAll('input, select, textarea').forEach(input => {
+                const name = input.getAttribute('name');
+                if (name) input.setAttribute('name', name.replace(/items-(__prefix__|\d+)-/, `items-${index}-`));
+                const id = input.getAttribute('id');
+                if (id) input.setAttribute('id', id.replace(/id_items-(__prefix__|\d+)-/, `id_items-${index}-`));
+            });
+            index++;
+        });
+        if (totalFormsInput) totalFormsInput.value = index;
+        calculateAll();
+    }
+
+    if (addCollyBtn) {
+        addCollyBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            tableBody.insertAdjacentHTML('beforeend', emptyFormTemplate.replace(/__prefix__/g, totalFormsInput.value));
+            const newRow = tableBody.lastElementChild;
+            newRow.querySelectorAll('input, select').forEach(input => {
+                input.addEventListener('input', calculateAll);
+                input.addEventListener('change', calculateAll);
+            });
+            updateRowIndices();
+        });
+    }
+
+    if (tableBody) {
+        tableBody.addEventListener('click', function(e) {
+            const removeBtn = e.target.closest('.remove-colly-row');
+            if (removeBtn) {
+                const row = removeBtn.closest('tr');
+                const deleteWrapper = row.querySelector('.delete-checkbox-wrapper input[type="checkbox"]');
+                if (deleteWrapper) {
+                    deleteWrapper.checked = true;
+                    row.classList.add('d-none');
+                } else {
+                    row.remove();
+                    updateRowIndices();
+                }
+                calculateAll();
+            }
+
+            const refreshBtn = e.target.closest('.refresh-colly-row');
+            if (refreshBtn) {
+                const row = refreshBtn.closest('tr');
+                row.querySelectorAll('input:not([type="hidden"]), textarea').forEach(input => {
+                    input.value = '';
+                });
+                row.querySelectorAll('select').forEach(select => {
+                    select.selectedIndex = 0;
+                });
+                calculateAll();
+            }
+
+            const copyBtn = e.target.closest('.copy-colly-row');
+            if (copyBtn) {
+                const row = copyBtn.closest('tr');
+                const rowClone = row.cloneNode(true);
+                
+                // Hapus ID untuk clone
+                const idInput = rowClone.querySelector('input[name$="-id"]');
+                if (idInput) idInput.remove();
+                
+                tableBody.appendChild(rowClone);
+                updateRowIndices();
+                
+                const newRow = tableBody.lastElementChild;
+                newRow.querySelectorAll('input, select').forEach(input => {
+                    input.addEventListener('input', calculateAll);
+                    input.addEventListener('change', calculateAll);
+                });
+                calculateAll();
+            }
+        });
+        tableBody.querySelectorAll('.colly-row input, .colly-row select').forEach(input => {
+            input.addEventListener('input', calculateAll);
+            input.addEventListener('change', calculateAll);
+        });
+    }
+
+    // Setup initial edit state for multi-colly
+    const collapseColly = document.getElementById('collapseColly');
+    if (collapseColly && collapseColly.classList.contains('show')) {
+        const mainInputs = ['id_weight', 'id_length', 'id_width', 'id_height'];
+        mainInputs.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.setAttribute('readonly', 'readonly');
+                el.classList.add('bg-light');
+            }
+        });
+        const mainColly = document.getElementById('id_main_colly');
+        if (mainColly) {
+            mainColly.setAttribute('readonly', 'readonly');
+            mainColly.classList.add('bg-light');
+        }
+        const mainPacking = document.getElementById('id_main_packing');
+        if (mainPacking) {
+            mainPacking.setAttribute('disabled', 'disabled');
+            mainPacking.classList.add('bg-light');
+        }
+    }
+
+    if (collapseColly) {
+        collapseColly.addEventListener('show.bs.collapse', function () {
+            // Ketika accordion dibuka (mode multi koli diaktifkan)
+            const mainInputs = ['id_weight', 'id_length', 'id_width', 'id_height'];
+            mainInputs.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.value = '0';
+                    el.setAttribute('readonly', 'readonly');
+                    el.classList.add('bg-light');
+                }
+            });
+            const mainColly = document.getElementById('id_main_colly');
+            if (mainColly) {
+                mainColly.value = '0';
+                mainColly.setAttribute('readonly', 'readonly');
+                mainColly.classList.add('bg-light');
+            }
+            const mainPacking = document.getElementById('id_main_packing');
+            if (mainPacking) {
+                mainPacking.value = 'NONE';
+                mainPacking.setAttribute('disabled', 'disabled');
+                mainPacking.classList.add('bg-light');
+            }
+            calculateAll();
+        });
+        
+        collapseColly.addEventListener('hidden.bs.collapse', function () {
+            // Ketika accordion ditutup (mode single koli diaktifkan)
+            const mainInputs = ['id_weight', 'id_length', 'id_width', 'id_height'];
+            mainInputs.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.removeAttribute('readonly');
+                    el.classList.remove('bg-light');
+                }
+            });
+            const mainColly = document.getElementById('id_main_colly');
+            if (mainColly) {
+                mainColly.value = '1';
+                mainColly.removeAttribute('readonly');
+                mainColly.classList.remove('bg-light');
+            }
+            const mainPacking = document.getElementById('id_main_packing');
+            if (mainPacking) {
+                mainPacking.removeAttribute('disabled');
+                mainPacking.classList.remove('bg-light');
+            }
+            calculateAll();
+        });
+    }
+
+    // Dynamic district handling
+    function updateDistrictList(cityField, districtField, isUserChange) {
+        var citySelect = $(cityField);
+        var districtSelect = $(districtField);
+        var selectedCity = citySelect.val();
+        
+        var currentVal = districtSelect.attr('data-current-val');
+        var dataCurrentVal = districtSelect.data('current-val');
+        if (dataCurrentVal && dataCurrentVal !== "") {
+            currentVal = dataCurrentVal;
+        }
+        
+        if (typeof currentVal === 'undefined' || currentVal === null || currentVal === "") {
+            currentVal = districtSelect.val();
+            districtSelect.attr('data-current-val', currentVal || "");
+        }
+        if (isUserChange) {
+            currentVal = "";
+            districtSelect.attr('data-current-val', "");
+            districtSelect.data('current-val', "");
+        }
+        
+        // Don't disable district if city is empty, just show placeholder
+        if (!selectedCity) {
+            districtSelect.empty().append('<option value="">Pilih Kota Terlebih Dahulu...</option>');
+            districtSelect.trigger('change');
+            return;
+        }
+        
+        districtSelect.empty().append('<option value="">Memuat...</option>');
+        if (districtSelect.hasClass('select2-hidden-accessible')) {
+            districtSelect.trigger('change.select2');
+        }
+        
+        $.ajax({
+            url: '/operations/api/get-districts/',
+            data: {
+                'city': selectedCity
+            },
+            success: function(data) {
+                districtSelect.empty().append('<option value="">Pilih Kecamatan...</option>');
+                if (data && data.districts) {
+                    $.each(data.districts, function(index, item) {
+                        var option = $('<option>', {
+                            value: item.value,
+                            text: item.label
+                        });
+                        
+                        // Check both currentVal and the latest attr just in case it was updated async
+                        var latestVal = districtSelect.attr('data-current-val') || currentVal;
+                        if (latestVal === item.value) {
+                            option.prop('selected', true);
+                        }
+                        districtSelect.append(option);
+                    });
+                }
+                districtSelect.trigger('change');
+            }
+        });
+    }
+
+    $('select[name="sender_city"]').on('change', function(e) {
+        updateDistrictList(this, 'select[name="sender_district"]', !!e.originalEvent);
+    });
+    
+    $('select[name="receiver_city"]').on('change', function(e) {
+        updateDistrictList(this, 'select[name="receiver_district"]', !!e.originalEvent);
+    });
+    
+    // Initialize district dropdown states on load
+    updateDistrictList('select[name="sender_city"]', 'select[name="sender_district"]');
+    updateDistrictList('select[name="receiver_city"]', 'select[name="receiver_district"]');
+
+    // ======= AUTO DRAFT LOCALSTORAGE =======
+    const formId = 'resiForm';
+    const draftKey = 'shipmentDraft_' + window.location.pathname;
+    const formEl = document.getElementById(formId);
+
+    function saveDraft() {
+        if(!formEl) return;
+        const formData = new FormData(formEl);
+        const data = {};
+        formData.forEach((value, key) => {
+            if (key !== 'csrfmiddlewaretoken') {
+                if (data.hasOwnProperty(key)) {
+                    if (!Array.isArray(data[key])) {
+                        data[key] = [data[key]];
+                    }
+                    data[key].push(value);
+                } else {
+                    data[key] = value;
+                }
+            }
+        });
+        localStorage.setItem(draftKey, JSON.stringify(data));
+    }
+
+    if (formEl) {
+        formEl.addEventListener('input', saveDraft);
+        formEl.addEventListener('change', saveDraft);
+        formEl.addEventListener('submit', function() {
+            localStorage.removeItem(draftKey);
+        });
+    }
+
+    function loadDraft() {
+        const navEntries = performance.getEntriesByType("navigation");
+        const isReload = navEntries.length > 0 && navEntries[0].type === "reload";
+        
+        if (!isReload) {
+            localStorage.removeItem(draftKey);
+            return;
+        }
+
+        const saved = localStorage.getItem(draftKey);
+        if (saved) {
+            try {
+                const dataObj = JSON.parse(saved);
+                
+                const banner = document.createElement('div');
+                banner.className = 'alert alert-info d-flex justify-content-between align-items-center mb-4';
+                banner.innerHTML = `
+                    <span><i class="ph-duotone ph-info me-2"></i> Terdapat data form dari sesi sebelumnya (Draft).</span>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-info text-white fw-bold me-2" id="btnRestoreDraft">Kembalikan Data</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnClearDraft">Hapus Draft</button>
+                    </div>
+                `;
+                formEl.parentNode.insertBefore(banner, formEl);
+
+                document.getElementById('btnRestoreDraft').addEventListener('click', function() {
+                    Object.keys(dataObj).forEach(key => {
+                        const val = dataObj[key];
+                        const inputs = document.getElementsByName(key);
+                        if (inputs.length > 0) {
+                            if (Array.isArray(val)) {
+                                val.forEach((v, i) => {
+                                    if(inputs[i]) {
+                                        inputs[i].value = v;
+                                        if(inputs[i].tagName === 'SELECT') $(inputs[i]).trigger('change');
+                                    }
+                                });
+                            } else {
+                                const input = inputs[0];
+                                if (input.type === 'checkbox' || input.type === 'radio') {
+                                    inputs.forEach(r => { if(r.value === val) r.checked = true; });
+                                } else {
+                                    input.value = val;
+                                    if(input.tagName === 'SELECT') $(input).trigger('change');
+                                }
+                            }
+                        }
+                    });
+                    banner.remove();
+                    calculateAll();
+                });
+
+                document.getElementById('btnClearDraft').addEventListener('click', function() {
+                    localStorage.removeItem(draftKey);
+                    banner.remove();
+                });
+            } catch (e) {
+                console.error("Failed to parse draft", e);
+            }
+        }
+    }
+    loadDraft();
+    // =======================================
+
+    calculateAll();
+});
+</script>
+{% endblock %}

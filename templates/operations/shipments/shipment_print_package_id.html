@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Package ID {{ shipment.resi_number }}</title>
+    <style>
+        @page {
+            size: 100mm 100mm;
+            margin: 1mm 1.5mm;
+        }
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 8px;
+            color: #000;
+            line-height: 1.05;
+            margin: 0;
+            padding: 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        td {
+            vertical-align: top;
+        }
+        .small-label {
+            font-size: 7px;
+            margin-bottom: 1px;
+        }
+        .fw-bold {
+            font-weight: bold;
+        }
+        .table-custom th, .table-custom td {
+            border: 0.5pt solid #000000;
+            padding: 2px 2px;
+            text-align: left;
+            font-size: 6.8px;
+        }
+    </style>
+</head>
+<body>
+    {% for index, item in package_items %}
+    <table cellpadding="0" cellspacing="0" style="width: 100%; border: 1.5pt solid #000000; border-collapse: collapse;">
+    <tr>
+    <td style="padding: 0;">
+        <!-- 1. HEADER ROW TABLE: 2 Main Columns (Logo Left, 4 Stats Right) -->
+        <table cellpadding="0" cellspacing="0" style="width: 100%; border-bottom: 0.6pt solid #000000; border-collapse: collapse;">
+            <tr>
+                <td style="width: 25%; text-align: center; vertical-align: middle; padding: 2px; border-right: 0.6pt solid #000000;">
+                    <img src="{% if logo_path %}{{ logo_path }}{% else %}{{ request.scheme }}://{{ request.get_host }}/static/img/logo-surat.png{% endif %}" width="72" />
+                </td>
+                <td style="width: 75%; vertical-align: top; padding: 0;">
+                    <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="width: 24%; padding: 3px 2px 2px 4px;">
+                                <div class="small-label">Asal</div>
+                                <div class="fw-bold" style="font-size: 11px;">{{ shipment.get_tlc_origin|default:"-" }}</div>
+                            </td>
+                            <td style="width: 24%; padding: 3px 2px 2px 4px;">
+                                <div class="small-label">Tujuan</div>
+                                <div class="fw-bold" style="font-size: 11px;">{{ shipment.get_tlc_dest|default:"-" }}</div>
+                            </td>
+                            <td style="width: 26%; padding: 3px 2px;">
+                                <div class="small-label">Pembayaran</div>
+                                <div class="fw-bold" style="font-size: 8px;">KREDIT</div>
+                            </td>
+                            <td style="width: 26%; padding: 3px 2px;">
+                                <div class="small-label">Handling</div>
+                                <div class="fw-bold" style="font-size: 8px;">GENERAL CARGO</div>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <!-- 2. BARCODE ROW TABLE -->
+        <table cellpadding="0" cellspacing="0" style="width: 100%; border-bottom: 0.6pt solid #000000; border-collapse: collapse;">
+            <tr>
+                <td style="text-align: center; padding-top: 4px; padding-bottom: 3px;">
+                    <pdf:barcode value="{{ shipment.resi_number }}-{{ index|stringformat:'04d' }}" type="code128" barWidth="0.85" barHeight="20" />
+                    <div style="font-size: 8px; font-weight: bold; margin-top: 4px; margin-bottom: 2px;">Package ID : {{ shipment.resi_number }}-{{ index|stringformat:"04d" }}</div>
+                </td>
+            </tr>
+        </table>
+
+        <!-- 3. BODY ROW TABLE -->
+        <table cellpadding="0" cellspacing="0" style="width: 100%; border-bottom: 0.6pt solid #000000; border-collapse: collapse;">
+            <tr>
+                <td style="width: 61%; border-right: 0.6pt solid #000000; padding: 3px 3px;">
+                    <div class="fw-bold" style="font-size: 8.5px; margin-bottom: 2px;">Resi No: {{ shipment.resi_number }}</div>
+                    <div class="fw-bold" style="font-size: 8.5px; margin-bottom: 4px;">No Referensi: {{ shipment.reference_no|default:"-" }}</div>
+
+                    <div class="small-label">Pengirim :</div>
+                    <div class="fw-bold" style="margin-bottom: 4px; font-size: 7.5px;">{{ shipment.client.company_name|default:shipment.sender_name|default:"-"|slice:":8" }}*********</div>
+                    
+                    <div class="small-label">NAMA DAN ALAMAT PENERIMA :</div>
+                    <div class="fw-bold" style="font-size: 7.5px;">{{ shipment.receiver_name|default:"-" }}</div>
+                    <div style="font-size: 7px; margin-bottom: 14px; line-height: 1.1;">
+                        {{ shipment.receiver_address|default:"-" }}<br/>
+                        Kota : {{ shipment.receiver_city|default:"-" }}, Kec : {{ shipment.receiver_district|default:"-" }}<br/>
+                        Phone : {{ shipment.receiver_phone|default:"-" }}<br/>
+                        <span class="fw-bold">PIC : {{ shipment.receiver_name|default:"-" }}</span>
+                    </div>
+
+                    <table class="table-custom" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-bottom: 1px;">
+                        <tr>
+                            <th>Berat</th>
+                            <th>Berat Actual</th>
+                            <th>Berat Volumetrik</th>
+                            <th>Volumetrik</th>
+                        </tr>
+                        <tr>
+                            {% if item %}
+                            <td>{{ item.actual_weight|default:0|floatformat:-2 }} (kg)</td>
+                            <td>{{ item.actual_weight|default:0|floatformat:-2 }} (kg)</td>
+                            <td>{{ item.get_volume_weight|default:0|floatformat:-2 }} (kg)</td>
+                            <td>{{ item.panjang|default:0|floatformat:0 }}x{{ item.lebar|default:0|floatformat:0 }}x{{ item.tinggi|default:0|floatformat:0 }} Cm</td>
+                            {% else %}
+                            <td>{{ shipment.chargeable_weight|default:0|floatformat:-2 }} (kg)</td>
+                            <td>{{ shipment.weight|default:0|floatformat:-2 }} (kg)</td>
+                            <td>{{ shipment.volume_weight|default:0|floatformat:-2 }} (kg)</td>
+                            <td>{{ shipment.length|default:0|floatformat:0 }}x{{ shipment.width|default:0|floatformat:0 }}x{{ shipment.height|default:0|floatformat:0 }} Cm</td>
+                            {% endif %}
+                        </tr>
+                    </table>
+                </td>
+                <td style="width: 39%; padding: 3px 3px;">
+                    <div class="small-label">Tipe Kiriman :</div>
+                    <div class="fw-bold" style="margin-bottom: 8px; font-size: 7.5px;">{{ shipment.shipment_type_detail|upper|default:"PACKAGE" }}</div>
+                    
+                    <div class="small-label">Layanan :</div>
+                    <div class="fw-bold" style="margin-bottom: 8px; font-size: 7.5px;">{{ shipment.get_service_type_display|upper|default:"REGULER" }}</div>
+                    
+                    <div class="small-label">Non / COD :</div>
+                    <div class="fw-bold" style="margin-bottom: 8px; font-size: 7.5px;">{% if shipment.is_cod %}COD{% else %}NON COD<br/>0{% endif %}</div>
+                    
+                    <div class="small-label">Instruksi Khusus :</div>
+                    <div class="fw-bold" style="font-size: 6.5px;">{{ shipment.special_instruction|default:"AWB DAN DO KEMBALI" }}</div>
+                </td>
+            </tr>
+        </table>
+
+        <!-- 4. FOOTER ROW TABLE -->
+        <table cellpadding="0" cellspacing="0" style="width: 100%; border-bottom: 0.6pt solid #000000; border-collapse: collapse;">
+            <tr>
+                <td style="width: 61%; border-right: 0.6pt solid #000000; padding: 3px 3px;">
+                    <div class="small-label">Keterangan Item :</div>
+                    <div class="fw-bold" style="font-size: 7.5px;">{% if item %}{{ item.description|default:"-" }}{% else %}{{ shipment.item_description|default:shipment.description_item|default:"-" }}{% endif %}</div>
+                </td>
+                <td style="width: 19%; border-right: 0.6pt solid #000000; text-align: center; padding: 2px; vertical-align: middle;">
+                    <div class="small-label">Total Koli</div>
+                    <div class="fw-bold" style="font-size: 11px;">{{ index }}/{{ shipment.total_colly|default:"1" }}</div>
+                </td>
+                <td style="width: 20%; text-align: center; padding: 2px; vertical-align: middle;">
+                    <div class="small-label">Berat (kg)</div>
+                    <div class="fw-bold" style="font-size: 10px;">{% if item %}{{ item.actual_weight|default:0|floatformat:-2 }}{% else %}{{ shipment.chargeable_weight|default:0|floatformat:-2 }}{% endif %}</div>
+                </td>
+            </tr>
+        </table>
+
+        <!-- 5. COPYRIGHT & ENTRY DATE TABLE -->
+        <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td style="width: 42%; font-size: 5.5px; padding: 2.5px 3px;">
+                    Copyright www.paketincargo.com All rights reserved
+                </td>
+                <td style="width: 58%; text-align: right; font-size: 5.5px; padding: 2.5px 3px; white-space: nowrap;">
+                    Entry Date : {{ shipment.created_at|date:"Y-m-d H:i:s" }} by {{ shipment.created_by.username|default:"Superadmin" }}
+                </td>
+            </tr>
+        </table>
+    </td>
+    </tr>
+    </table>
+    {% if not forloop.last %}<pdf:nextpage />{% endif %}
+    {% endfor %}
+</body>
+</html>

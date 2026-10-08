@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title|default:"Form Vendor" }} - ERP Paketin{% endblock %}
+{% block page_title %}{{ title|default:"Form Vendor" }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="mb-3">
+        <a href="{% url 'finance:vendor_list' %}" class="btn btn-outline-secondary bg-white px-3 shadow-sm btn-sm">
+            <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+        </a>
+    </div>
+
+    <div class="card bg-white border-0 shadow-sm rounded-4">
+        <div class="card-body p-4">
+            <h5 class="fw-bold text-dark border-bottom pb-3 mb-4">{{ title|default:"Form Vendor" }}</h5>
+
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger rounded-3 mb-4">
+                    {{ form.non_field_errors }}
+                </div>
+                {% endif %}
+
+                <div class="row g-3">
+                    {% for field in form %}
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-dark small mb-1">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}
+                        <div class="form-text text-muted small">{{ field.help_text }}</div>
+                        {% endif %}
+                        {% if field.errors %}
+                        <div class="text-danger small mt-1">{{ field.errors }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                    <a href="{% url 'finance:vendor_list' %}" class="btn btn-outline-secondary px-4 rounded-3">Batal</a>
+                    <button type="submit" class="btn btn-primary px-4 rounded-3 shadow-sm">
+                        <i class="ph-bold ph-floppy-disk me-1"></i> Simpan Data
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}Log Aktivitas Sistem (Audit Log){% endblock %}
+{% block page_title %}Log Aktivitas Sistem (Audit Log){% endblock %}
+
+{% block extra_css %}
+<style>
+    .alert-info-custom {
+        background-color: #d1f2f9;
+        color: #0b687c;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 16px;
+        font-size: 0.9rem;
+    }
+    .filter-container {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 12px;
+        background: #fff;
+    }
+    .table-audit th {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+        border-bottom: 2px solid #e0e0e0;
+        padding-top: 15px;
+        padding-bottom: 15px;
+    }
+    .table-audit td {
+        font-size: 0.85rem;
+        vertical-align: middle;
+        padding-top: 15px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .badge-aksi {
+        padding: 5px 12px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .badge-aksi.dibuat { background-color: #198754; color: #fff; }
+    .badge-aksi.diperbarui { background-color: #0d6efd; color: #fff; }
+    .badge-aksi.dihapus { background-color: #dc3545; color: #fff; }
+    
+    .badge-modul {
+        background-color: #212529;
+        color: #fff;
+        padding: 5px 12px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .btn-detail {
+        background: #fff;
+        border: 1px solid #ced4da;
+        color: #6c757d;
+        padding: 4px 10px;
+        border-radius: 6px;
+        transition: all 0.2s;
+    }
+    .btn-detail:hover {
+        background: #f8f9fa;
+        color: #495057;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 pb-4">
+    
+    <!-- Info Banner -->
+    <div class="alert alert-info-custom d-flex align-items-center mb-4">
+        <i class="ph-fill ph-info me-2 fs-5"></i>
+        <span>Halaman ini hanya dapat diakses oleh Administrator. Semua perubahan data dalam sistem terekam di sini.</span>
+    </div>
+
+    <!-- Filter Row -->
+    <div class="filter-container mb-4 d-flex gap-2">
+        <div class="input-group" style="flex: 2;">
+            <span class="input-group-text bg-white text-muted"><i class="ph-bold ph-magnifying-glass"></i></span>
+            <input type="text" class="form-control border-start-0" placeholder="Cari data...">
+        </div>
+        
+        <select class="form-select text-muted" style="flex: 1;">
+            <option selected>Pilih salah satu...</option>
+            <option value="create">Dibuat</option>
+            <option value="update">Diperbarui</option>
+            <option value="delete">Dihapus</option>
+        </select>
+        
+        <select class="form-select text-muted" style="flex: 1;">
+            <option selected>Pilih salah satu...</option>
+            <option value="pegawai">Pegawai</option>
+            <option value="absensi">Absensi</option>
+            <option value="cuti">Cuti</option>
+        </select>
+
+        <select class="form-select text-muted" style="flex: 1;">
+            <option selected>Pilih salah satu...</option>
+            <option value="today">Hari ini</option>
+            <option value="week">Minggu ini</option>
+        </select>
+        
+        <button class="btn btn-primary fw-semibold px-4">Filter</button>
+        <button class="btn btn-outline-secondary px-3"><i class="ph-bold ph-arrow-counter-clockwise"></i></button>
+    </div>
+
+    <!-- Audit Table -->
+    <div class="table-responsive bg-white rounded-3">
+        <table class="table table-audit mb-0">
+            <thead>
+                <tr>
+                    <th>Waktu</th>
+                    <th>Pengguna</th>
+                    <th>Aksi</th>
+                    <th>Modul</th>
+                    <th>Data Terkait</th>
+                    <th class="text-center">Detail</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td class="text-muted">{{ log.timestamp|date:"d Agu Y H:i:s" }}</td>
+                    <td class="text-dark">{{ log.user.get_full_name|default:log.user.email|default:"Superadmin" }}</td>
+                    <td>
+                        <!-- Basic logic to map action text to colors -->
+                        {% if 'create' in log.action|lower or 'buat' in log.action|lower %}
+                            <span class="badge-aksi dibuat">Dibuat</span>
+                        {% elif 'update' in log.action|lower or 'perbaru' in log.action|lower %}
+                            <span class="badge-aksi diperbarui">Diperbarui</span>
+                        {% elif 'delete' in log.action|lower or 'hapus' in log.action|lower %}
+                            <span class="badge-aksi dihapus">Dihapus</span>
+                        {% else %}
+                            <span class="badge-aksi bg-secondary text-white">{{ log.action }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge-modul">{{ log.module }}</span>
+                    </td>
+                    <td class="text-dark">
+                        {{ log.object_id|default:"-" }} | {{ log.action }}
+                    </td>
+                    <td class="text-center">
+                        <button class="btn-detail" title="Lihat Detail">
+                            <i class="ph-duotone ph-eye fs-6"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <!-- Mock Data to match CRM visualization exactly as requested -->
+                <tr>
+                    <td class="text-muted">13 Agu 2026 16:26:21</td>
+                    <td class="text-dark">Superadmin</td>
+                    <td><span class="badge-aksi diperbarui">Diperbarui</span></td>
+                    <td><span class="badge-modul">Pegawai</span></td>
+                    <td class="text-dark">EMP-0026 | John Doe (Promosi Jabatan)</td>
+                    <td class="text-center"><button class="btn-detail"><i class="ph-duotone ph-eye fs-6"></i></button></td>
+                </tr>
+                <tr>
+                    <td class="text-muted">13 Agu 2026 16:26:13</td>
+                    <td class="text-dark">Superadmin</td>
+                    <td><span class="badge-aksi diperbarui">Diperbarui</span></td>
+                    <td><span class="badge-modul">Pegawai</span></td>
+                    <td class="text-dark">EMP-0026 | John Doe (Update Dokumen)</td>
+                    <td class="text-center"><button class="btn-detail"><i class="ph-duotone ph-eye fs-6"></i></button></td>
+                </tr>
+                <tr>
+                    <td class="text-muted">13 Agu 2026 16:26:05</td>
+                    <td class="text-dark">Superadmin</td>
+                    <td><span class="badge-aksi diperbarui">Diperbarui</span></td>
+                    <td><span class="badge-modul">Absensi</span></td>
+                    <td class="text-dark">ATT-0023 | Rekap Absensi Bulanan</td>
+                    <td class="text-center"><button class="btn-detail"><i class="ph-duotone ph-eye fs-6"></i></button></td>
+                </tr>
+                <tr>
+                    <td class="text-muted">13 Agu 2026 16:26:05</td>
+                    <td class="text-dark">Superadmin</td>
+                    <td><span class="badge-aksi dibuat">Dibuat</span></td>
+                    <td><span class="badge-modul">Cuti</span></td>
+                    <td class="text-dark">LV-0023 | Jane Smith (Tahunan)</td>
+                    <td class="text-center"><button class="btn-detail"><i class="ph-duotone ph-eye fs-6"></i></button></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

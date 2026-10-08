@@ -1,0 +1,2006 @@
+/* ============ SPREADSHEET PAGE ============ */
+/* Page-table container is managed in style.css */
+
+.spreadsheet-page {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    background: var(--bg-primary);
+    overflow: hidden;
+    height: 100%;
+}
+
+/* Find bar */
+.find-bar {
+    background: var(--find-bar-bg);
+    border-bottom: 1px solid var(--border-color);
+    padding: 5px 12px;
+    flex-shrink: 0
+}
+
+.find-bar-inner {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 700px
+}
+
+.find-input-group {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    padding: 3px 6px
+}
+
+.find-input-group i {
+    color: var(--text-muted);
+    font-size: .75rem
+}
+
+.find-input-group input {
+    border: none;
+    background: transparent;
+    font-size: .8rem;
+    color: var(--text-primary);
+    outline: none;
+    width: 140px;
+    padding: 3px
+}
+
+.find-input-group input::placeholder {
+    color: var(--text-muted)
+}
+
+.find-count {
+    font-size: .7rem;
+    color: var(--text-muted);
+    padding: 0 5px;
+    white-space: nowrap;
+    min-width: 36px;
+    text-align: center
+}
+
+.find-btn {
+    width: 26px;
+    height: 26px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .7rem;
+    transition: all .1s
+}
+
+.find-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary)
+}
+
+.find-btn-text {
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: .72rem;
+    padding: 3px 6px;
+    border-radius: 4px;
+    transition: all .1s
+}
+
+.find-btn-text:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary)
+}
+
+.find-btn-close {
+    width: 26px;
+    height: 26px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .8rem;
+    transition: all .1s;
+    margin-left: auto
+}
+
+.find-btn-close:hover {
+    background: var(--profit-neg);
+    color: white
+}
+
+.find-actions {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: 3px
+}
+
+.cell-find-match {
+    outline: 2px solid #f59e0b !important;
+    outline-offset: -2px;
+    background: rgba(245, 158, 11, .12) !important
+}
+
+.cell-find-current {
+    outline: 2px solid #f59e0b !important;
+    outline-offset: -2px;
+    background: rgba(245, 158, 11, .3) !important
+}
+
+/* ============ TOOLBAR ============ */
+.spreadsheet-toolbar {
+    display: flex;
+    align-items: center;
+    padding: 5px 10px;
+    background: var(--bg-secondary, #f8f9fa);
+    border-bottom: none;
+    flex-shrink: 0;
+    gap: 10px;
+    width: 100%;
+}
+
+.toolbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-right: 12px;
+}
+
+.toolbar-brand i {
+    color: var(--red);
+    font-size: 1.1rem;
+}
+
+.toolbar-title-text {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.sync-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+    margin-left: 2px;
+}
+
+.sync-text {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.sync-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.sync-dot.synced {
+    background: #22c55e;
+}
+
+.sync-dot.syncing {
+    background: #f59e0b;
+    animation: blink 1s infinite;
+}
+
+.sync-dot.error {
+    background: #ef4444;
+}
+
+.primary-btn {
+    background: var(--red) !important;
+    color: white !important;
+    border-color: var(--red) !important;
+    padding: 4px 10px !important;
+}
+
+.primary-btn:hover {
+    background: var(--dark-red) !important;
+}
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+}
+
+.btn-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: #333;
+    /* Icons are now black/dark */
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.2s;
+}
+
+.btn-toolbar:hover {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: var(--border-color);
+}
+
+.btn-toolbar.active {
+    background: rgba(204, 0, 0, 0.1);
+    color: var(--red) !important;
+}
+
+.btn-toolbar i {
+    pointer-events: none;
+}
+
+.fs-active-file-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-left: 8px;
+    white-space: nowrap;
+}
+
+.spreadsheet-header-new {
+    display: flex;
+    align-items: center;
+    background: var(--bg-secondary, #f8f9fa);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0 4px;
+    height: 40px;
+    gap: 4px;
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.header-brand-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-left: 8px; /* Added left padding to shift right */
+    padding-right: 12px;
+    border-right: 1px solid var(--border-color);
+    height: 60%;
+    flex-shrink: 0;
+}
+
+.sheet-brand-icon {
+    font-size: 1.1rem;
+    color: var(--red);
+}
+
+.btn-file-menu {
+    background: var(--bg-primary, #fff);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.18s;
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    position: relative;
+    z-index: 10;
+}
+
+.btn-file-menu i {
+    pointer-events: none;
+}
+
+.btn-file-menu:hover {
+    background: #fee2e2;
+    border-color: var(--red);
+    color: var(--red);
+}
+
+.toolbar-container {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+}
+
+.header-actions-group {
+    display: flex;
+    align-items: center;
+    padding-left: 12px;
+    border-left: 1px solid var(--border-color);
+    height: 60%;
+    flex-shrink: 0;
+}
+
+.btn-export-minimal {
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    color: #16a34a;
+    cursor: pointer;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.btn-export-minimal:hover {
+    background: #f0fdf4;
+    transform: scale(1.1);
+}
+
+/* YEARLY FILE PANEL - GOOGLE SHEETS STYLE (ADAPTED) */
+.file-panel-overlay {
+    position: fixed;
+    top: var(--navbar-height);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #ffffff;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+}
+
+.file-panel-fs {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    background: #ffffff;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: hidden;
+    animation: panelPop 0.25s ease-out;
+}
+
+@keyframes panelPop {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.file-panel-fs-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    background: var(--red); /* User's brand color */
+    color: white;
+}
+
+.fs-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: white;
+}
+
+.fs-brand i {
+    color: white;
+}
+
+.btn-close-fs {
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    color: white;
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.8;
+}
+
+.btn-close-fs:hover {
+    background: rgba(255,255,255,0.15);
+    opacity: 1;
+}
+
+.fs-container {
+    margin: 0 auto !important;
+    width: 100%;
+    max-width: 900px !important;
+    padding: 0 24px;
+    display: block !important;
+    transition: transform 0.3s ease;
+}
+
+@media (min-width: 992px) {
+    body:not(.sidebar-collapsed) .fs-container {
+        transform: translateX(150px);
+    }
+}
+
+.file-panel-back-header {
+    padding: 16px 24px;
+    background: #f8f9fa;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.btn-back-to-sheet {
+    background: white;
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.btn-back-to-sheet:hover {
+    background: #f1f3f4;
+    border-color: var(--text-muted);
+    color: var(--text-primary);
+}
+
+.file-panel-fs-top {
+    padding: 10px 0;
+    background: #f8f9fa;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.fs-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.fs-section-title {
+    font-size: 1rem;
+    color: var(--text-primary);
+    font-weight: 600;
+    margin-bottom: 0;
+}
+
+.btn-add-file-fs {
+    background: white;
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.btn-add-file-fs:hover {
+    background: #f8f9fa;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    transform: translateY(-1px);
+    border-color: var(--red);
+    color: var(--red);
+}
+
+.btn-add-file-fs i {
+    color: var(--red);
+    font-size: 0.9rem;
+}
+
+.fs-template-preview i {
+    font-size: 3rem;
+    color: var(--red);
+}
+
+.fs-template-title {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    margin-top: 10px;
+    font-weight: 500;
+    text-align: center;
+}
+
+.file-panel-fs-bottom {
+    background: #ffffff;
+    flex: 1;
+    width: 100%;
+    padding: 24px 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.fs-list-header {
+    display: grid;
+    grid-template-columns: minmax(200px, 1fr) 150px 150px 100px;
+    padding: 12px 16px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-color);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.fs-col-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.fs-file-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.fs-file-row {
+    display: grid;
+    grid-template-columns: minmax(200px, 1fr) 150px 150px 100px;
+    padding: 12px 16px;
+    align-items: center;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    transition: background 0.2s;
+}
+
+.fs-file-row:hover {
+    background: #f8fafc;
+}
+
+.fs-file-row.active {
+    background: #fef2f2;
+}
+
+.fs-col-name {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.fs-file-icon {
+    color: var(--red);
+    font-size: 1.2rem;
+}
+
+.fs-file-title {
+    font-weight: 500;
+}
+
+.fs-btn-action {
+    background: white;
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    opacity: 1; /* Changed to always visible */
+    transition: all 0.2s;
+}
+
+/* Hover rule removed since it is now always visible */
+
+.fs-btn-action:hover {
+    color: var(--red);
+    border-color: var(--red);
+    background: #fef2f2;
+}
+
+@media (max-width: 768px) {
+    .fs-list-header {
+        grid-template-columns: 1fr 60px;
+    }
+    .fs-col-owner, .fs-col-date {
+        display: none;
+    }
+    .fs-file-row {
+        grid-template-columns: 1fr 60px;
+    }
+}
+
+/* ============ TABLE CONTAINER ============ */
+.spreadsheet-container {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+    overscroll-behavior: contain;
+    background: var(--bg-primary);
+    outline: none !important; /* Force remove focus ring */
+    box-shadow: none !important;
+    border-top: none;
+    will-change: scroll-position;
+    -webkit-overflow-scrolling: touch;
+    contain: layout style;
+}
+
+.spreadsheet-container tbody {
+    will-change: contents;
+}
+
+.spreadsheet-container:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.spreadsheet-wrapper {
+    overflow: visible;
+    height: auto;
+    position: relative;
+}
+
+/* ============ TABLE ============ */
+.spreadsheet-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: max-content;
+    background: var(--bg-primary);
+    table-layout: fixed;
+    border: none;
+    margin-right: 0;
+    margin-bottom: 20px; /* Small buffer for better last-row visibility */
+}
+
+.spreadsheet-table thead th:last-child,
+.spreadsheet-table tbody td:last-child {
+    border-right: none; /* Clean edge at the far right */
+}
+
+.spreadsheet-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 300;
+}
+
+.spreadsheet-table thead th {
+    background: var(--header-bg);
+    color: var(--header-text);
+    padding: 10px 12px;
+    font-weight: 700;
+    font-size: .72rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-bottom: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    background-clip: padding-box;
+    vertical-align: middle;
+    line-height: 1.2;
+}
+
+/* Row 1: Alphabet Helper */
+.spreadsheet-table thead tr.alphabet-helper-row {
+    display: table-row !important;
+    height: 24px !important;
+}
+
+.spreadsheet-table thead tr.alphabet-helper-row th {
+    display: table-cell !important;
+    background: #f4f4f4;
+    color: #888;
+    font-weight: 500;
+    font-size: 0.65rem;
+    padding: 0;
+    height: 24px !important;
+    line-height: 24px;
+    background-clip: padding-box;
+    border-bottom: 1px solid var(--border-color);
+}
+/* First Column Sticky (Index) */
+.spreadsheet-table .col-index {
+    position: sticky;
+    left: 0;
+    z-index: 15;
+    background: #f9f9f9;
+    border-right: 2px solid var(--border-color);
+    width: 50px;
+    text-align: center;
+}
+
+.spreadsheet-table thead tr.alphabet-helper-row th.col-index {
+    z-index: 16;
+}
+
+.spreadsheet-table thead tr:nth-child(2) th.col-index {
+    z-index: 16;
+}
+
+/* Row 2: Actual Field Headers */
+.spreadsheet-table thead tr:not(.alphabet-helper-row) th {
+    height: 34px !important;
+}
+
+.spreadsheet-table thead tr:nth-child(2) {
+    height: 34px !important;
+}
+
+/* Column Widths handled by data-field or HTML style */
+.spreadsheet-table thead th.col-index {
+    width: 50px;
+    min-width: 50px;
+}
+
+.spreadsheet-table thead th.col-actions {
+    width: 40px;
+    min-width: 40px;
+}
+
+
+/* Atau menggunakan data-field selector lebih spesifik */
+.spreadsheet-table thead th[data-field="tanggal_pickup"] {
+    min-width: 110px;
+}
+
+.spreadsheet-table thead th[data-field="nama"] {
+    min-width: 160px;
+}
+
+.spreadsheet-table thead th[data-field="awb"] {
+    min-width: 140px;
+}
+
+.spreadsheet-table thead th[data-field="awb_sistem"] {
+    min-width: 140px;
+}
+
+.spreadsheet-table thead th[data-field="pengirim"] {
+    min-width: 140px;
+}
+
+.spreadsheet-table thead th[data-field="sales"] {
+    min-width: 110px;
+}
+
+.spreadsheet-table thead th[data-field="penerima"] {
+    min-width: 140px;
+}
+
+.spreadsheet-table thead th[data-field="service"] {
+    min-width: 90px;
+}
+
+.spreadsheet-table thead th[data-field="via"] {
+    min-width: 70px;
+}
+
+.spreadsheet-table thead th[data-field="aktual"] {
+    min-width: 85px;
+}
+
+.spreadsheet-table thead th[data-field="vol"] {
+    min-width: 75px;
+}
+
+.spreadsheet-table thead th[data-field="unit"] {
+    min-width: 75px;
+}
+
+.spreadsheet-table thead th[data-field="kubik"] {
+    min-width: 85px;
+}
+
+.spreadsheet-table thead th[data-field="p"] {
+    min-width: 65px;
+}
+
+.spreadsheet-table thead th[data-field="l"] {
+    min-width: 65px;
+}
+
+.spreadsheet-table thead th[data-field="t"] {
+    min-width: 65px;
+}
+
+.spreadsheet-table thead th[data-field="koil"] {
+    min-width: 75px;
+}
+
+.spreadsheet-table thead th[data-field="penjualan"] {
+    min-width: 120px;
+}
+
+.spreadsheet-table thead th[data-field="vendor_i"] {
+    min-width: 120px;
+}
+
+.spreadsheet-table thead th[data-field="vendor_ii"] {
+    min-width: 120px;
+}
+
+.spreadsheet-table thead th:hover {
+    background: var(--bg-tertiary)
+}
+
+.sort-indicator {
+    font-size: .55rem;
+    margin-left: 6px;
+    opacity: .6;
+    display: inline-block;
+}
+
+.sort-indicator.active {
+    opacity: 1;
+    color: var(--red)
+}
+
+.spreadsheet-table thead th.col-selected {
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary);
+}
+
+/* Index column sticky kiri */
+.spreadsheet-table thead th.col-index {
+    background: var(--index-bg);
+    position: sticky;
+    left: 0;
+    z-index: 120; /* Highest priority: Sticky Top AND Left */
+    width: 50px !important;
+    min-width: 50px !important;
+    max-width: 50px !important;
+    border-right: 2px solid var(--index-border);
+    cursor: default;
+}
+
+/* Actions column sticky kanan (Dihilangkan stickynya agar tidak menghalangi scroll) */
+.spreadsheet-table thead th.col-actions {
+    background: var(--header-bg);
+    width: 40px !important;
+    min-width: 40px !important;
+    max-width: 40px !important;
+    border-left: 2px solid var(--border-color);
+    cursor: default;
+}
+
+/* Calc columns */
+.spreadsheet-table thead th.col-calc {
+    background: var(--calc-bg);
+    color: var(--calc-text);
+    cursor: default;
+    min-width: 100px;
+}
+
+/* ============ BODY CELLS ============ */
+.spreadsheet-table tbody td {
+    padding: 0;
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 0;
+    position: relative;
+    vertical-align: middle;
+    background: var(--cell-bg);
+    height: 32px;
+}
+
+.spreadsheet-table tbody tr:nth-child(even) td {
+    background: var(--cell-bg-alt) !important;
+}
+
+.spreadsheet-table tbody td.col-index {
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    background: var(--index-bg) !important;
+    border-right: 2px solid var(--index-border);
+    text-align: center;
+    font-size: .7rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+    width: 50px;
+    min-width: 50px;
+}
+
+.spreadsheet-table tbody tr:nth-child(even) td.col-index {
+    background: var(--index-bg-alt) !important;
+}
+
+.spreadsheet-table tbody td.col-index:hover {
+    background: var(--index-hover) !important
+}
+
+/* Actions column sticky kanan (Dihilangkan stickynya) */
+.spreadsheet-table tbody td.col-actions {
+    background: var(--cell-bg);
+    border-left: 2px solid var(--border-color);
+    width: 40px;
+    min-width: 40px;
+}
+
+.spreadsheet-table tbody tr:nth-child(even) td.col-actions {
+    background: var(--cell-bg-alt) !important;
+}
+
+/* Calc columns */
+.spreadsheet-table tbody td.cell-calc {
+    background: var(--calc-bg);
+    cursor: default;
+}
+
+.spreadsheet-table tbody tr:nth-child(even) td.cell-calc {
+    background: var(--calc-bg-alt) !important;
+}
+
+/* Hover */
+.spreadsheet-table tbody tr:hover td {
+    background: var(--cell-hover) !important
+}
+
+.spreadsheet-table tbody tr:hover td.col-index {
+    background: var(--index-hover) !important
+}
+
+.spreadsheet-table tbody tr:hover td.col-actions {
+    background: var(--cell-hover) !important
+}
+
+.spreadsheet-table tbody tr:hover td.cell-calc {
+    background: var(--calc-bg) !important
+}
+
+/* ============ SPREADSHEET CURSOR & SELECTION ============ */
+.spreadsheet-table tbody tr {
+    scroll-margin-top: 100px;
+}
+
+.spreadsheet-table tbody td {
+    cursor: cell;
+}
+td.cell-active {
+    background: rgba(204, 0, 0, 0.04) !important;
+    z-index: 11 !important;
+    position: relative;
+}
+
+/* Style for the active row */
+tbody tr.row-active {
+    position: relative;
+    z-index: 9 !important;
+}
+
+/* Fill handle (square at bottom-right) */
+td.cell-active::after {
+    content: '';
+    position: absolute;
+    right: -2.5px;
+    bottom: -2.5px;
+    width: 6px;
+    height: 6px;
+    background: var(--red);
+    border: 1px solid white;
+    z-index: 12;
+    cursor: crosshair;
+}
+
+/* === CELL HIGHLIGHT OVERLAY === */
+/* Renders ABOVE sticky header (z-index 300) so the red border is never clipped */
+.cell-highlight-overlay {
+    position: absolute;
+    pointer-events: none;
+    z-index: 400;
+    border: 2.5px solid var(--red);
+    display: none;
+    box-sizing: border-box;
+}
+
+td.cell-selected {
+    outline: 1.5px solid var(--red) !important;
+    outline-offset: -1.5px;
+    position: relative;
+    z-index: 10 !important;
+}
+
+/* Fix for cross-panel bleeding */
+.page-content:not(.active) .cell-active,
+.page-content:not(.active) .cell-selected {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+
+/* Empty row */
+.empty-row td {
+    background: var(--cell-bg);
+}
+
+.empty-row:nth-child(even) td {
+    background: var(--cell-bg-alt) !important;
+}
+
+.empty-row:nth-child(even) td.col-index {
+    background: var(--index-bg-alt) !important;
+}
+
+.empty-row:hover td {
+    background: var(--empty-hover) !important;
+    cursor: cell
+}
+
+/* ============ CELL DISPLAY ============ */
+.cell-display {
+    padding: 2px 8px;
+    min-height: 30px;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+
+.cell-display.cell-date {
+
+    font-size: .72rem
+}
+
+.cell-display.cell-number {
+    display: flex !important;
+    justify-content: flex-end !important;
+    text-align: right !important;
+
+    font-size: .72rem;
+}
+
+.cell-display.cell-currency {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    font-size: .72rem;
+    color: var(--text-primary);
+}
+
+.rp-label {
+    margin-right: auto;
+    color: var(--text-muted);
+}
+
+.rp-value {
+    margin-left: auto;
+    text-align: right;
+}
+
+.cell-profit-positive {
+    color: var(--profit-pos) !important;
+    font-weight: 600;
+}
+
+.cell-profit-negative {
+    color: var(--profit-neg) !important;
+    font-weight: 600;
+}
+
+td.cell-editing {
+    padding: 0 !important;
+    z-index: 10;
+    outline: 2px solid var(--red) !important;
+    outline-offset: -2px;
+}
+
+.cell-input {
+    width: 100%;
+    height: 30px;
+    padding: 2px 8px;
+    border: none;
+    outline: none;
+    font-size: .78rem;
+    font-family: inherit;
+    background: var(--bg-primary);
+    color: var(--text-primary)
+}
+
+.cell-input-number {
+    text-align: right;
+    font-family: 'Courier New', monospace
+}
+
+.cell-remote-edit {
+    animation: remote-flash 1.2s ease
+}
+
+@keyframes remote-flash {
+    0% {
+        background: rgba(34, 197, 94, .2)
+    }
+
+    100% {
+        background: transparent
+    }
+}
+
+/* ============ SHEETS BAR ============ */
+.spreadsheet-sheets {
+    display: flex;
+    align-items: stretch;
+    background: var(--bg-secondary, #f1f3f5);
+    border-top: 1px solid var(--border-color);
+    border-bottom: none; /* Remove border to reduce gap with status bar */
+    font-size: .75rem;
+    color: var(--text-primary);
+    flex-shrink: 0;
+    height: 32px; /* Fixed smaller height */
+}
+
+.sheets-file-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--red, #CC0000);
+    background: transparent;
+    white-space: nowrap;
+    cursor: pointer;
+    flex-shrink: 0;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sheets-file-badge:hover {
+    background: rgba(204,0,0,0.06);
+}
+
+.sheets-file-badge i {
+    font-size: 0.8rem;
+    flex-shrink: 0;
+}
+
+.sheets-divider-v {
+    width: 1px;
+    height: 100%;
+    background: var(--border-color);
+    margin: 6px 0;
+    flex-shrink: 0;
+}
+
+td.cell-referenced {
+    outline: 2px dashed var(--red) !important;
+    outline-offset: -2px;
+    background: rgba(204, 0, 0, 0.02) !important;
+    z-index: 5;
+}
+
+/* Operator Specific Highlights */
+td.cell-ref-add {
+    outline: 2px solid #16a34a !important;
+    outline-offset: -2px;
+    background: rgba(22, 163, 74, 0.08) !important;
+    z-index: 5;
+}
+
+td.cell-ref-sub {
+    outline: 2px solid #dc2626 !important;
+    outline-offset: -2px;
+    background: rgba(220, 38, 38, 0.08) !important;
+    z-index: 5;
+}
+
+td.cell-ref-mul {
+    outline: 2px solid #9333ea !important;
+    outline-offset: -2px;
+    background: rgba(147, 51, 234, 0.08) !important;
+    z-index: 5;
+}
+
+td.cell-ref-div {
+    outline: 2px solid #ea580c !important;
+    outline-offset: -2px;
+    background: rgba(234, 88, 12, 0.08) !important;
+    z-index: 5;
+}
+
+
+.sheets-list {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.sheets-list::-webkit-scrollbar {
+    display: none;
+}
+
+.sheet-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-right: 1px solid var(--border-color);
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.sheet-tab:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+
+
+.sheet-tab.active {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-weight: 600;
+    border-bottom: 3px solid var(--red);
+}
+
+
+
+.sheet-menu-icon {
+    color: var(--text-muted);
+    cursor: grab;
+    font-size: 0.75rem;
+}
+
+.sheet-dropdown-icon {
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.sheet-dropdown-icon:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+
+
+.sheets-actions {
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+}
+
+.btn-add-sheet {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.btn-add-sheet:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text-primary);
+}
+
+/* ============ STATUS BAR - KURANGI GAP ============ */
+.spreadsheet-pagination {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    background: var(--statusbar-bg);
+    border-top: 1px solid var(--border-light); /* Use lighter border */
+    font-size: .65rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    height: 28px; /* Fixed smaller height */
+    line-height: 1.2;
+}
+
+.statusbar-separator {
+    color: var(--border-color);
+    margin: 0 2px;
+}
+
+.btn-pagination {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-secondary);
+    font-size: .68rem;
+    cursor: pointer;
+    transition: all .12s;
+}
+
+.btn-pagination:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--text-muted)
+}
+
+/* ============ SCROLLBAR ============ */
+.spreadsheet-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.spreadsheet-container::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+}
+
+.spreadsheet-container::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 4px;
+}
+
+.spreadsheet-container::-webkit-scrollbar-thumb:hover {
+    background: var(--red);
+}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 768px) {
+    .spreadsheet-toolbar {
+        flex-wrap: wrap;
+        padding: 8px;
+    }
+
+    .toolbar-title {
+        width: 100%;
+        margin-bottom: 4px;
+    }
+
+    .btn-toolbar {
+        padding: 4px 6px;
+        font-size: 0.7rem;
+    }
+
+    .spreadsheet-pagination {
+        flex-wrap: wrap;
+        padding: 4px 8px;
+        gap: 4px;
+    }
+
+    #btnLoadMore {
+        width: 100%;
+        margin-top: 4px;
+    }
+
+    /* Kurangi padding sel di mobile */
+    .spreadsheet-table thead th,
+    .spreadsheet-table tbody td {
+        padding: 6px 8px;
+    }
+
+    .cell-display {
+        min-height: 26px;
+    }
+}
+
+@media (max-width: 480px) {
+    .find-bar-inner {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .find-input-group input {
+        width: 100px;
+    }
+}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 1400px) {
+    .spreadsheet-table thead th {
+        padding: 8px 10px;
+        font-size: .68rem;
+    }
+
+    .spreadsheet-table thead th[data-field="nama"] {
+        min-width: 140px;
+    }
+
+    .spreadsheet-table thead th[data-field="awb"] {
+        min-width: 120px;
+    }
+
+    .spreadsheet-table thead th[data-field="pengirim"] {
+        min-width: 120px;
+    }
+
+    .spreadsheet-table thead th[data-field="penerima"] {
+        min-width: 120px;
+    }
+}
+
+/* ============ FLOATING TOOLBAR (LEFT CLICK) ============ */
+.floating-toolbar {
+    position: fixed;
+    background: var(--modal-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px;
+    z-index: 2500;
+    animation: toolbarPop 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    pointer-events: auto;
+}
+
+@keyframes toolbarPop {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.btn-float {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 5px;
+    transition: all 0.12s;
+    font-size: 0.85rem;
+}
+
+.btn-float:hover {
+    background: var(--bg-tertiary);
+    color: var(--red);
+}
+
+.btn-float.danger:hover {
+    color: var(--profit-neg);
+}
+
+.float-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--border-color);
+    margin: 0 4px;
+}
+
+/* ==================== SHEET CONTEXT MENU ==================== */
+.sheet-context-menu {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 9px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+    padding: 4px;
+    min-width: 180px;
+    overflow: hidden;
+    animation: menuIn 0.12s ease;
+}
+
+@keyframes menuIn {
+    from {
+        transform: translateY(4px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.sheet-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.1s;
+    user-select: none;
+}
+
+.sheet-menu-item i {
+    width: 14px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.sheet-menu-item:hover:not(.disabled) {
+    background: var(--bg-tertiary);
+}
+
+.sheet-menu-item.danger {
+    color: #dc2626;
+}
+
+.sheet-menu-item.danger i {
+    color: #dc2626;
+}
+
+.sheet-menu-item.danger:hover:not(.disabled) {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.sheet-menu-item.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.sheet-menu-divider {
+    height: 1px;
+    background: var(--border-light);
+    margin: 3px 4px;
+}
+
+/* ==================== SHEET TAB DRAG ==================== */
+.sheet-tab {
+    user-select: none;
+    transition: background 0.15s, opacity 0.15s;
+    cursor: pointer;
+}
+
+.sheet-tab.dragging {
+    opacity: 0.5;
+    background: var(--cell-hover) !important;
+}
+
+.sheet-tab.drag-over {
+    background: rgba(204, 0, 0, 0.07) !important;
+    border-left: 2px solid var(--red) !important;
+}
+
+/* Btn add sheet with caret area */
+.btn-add-sheet {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+}
+
+/* Add caret indicator to btn-add-sheet */
+.btn-add-sheet::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 20px;
+    border-left: 1px solid rgba(0, 0, 0, 0.08);
+}
+/* Locked Font Format */
+.spreadsheet-table,
+.cell-floating-editor,
+.formula-bar-input {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+    font-size: 13px !important;
+}
+
+.spreadsheet-table td {
+    font-family: inherit !important;
+    font-size: inherit !important;
+}
+
+.cell-editor-input {
+    width: 100%;
+    height: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: 'Inter', sans-serif;
+    font-size: .72rem;
+    padding: 0 8px;
+    color: var(--text-primary);
+}
+/* Dashboard Warning Banner */
+.dashboard-warning-banner {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    color: #92400e;
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    font-size: 0.85rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    animation: slideDown 0.3s ease-out;
+}
+
+.dashboard-warning-banner i {
+    font-size: 1.1rem;
+    margin-right: 12px;
+    color: #d97706;
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+/* ============ REMOTE PRESENCE ============ */
+.cell-remote-selected {
+    background: color-mix(in srgb, var(--remote-color) 12%, transparent) !important;
+    position: relative;
+    z-index: 5 !important;
+}
+
+.remote-cursor {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 2px solid var(--remote-color);
+    pointer-events: auto; /* Enable hover */
+    z-index: 1000 !important;
+}
+
+.remote-cursor-label {
+    position: absolute;
+    top: -22px;
+    left: -2px;
+    font-size: 10px;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px 4px 4px 0;
+    white-space: nowrap;
+    font-weight: 600;
+    z-index: 1001 !important;
+    pointer-events: none;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    
+    /* Hide by default */
+    opacity: 0;
+    transform: translateY(5px);
+    transition: all 0.2s ease;
+}
+
+.remote-cursor-label.label-bottom {
+    top: 100%;
+    bottom: auto;
+    border-radius: 0 4px 4px 4px;
+    margin-top: 2px;
+}
+
+/* Show on hover */
+.remote-cursor:hover .remote-cursor-label {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Class to show briefly via JS when moving */
+.remote-cursor.is-moving .remote-cursor-label {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Ensure labels are not cut off by cell overflow */
+.spreadsheet-table td:has(.remote-cursor) {
+    overflow: visible !important;
+    z-index: 999 !important;
+}
+
+.spreadsheet-table td {
+    position: relative;
+}
+
+/* Locked Cell Styling - matching cell-readonly visual */
+.cell-locked::after {
+    content: '\f023';
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    position: absolute;
+    top: 1px;
+    right: 2px;
+    font-size: 7px;
+    color: rgba(0,0,0,0.15);
+    pointer-events: none;
+}
+
+  /* Visual Indicators for Cells */
+.cell-readonly .cell-display {
+    color: var(--text-muted);
+}
+
+.cell-error {
+    background-color: rgba(255, 0, 0, 0.1) !important;
+    position: relative;
+}
+
+.cell-error::after {
+    content: "⚠️";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 8px;
+    color: #c62828;
+    pointer-events: auto;
+}
+
+/* Worksheet Date Warning (Collapsible) */
+.worksheet-date-warning {
+    background: rgba(255, 243, 205, 0.95);
+    border: 1px solid #ffeeba;
+    color: #856404;
+    padding: 4px 8px;
+    font-size: 0.72rem;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-right: 8px;
+    white-space: nowrap;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    max-width: 28px; /* Just enough to show the icon */
+    height: 28px;
+}
+
+.worksheet-date-warning:hover {
+    max-width: 400px;
+    gap: 8px;
+    padding: 4px 10px;
+}
+
+.worksheet-date-warning .warning-icon {
+    color: #d39e00;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.worksheet-date-warning .warning-text {
+    opacity: 0;
+    transform: translateX(-5px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+}
+
+.worksheet-date-warning:hover .warning-text {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+}
+
+.worksheet-date-warning .warning-close {
+    margin-left: 4px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    flex-shrink: 0;
+}
+
+.worksheet-date-warning:hover .warning-close {
+    opacity: 0.5;
+    pointer-events: auto;
+}
+
+.worksheet-date-warning .warning-close:hover {
+    opacity: 1;
+}
+
+/* Color Palette Dropdown */
+.color-palette-dropdown {
+    position: fixed;
+    /* top/left will be set dynamically via JS */
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    padding: 8px;
+    display: grid;
+    grid-template-columns: repeat(10, 18px);
+    gap: 4px;
+    z-index: 1000;
+}
+
+.color-palette-dropdown.hidden {
+    display: none;
+}
+
+.color-swatch {
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: transform 0.1s;
+}
+
+.color-swatch:hover {
+    transform: scale(1.15);
+    border-color: #000;
+    z-index: 2;
+}
+
+.color-swatch[data-color=""] {
+    background: repeating-linear-gradient(45deg, #fff, #fff 4px, #f0f0f0 4px, #f0f0f0 8px);
+}
+
+.cell-comment-indicator {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-top: 10px solid #e11d48;
+    border-left: 10px solid transparent;
+    z-index: 5;
+    pointer-events: auto;
+    cursor: default;
+}
+.spreadsheet-table tbody td {
+    position: relative;
+}
+
+
+
+.cell-comment-indicator[data-comment]:hover::after {
+    content: attr(data-comment);
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: #ffffe1;
+    color: #000;
+    border: 1px solid #ccc;
+    padding: 6px 10px;
+    border-radius: 2px;
+    font-size: 0.8rem;
+    white-space: pre-wrap;
+    z-index: 1000;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    min-width: 150px;
+    pointer-events: none;
+    text-align: left;
+}
+
+/* --- Column Resizer --- */
+.col-resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 5px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 10;
+}
+.col-resizer:hover, .resizing .col-resizer {
+    background-color: var(--primary-color, #1a73e8);
+}
+.resizing {
+    cursor: col-resize !important;
+}
+.resizing * {
+    user-select: none !important;
+}
+
+/* ==================== CRM BADGE & STATUS INDICATORS ==================== */
+
+/* CRM Badge - small pill next to row number */
+.crm-badge {
+    display: inline-block;
+    font-size: 0.5rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    color: #fff;
+    padding: 1px 4px;
+    border-radius: 3px;
+    margin-left: 3px;
+    vertical-align: middle;
+    line-height: 1.2;
+    text-transform: uppercase;
+    box-shadow: 0 1px 3px rgba(124, 58, 237, 0.3);
+}
+
+/* Status dot - colored circle before row number */
+.crm-status-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-right: 3px;
+    vertical-align: middle;
+    animation: crmDotPulse 2s ease-in-out infinite;
+}
+
+.crm-dot-new {
+    background: #3b82f6;
+    box-shadow: 0 0 4px rgba(59, 130, 246, 0.5);
+}
+
+.crm-dot-vendor_filled {
+    background: #f59e0b;
+    box-shadow: 0 0 4px rgba(245, 158, 11, 0.5);
+}
+
+.crm-dot-invoiced {
+    background: #10b981;
+    box-shadow: 0 0 4px rgba(16, 185, 129, 0.5);
+}
+
+@keyframes crmDotPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Row-level left border highlights for CRM status */
+.crm-status-new td:first-child {
+    border-left: 3px solid #3b82f6 !important;
+}
+
+.crm-status-vendor_filled td:first-child {
+    border-left: 3px solid #f59e0b !important;
+}
+
+.crm-status-invoiced td:first-child {
+    border-left: 3px solid #10b981 !important;
+}
+
+/* Subtle background tint for CRM rows in non-completed status */
+.crm-status-new td {
+    background-color: rgba(59, 130, 246, 0.03) !important;
+}
+
+.crm-status-vendor_filled td {
+    background-color: rgba(245, 158, 11, 0.03) !important;
+}
+
+.crm-status-invoiced td {
+    background-color: rgba(16, 185, 129, 0.03) !important;
+}

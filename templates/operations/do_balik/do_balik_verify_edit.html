@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Verifikasi Pouch Dokumen DO Balik - ERP Paketin{% endblock %}
+{% block page_title %}Verifikasi Pouch Dokumen DO Balik{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="mb-3">
+        <a href="{% url 'operations:do-balik-list' %}" class="btn btn-secondary btn-sm shadow-sm">
+            <i class="ph-bold ph-arrow-left me-1"></i> Kembali
+        </a>
+    </div>
+
+    
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+                        <h6 class="fw-bold text-dark mb-0"><i class="ph-bold ph-info text-primary me-2"></i>Ringkasan Pouch Dokumen</h6>
+                    </div>
+                    <div class="card-body p-4">
+                <h5 class="fw-bold text-dark border-bottom pb-3 mb-4">Verifikasi Pouch Dokumen: {{ pouch.pouch_number }}</h5>
+
+                        <table class="table table-sm table-borderless mb-3" style="font-size: 13px;">
+                            <tr>
+                                <td class="text-muted" style="width: 120px;">Dari:</td>
+                                <td class="fw-semibold">{{ pouch.origin_branch.name|default:"-" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Tujuan:</td>
+                                <td class="fw-semibold">{{ pouch.dest_branch.name|default:"-" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Ekspedisi:</td>
+                                <td class="fw-semibold">{{ pouch.courier_service|default:"Internal" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">No. Resi Kirim:</td>
+                                <td class="fw-semibold">{{ pouch.airwaybill_no|default:"-" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Tgl Berangkat:</td>
+                                <td class="fw-semibold">{{ pouch.dispatched_at|date:"d M Y H:i" }}</td>
+                            </tr>
+                        </table>
+
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-semibold">Catatan Verifikasi Hub Asal</label>
+                            <textarea name="notes" class="form-control form-control-sm" rows="3" placeholder="Fisik stempel & tanda tangan lengkap..."></textarea>
+                        </div>
+
+                        <div class="alert alert-info py-2 small mb-3 border-0 rounded-3">
+                            <i class="ph-bold ph-shield-check me-1"></i> Resi yang diverifikasi akan berstatus <b>POD BALIK</b> dan siap ditagihkan dalam Invoice B2B.
+                        </div>
+
+                        <button type="submit" class="btn btn-success px-4 fw-bold shadow-sm w-100">
+                            <i class="ph-bold ph-checks me-1"></i> Konfirmasi Terima &amp; Verifikasi
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden">
+                    <div class="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center">
+                        <h6 class="fw-bold text-dark mb-0"><i class="ph-bold ph-list-checks text-primary me-2"></i>Checklist Fisik Surat Jalan (DO Balik)</h6>
+                        <span class="badge bg-light text-dark border">Total: {{ pouch.shipments.count }} Resi</span>
+                    </div>
+                    <div class="card-body p-0 table-responsive">
+                        <table class="table table-hover align-middle mb-0" style="font-size: 13px;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3" style="width: 40px;">
+                                        <input type="checkbox" id="checkAll" class="form-check-input" checked>
+                                    </th>
+                                    <th>No. Resi AWB</th>
+                                    <th>Klien / Shipper</th>
+                                    <th>Penerima</th>
+                                    <th>Status Saat Ini</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for s in pouch.shipments.all %}
+                                <tr>
+                                    <td class="ps-3">
+                                        <input type="checkbox" name="verified_shipment_ids" value="{{ s.id }}" class="form-check-input item-check" checked>
+                                    </td>
+                                    <td class="fw-bold text-primary">{{ s.resi_number }}</td>
+                                    <td>{{ s.client.company_name|default:s.sender_name }}</td>
+                                    <td>{{ s.receiver_name }}</td>
+                                    <td><span class="badge bg-secondary">{{ s.get_status_display }}</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+document.getElementById('checkAll')?.addEventListener('change', function() {
+    document.querySelectorAll('.item-check').forEach(cb => cb.checked = this.checked);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Proses Retur: {{ rto.rto_number }} - ERP Paketin{% endblock %}
+{% block page_title %}Proses Retur Paket{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h4 class="mb-1 fw-bold text-dark">Proses &amp; Tindak Lanjut: {{ rto.rto_number }}</h4>
+            <p class="text-muted small mb-0">Tindak lanjuti paket gagal antar bersama Customer Service &amp; Tim Operasional Hub.</p>
+        </div>
+        <div>
+            <a href="{% url 'operations:return-list' %}" class="btn btn-outline-secondary btn-sm px-3 shadow-sm">
+                <i class="ph-bold ph-arrow-left me-1"></i> Kembali ke Daftar
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left Column: Info Resi & Alasan -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+                    <h6 class="fw-bold text-dark mb-0"><i class="ph-bold ph-package text-primary me-2"></i>Detail Pengiriman &amp; Gagal Antar</h6>
+                </div>
+                <div class="card-body p-4">
+                    <table class="table table-sm table-borderless mb-3" style="font-size: 13px;">
+                        <tr>
+                            <td class="text-muted" style="width: 140px;">No. Resi AWB:</td>
+                            <td class="fw-bold text-primary">{{ rto.shipment.resi_number }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Pengirim:</td>
+                            <td class="fw-semibold">{{ rto.shipment.client.company_name|default:rto.shipment.sender_name }} ({{ rto.shipment.origin }})</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Penerima:</td>
+                            <td class="fw-semibold">{{ rto.shipment.receiver_name }} ({{ rto.shipment.receiver_phone }})</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Alamat Tujuan:</td>
+                            <td>{{ rto.shipment.receiver_address }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Alasan Gagal Antar:</td>
+                            <td><span class="badge bg-danger">{{ rto.get_reason_display }}</span></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Keterangan:</td>
+                            <td>{{ rto.reason_detail|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Status RTO Saat Ini:</td>
+                            <td><span class="badge bg-warning text-dark">{{ rto.get_status_display }}</span></td>
+                        </tr>
+                    </table>
+
+                    {% if rto.evidence_image %}
+                    <div class="mt-3">
+                        <label class="form-label text-muted small fw-semibold">Foto Bukti Gagal Antar:</label>
+                        <div>
+                            <img src="{{ rto.evidence_image.url }}" class="img-fluid rounded-3 border shadow-sm" style="max-height: 250px;" alt="Bukti Gagal Antar">
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Riwayat Catatan CS -->
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+                    <h6 class="fw-bold text-dark mb-0"><i class="ph-bold ph-chat-text text-info me-2"></i>Riwayat Catatan CS &amp; Tindak Lanjut</h6>
+                </div>
+                <div class="card-body p-4">
+                    <pre class="bg-light p-3 rounded-3 border text-muted small mb-0" style="white-space: pre-wrap; font-family: inherit;">{{ rto.cs_notes|default:"Belum ada catatan." }}</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Action Form -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+                    <h6 class="fw-bold text-dark mb-0"><i class="ph-bold ph-lightning text-warning me-2"></i>Tindakan Operasional / CS</h6>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-semibold">Pilih Tindakan Selanjutnya</label>
+                            <div class="d-flex flex-column gap-2">
+                                {% if rto.status == 'HOLD_DESTINATION' or rto.status == 'CONFIRM_SHIPPER' %}
+                                <div class="form-check p-3 border rounded-3 bg-light">
+                                    <input class="form-check-input" type="radio" name="action" id="actApprove" value="APPROVE_RTO" checked>
+                                    <label class="form-check-label fw-bold text-danger" for="actApprove">
+                                        <i class="ph-bold ph-check-circle me-1"></i> 1. Setujui Retur ke Kota Asal (Approved RTO)
+                                    </label>
+                                    <div class="small text-muted ps-4">Shipper telah mengonfirmasi barang dikembalikan ke kota asal.</div>
+                                </div>
+
+                                <div class="form-check p-3 border rounded-3 bg-light">
+                                    <input class="form-check-input" type="radio" name="action" id="actRedeliver" value="REDELIVER">
+                                    <label class="form-check-label fw-bold text-success" for="actRedeliver">
+                                        <i class="ph-bold ph-arrow-clockwise me-1"></i> 2. Jadwalkan Antar Ulang (Re-delivery)
+                                    </label>
+                                    <div class="small text-muted ps-4">Penerima/Shipper meminta kurir mencoba antar ulang dengan alamat/waktu baru.</div>
+                                </div>
+                                {% endif %}
+
+                                {% if rto.status == 'APPROVED_RTO' %}
+                                <div class="form-check p-3 border rounded-3 bg-light">
+                                    <input class="form-check-input" type="radio" name="action" id="actDispatch" value="DISPATCH_RTO" checked>
+                                    <label class="form-check-label fw-bold text-primary" for="actDispatch">
+                                        <i class="ph-bold ph-truck me-1"></i> Berangkatkan Linehaul Retur (Tujuan &rarr; Asal)
+                                    </label>
+                                    <div class="small text-muted ps-4">Paket dimasukkan ke dalam manifest pengembalian barang ke Hub Asal.</div>
+                                </div>
+                                {% endif %}
+
+                                {% if rto.status == 'IN_TRANSIT_RTO' %}
+                                <div class="form-check p-3 border rounded-3 bg-light">
+                                    <input class="form-check-input" type="radio" name="action" id="actReceive" value="RECEIVE_ORIGIN" checked>
+                                    <label class="form-check-label fw-bold text-success" for="actReceive">
+                                        <i class="ph-bold ph-archive-box me-1"></i> Terima Fisik Retur di Hub Asal
+                                    </label>
+                                    <div class="small text-muted ps-4">Fisik barang retur telah tiba dan diperiksa di gudang Hub Asal.</div>
+                                </div>
+                                {% endif %}
+
+                                {% if rto.status == 'RECEIVED_ORIGIN' %}
+                                <div class="form-check p-3 border rounded-3 bg-light">
+                                    <input class="form-check-input" type="radio" name="action" id="actHandover" value="HANDOVER_SHIPPER" checked>
+                                    <label class="form-check-label fw-bold text-dark" for="actHandover">
+                                        <i class="ph-bold ph-hand-heart me-1"></i> Serah Terima Barang Kembali ke Pengirim (Selesai)
+                                    </label>
+                                    <div class="small text-muted ps-4">Barang telah diserahkan kembali kepada Shipper dengan Berita Acara.</div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% if rto.status == 'APPROVED_RTO' %}
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-semibold">Nomor Manifest RTO (Linehaul Balik)</label>
+                            <input type="text" name="rto_manifest_no" class="form-control form-control-sm" placeholder="Contoh: MNF-RTO-20260921-0001">
+                        </div>
+                        {% endif %}
+
+                        {% if rto.status == 'HOLD_DESTINATION' or rto.status == 'CONFIRM_SHIPPER' %}
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-semibold">Biaya Ongkos Kirim Retur (Rp)</label>
+                            <input type="number" name="return_fee" value="0" class="form-control form-control-sm" placeholder="Nominal biaya ongkir retur jika dibebankan">
+                            <small class="text-muted">Isi 0 jika Free Return sesuai kontrak klien.</small>
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-semibold">Catatan Tindak Lanjut CS / Operasional <span class="text-danger">*</span></label>
+                            <textarea name="cs_notes" class="form-control form-control-sm" rows="3" placeholder="Masukkan hasil konfirmasi dengan Shipper/Penerima..." required></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-danger px-4 fw-bold shadow-sm w-100 py-2">
+                            <i class="ph-bold ph-check me-1"></i> Simpan &amp; Proses Tindak Lanjut
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Universal Void - ERP Paketin{% endblock %}
+{% block page_title %}Void{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Header Section (transparent background over red gradient) -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1 fw-bold text-dark">Universal Void</h4>
+            <p class="text-muted small mb-0">Pusat pembatalan resi pengiriman operasional dengan validasi sistem dan log audit</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'operations:shipment-list' %}" class="btn btn-outline-secondary bg-white px-4 fw-semibold shadow-xs">
+                <i class="ph-bold ph-arrow-left me-1"></i> Daftar Resi
+            </a>
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show border-0 shadow-sm rounded-3 py-2 px-3 small mb-4" role="alert">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="ph-bold {% if message.tags == 'success' %}ph-check-circle text-success{% elif message.tags == 'error' or message.tags == 'danger' %}ph-x-circle text-danger{% else %}ph-info text-info{% endif %} fs-5"></i>
+                    <span>{{ message }}</span>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="padding: 0.75rem 1rem;"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row g-4">
+        <!-- Left: Search & Execute Void -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden bg-white">
+                <div class="card-header bg-white border-bottom border-light-subtle pt-3 pb-2">
+                    <h6 class="fw-bold mb-0 text-dark small text-uppercase"><i class="ph-bold ph-magnifying-glass text-primary me-2"></i>Cari Resi Untuk Dibatalkan</h6>
+                </div>
+                <div class="card-body p-4">
+                    
+                    <!-- Search Box Form -->
+                    <form method="get" action="{% url 'operations:void_credit' %}" class="mb-4">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Nomor Resi / No. Referensi</label>
+                        <div class="input-group shadow-xs rounded-pill overflow-hidden border">
+                            <span class="input-group-text bg-white border-0 ps-3 text-muted">
+                                <i class="ph-bold ph-barcode fs-5"></i>
+                            </span>
+                            <input type="text" name="q" class="form-control border-0 px-2 py-2" placeholder="Scan barcode atau ketik nomor resi..." value="{{ search_query }}" autofocus required>
+                            <button class="btn btn-danger px-4 fw-bold" type="submit">
+                                Cari
+                            </button>
+                        </div>
+                        <small class="text-muted d-block mt-1 ps-2" style="font-size: 0.75rem;">Contoh: BKSC-260916-0001, CRD-..., dsb.</small>
+                    </form>
+
+                    {% if selected_shipment %}
+                        <!-- Preview Card Resi -->
+                        <div class="border rounded-3 p-3 bg-light-subtle mb-4">
+                            <div class="d-flex justify-content-between align-items-start mb-2 border-bottom pb-2">
+                                <div>
+                                    <span class="badge bg-danger rounded-pill px-2 py-1 font-monospace fw-bold" style="font-size: 0.75rem;">{{ selected_shipment.resi_number }}</span>
+                                    <div class="text-muted small mt-1">Layanan: <strong>{{ selected_shipment.get_service_type_display|default:selected_shipment.service_type }}</strong></div>
+                                </div>
+                                <span class="badge 
+                                    {% if selected_shipment.status == 'VOID' %}bg-dark
+                                    {% elif selected_shipment.status == 'PENDING' %}bg-warning text-dark
+                                    {% elif selected_shipment.status == 'PICKUP' %}bg-info text-dark
+                                    {% elif selected_shipment.status == 'INBOUND_ORIGIN' %}bg-primary
+                                    {% else %}bg-secondary{% endif %} rounded-pill px-3 py-1">
+                                    {{ selected_shipment.get_status_display }}
+                                </span>
+                            </div>
+
+                            <div class="row g-2 small mb-2">
+                                <div class="col-6">
+                                    <span class="text-muted d-block" style="font-size: 0.7rem;">PENGIRIM</span>
+                                    <span class="fw-semibold text-dark text-truncate d-block">{{ selected_shipment.client.name|default:selected_shipment.sender_name }}</span>
+                                    <small class="text-muted">{{ selected_shipment.get_tlc_origin }} - {{ selected_shipment.get_city_origin }}</small>
+                                </div>
+                                <div class="col-6">
+                                    <span class="text-muted d-block" style="font-size: 0.7rem;">PENERIMA</span>
+                                    <span class="fw-semibold text-dark text-truncate d-block">{{ selected_shipment.receiver_name }}</span>
+                                    <small class="text-muted">{{ selected_shipment.get_tlc_dest }} - {{ selected_shipment.get_city_dest }}</small>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center pt-2 border-top small">
+                                <span class="text-muted">Koli / Berat: <strong>{{ selected_shipment.koli_count }} Koli / {{ selected_shipment.actual_weight }} Kg</strong></span>
+                                <span class="fw-bold text-dark">Rp {{ selected_shipment.total_amount|intcomma }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Eligibility Check & Form -->
+                        {% if can_void %}
+                            <div class="alert alert-success border-0 rounded-3 py-2 px-3 small mb-3">
+                                <i class="ph-bold ph-check-circle text-success me-1"></i> Resi ini <strong>memenuhi syarat</strong> untuk dibatalkan (VOID).
+                            </div>
+
+                            <form id="voidForm" method="post" action="{% url 'operations:void_credit' %}" onsubmit="event.preventDefault(); PaketinModal.confirm({ title: 'Batalkan Resi (VOID)?', description: 'Resi {{ selected_shipment.resi_number }} akan dibatalkan secara permanen. Data tagihan dan operasional terkait akan disesuaikan.', theme: 'danger', confirmText: 'Batalkan Resi (VOID)', frictionText: 'VOID', icon: 'ph-prohibit', form: this });">
+                                {% csrf_token %}
+                                <input type="hidden" name="shipment_id" value="{{ selected_shipment.pk }}">
+                                
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold text-secondary mb-1">Kategori Alasan VOID <span class="text-danger">*</span></label>
+                                    <select name="reason_category" class="form-select form-select-sm" required>
+                                        <option value="" disabled selected>-- Pilih Kategori Alasan --</option>
+                                        <option value="SALAH INPUT DATA">Salah Input Data (Berat / Dimensi / Alamat)</option>
+                                        <option value="PEMBATALAN KLIEN">Klien / Pengirim Membatalkan Pengiriman</option>
+                                        <option value="DUPLIKASI RESI">Duplikasi Resi (Input Ganda)</option>
+                                        <option value="SALAH METODE BAYAR">Salah Pilih Metode Pembayaran (Cash / Credit)</option>
+                                        <option value="PERUBAHAN JADWAL">Perubahan Jadwal / Armada</option>
+                                        <option value="LAINNYA">Alasan Lainnya</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold text-secondary mb-1">Catatan Keterangan Detail <span class="text-danger">*</span></label>
+                                    <textarea name="reason_notes" class="form-control form-control-sm" rows="3" placeholder="Jelaskan alasan pembatalan secara ringkas..." required></textarea>
+                                </div>
+
+                                <button type="submit" class="btn btn-danger w-100 fw-bold py-2 shadow-sm">
+                                    <i class="ph-bold ph-trash me-1"></i> Konfirmasi Batalkan Resi (VOID)
+                                </button>
+                            </form>
+                        {% else %}
+                            <div class="alert alert-danger border-0 rounded-3 py-3 px-3 small mb-0">
+                                <div class="d-flex align-items-start gap-2">
+                                    <i class="ph-bold ph-warning-circle text-danger fs-5 mt-1"></i>
+                                    <div>
+                                        <strong>Tidak Dapat Di-VOID:</strong>
+                                        <p class="mb-0 mt-1">{{ cannot_void_reason }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                    {% else %}
+                        <div class="text-center py-4 text-muted border border-dashed rounded-3">
+                            <i class="ph-duotone ph-barcode text-muted mb-2" style="font-size: 2.5rem; opacity: 0.3;"></i>
+                            <p class="mb-0 fw-semibold text-dark small">Silakan cari atau scan resi yang ingin dibatalkan.</p>
+                            <small class="text-muted">Resi yang dapat di-void adalah resi dengan status awal sebelum keberangkatan.</small>
+                        </div>
+                    {% endif %}
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Void Monitoring & Audit Logs Table -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden bg-white">
+                <div class="card-header bg-white border-bottom border-light-subtle pt-3 pb-2 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0 text-dark small text-uppercase"><i class="ph-bold ph-clock-counter-clockwise text-secondary me-2"></i>Riwayat Resi yang Di-VOID</h6>
+                    <span class="badge bg-light text-secondary border rounded-pill px-2 py-1" style="font-size: 0.72rem;">Log Audit Terkini</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                            <thead class="table-light text-secondary small text-uppercase fw-bold">
+                                <tr>
+                                    <th class="ps-3">NOMOR RESI</th>
+                                    <th>PENGIRIM & TUJUAN</th>
+                                    <th>ALASAN VOID</th>
+                                    <th class="text-end pe-3">WAKTU VOID</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for s in voided_shipments %}
+                                <tr>
+                                    <td class="ps-3 font-monospace fw-bold text-dark">
+                                        <a href="{% url 'operations:shipment-detail' s.pk %}" class="text-decoration-none text-dark">
+                                            {{ s.resi_number }}
+                                        </a>
+                                        <div class="text-muted small" style="font-size: 0.7rem;">{{ s.get_service_type_display|default:s.service_type }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold text-dark text-truncate" style="max-width: 140px;" title="{{ s.client.name|default:s.sender_name }}">
+                                            {{ s.client.name|default:s.sender_name }}
+                                        </div>
+                                        <small class="text-muted">{{ s.get_tlc_origin }} &rarr; {{ s.get_tlc_dest }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="small text-danger fw-semibold" style="line-height: 1.3;">
+                                            {{ s.description_item|default:"Dibatalkan (VOID)"|truncatechars:60 }}
+                                        </div>
+                                    </td>
+                                    <td class="text-end pe-3 text-muted small">
+                                        {{ s.updated_at|date:"d M Y, H:i" }}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-5 text-muted">
+                                        <i class="ph-duotone ph-check-circle text-success mb-2" style="font-size: 2.5rem; opacity: 0.4;"></i>
+                                        <p class="mb-0 fw-semibold text-dark">Belum ada riwayat resi yang dibatalkan (VOID).</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

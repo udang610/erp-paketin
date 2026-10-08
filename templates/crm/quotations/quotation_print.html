@@ -1,0 +1,240 @@
+{% load static %}
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quotation - QUO-{{ quotation.pk|stringformat:"04d" }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background: #fff;
+        }
+        .page {
+            width: 21cm;
+            min-height: 29.7cm;
+            padding: 2cm;
+            margin: 1cm auto;
+            border: 1px #D3D3D3 solid;
+            border-radius: 5px;
+            background: white;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            border-bottom: 2px solid #dc3545;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .logo-text {
+            color: #dc3545;
+            font-weight: 800;
+            font-size: 24px;
+            letter-spacing: -0.5px;
+        }
+        .table-totals td {
+            border-top: none;
+            padding: 5px 10px;
+        }
+        .table-totals .total-row td {
+            border-top: 2px solid #333;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        @media print {
+            body {
+                background: none;
+            }
+            .page {
+                margin: 0;
+                border: initial;
+                border-radius: initial;
+                width: initial;
+                min-height: initial;
+                box-shadow: initial;
+                background: initial;
+                page-break-after: always;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="text-center mt-3 no-print">
+    <button onclick="window.print()" class="btn btn-danger">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-printer me-2" viewBox="0 0 16 16">
+            <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
+            <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/>
+        </svg>
+        Cetak ke PDF / Printer
+    </button>
+    <a href="{% url 'crm:quotation-detail' quotation.pk %}" class="btn btn-secondary ms-2">Kembali</a>
+</div>
+
+<div class="page">
+    <div class="header d-flex justify-content-between align-items-end">
+        <div>
+            <div class="logo-text">PAKETIN CARGO</div>
+            <div class="small text-muted mt-1">Solusi Pengiriman Terbaik Anda</div>
+        </div>
+        <div class="text-end">
+            <h4 class="mb-0">PENAWARAN HARGA</h4>
+            <div class="text-muted">No. QUO-{{ quotation.pk|stringformat:"04d" }}</div>
+            <div class="small mt-1">Tanggal: {{ quotation.created_at|date:"d F Y" }}</div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-6">
+            <h6 class="text-muted mb-1">Kepada Yth:</h6>
+            <div class="fw-bold">{{ quotation.lead.client.company_name }}</div>
+            {% if quotation.lead.client.contact_name %}<div>Attn: {{ quotation.lead.client.contact_name }}</div>{% endif %}
+            {% if quotation.lead.client.email %}<div>Email: {{ quotation.lead.client.email }}</div>{% endif %}
+            {% if quotation.lead.client.phone %}<div>Telp: {{ quotation.lead.client.phone }}</div>{% endif %}
+            <div class="mt-1 small">{{ quotation.lead.client.address|default:"" }}</div>
+        </div>
+        <div class="col-6 text-end">
+            <h6 class="text-muted mb-1">Dari:</h6>
+            <div class="fw-bold">PT Paketin Cargo Logistics</div>
+            <div>{{ quotation.owner.get_full_name|default:quotation.owner.username }} (Sales)</div>
+            <div class="small">info@paketincargo.com</div>
+            <div class="small">www.paketincargo.com</div>
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <h6 class="border-bottom pb-2">Detail Pengiriman</h6>
+        <div class="row mb-2">
+            <div class="col-3 text-muted">Layanan</div>
+            <div class="col-9 fw-bold">{{ quotation.get_service_display }}</div>
+        </div>
+        <div class="row mb-2">
+            <div class="col-3 text-muted">Rute</div>
+            <div class="col-9">{{ quotation.origin }} &nbsp; ➔ &nbsp; {{ quotation.destination }}</div>
+        </div>
+        <div class="row mb-2">
+            <div class="col-3 text-muted">Dimensi Barang</div>
+            <div class="col-9">{{ quotation.panjang }} cm x {{ quotation.lebar }} cm x {{ quotation.tinggi }} cm</div>
+        </div>
+        <div class="row mb-2">
+            <div class="col-3 text-muted">Jumlah Koli</div>
+            <div class="col-9">{{ quotation.quantity }}</div>
+        </div>
+        <div class="row mb-2">
+            <div class="col-3 text-muted">Berat Aktual</div>
+            <div class="col-9">{{ quotation.actual_weight }} kg</div>
+        </div>
+        <div class="row mb-2">
+            <div class="col-3 text-muted">Berat Chargeable</div>
+            <div class="col-9 fw-bold text-danger">{{ quotation.volumetric_weight }} kg <small class="text-muted fw-normal">(Accumulated)</small></div>
+        </div>
+    </div>
+    
+    {% if quotation.items.exists %}
+    <div class="mb-4">
+        <h6 class="border-bottom pb-2">Detail Barang Tambahan (Multiple Colly)</h6>
+        <table class="table table-sm">
+            <thead class="table-light">
+                <tr>
+                    <th>Deskripsi</th>
+                    <th class="text-center">Koli</th>
+                    <th class="text-center">Dimensi (PxLxT)</th>
+                    <th class="text-end">Berat Aktual</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in quotation.items.all %}
+                <tr>
+                    <td>{{ item.description|default:"-" }}</td>
+                    <td class="text-center">{{ item.quantity }}</td>
+                    <td class="text-center">{{ item.panjang }} x {{ item.lebar }} x {{ item.tinggi }} cm</td>
+                    <td class="text-end">{{ item.actual_weight }} kg</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <div class="mb-4">
+        <h6 class="border-bottom pb-2">Rincian Biaya</h6>
+        <table class="table table-sm">
+            <thead class="table-light">
+                <tr>
+                    <th>Deskripsi</th>
+                    <th class="text-end">Jumlah</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Biaya Pengiriman ({{ quotation.volumetric_weight }} kg @ Rp {{ quotation.price_per_kg|floatformat:"0"|intcomma }})</td>
+                    <td class="text-end">Rp {{ quotation.price_per_kg|floatformat:"0"|intcomma }} / kg</td>
+                </tr>
+                {% if quotation.insurance > 0 %}
+                <tr>
+                    <td>Biaya Asuransi</td>
+                    <td class="text-end">Rp {{ quotation.insurance|floatformat:"0"|intcomma }}</td>
+                </tr>
+                {% endif %}
+                {% if quotation.packing > 0 %}
+                <tr>
+                    <td>Biaya Packing Tambahan</td>
+                    <td class="text-end">Rp {{ quotation.packing|floatformat:"0"|intcomma }}</td>
+                </tr>
+                {% endif %}
+                {% if quotation.discount > 0 %}
+                <tr>
+                    <td>Diskon Khusus</td>
+                    <td class="text-end text-danger">- Rp {{ quotation.discount|floatformat:"0"|intcomma }}</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+        
+        <table class="table table-borderless table-totals w-50 ms-auto">
+            <tr class="total-row">
+                <td class="text-end">Estimasi Total Biaya</td>
+                <td class="text-end text-danger">Rp {{ quotation.total_price|floatformat:"0"|intcomma }}</td>
+            </tr>
+        </table>
+    </div>
+
+    {% if quotation.notes %}
+    <div class="mb-5">
+        <h6 class="border-bottom pb-2">Catatan Tambahan</h6>
+        <p class="small text-muted" style="white-space: pre-wrap;">{{ quotation.notes }}</p>
+    </div>
+    {% endif %}
+
+    <div class="row mt-5 pt-4 text-center">
+        <div class="col-6">
+            <div class="mb-5">Menyetujui,</div>
+            <div>_______________________</div>
+            <div class="small fw-bold mt-1">{{ quotation.lead.client.company_name }}</div>
+        </div>
+        <div class="col-6">
+            <div class="mb-5">Hormat Kami,</div>
+            <div>_______________________</div>
+            <div class="small fw-bold mt-1">{{ quotation.owner.get_full_name|default:quotation.owner.username }}</div>
+            <div class="small text-muted">PT Paketin Cargo Logistics</div>
+        </div>
+    </div>
+    
+    <div class="text-center mt-5 pt-3 border-top small text-muted">
+        * Penawaran ini berlaku selama 14 hari sejak tanggal diterbitkan.
+    </div>
+</div>
+
+<script>
+    // Opsional: otomatis buka dialog print saat halaman dimuat
+    // window.onload = function() { window.print(); }
+</script>
+</body>
+</html>
